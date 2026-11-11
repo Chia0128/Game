@@ -97,6 +97,7 @@
         .color-thief { color: #ff3d00; font-weight: bold; }
         .color-achieve { color: #00e5ff; font-weight: bold; background: rgba(0,229,255,0.1); padding: 2px 4px; border-radius: 4px; display: inline-block;}
         .color-event { color: #ff9800; font-weight: bold; }
+        .color-weap-effect { color: #00e676; font-weight: bold; }
 
         /* 敵方狀態區 */
         #enemy-zone {
@@ -155,28 +156,29 @@
             background: #242424;
             padding: 20px;
             border-radius: 12px;
-            width: 300px;
+            width: 320px;
             border: 1px solid #555;
             text-align: center;
         }
         .modal-list {
             text-align: left;
-            max-height: 160px;
+            max-height: 200px;
             overflow-y: auto;
             margin: 10px 0;
             background: #111;
             padding: 8px;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: 12px;
         }
         .weapon-option {
-            padding: 6px;
+            padding: 6px 8px;
             margin: 4px 0;
             background: #333;
             border-radius: 4px;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
+            align-items: center;
         }
         .weapon-option.equipped { border: 1px solid #ffb300; background: #3e3214; }
     </style>
@@ -191,7 +193,7 @@
         <div class="modal-card">
             <h3 style="margin-top:0; color:#ffb300;">🎒 冒險背包與裝備</h3>
             <div style="font-size: 13px; text-align: left; margin-bottom: 6px; color:#aaa;">防具防禦力：<span id="bag-def" style="color:#fff; font-weight:bold;">0</span></div>
-            <div style="font-size: 13px; text-align: left; margin-bottom: 4px; color:#aaa;">持有武器（點擊可切換裝備）：</div>
+            <div style="font-size: 13px; text-align: left; margin-bottom: 4px; color:#aaa;">持有武器（點擊切換裝備）：</div>
             <div class="modal-list" id="weapon-list"></div>
             <div style="font-size: 13px; text-align: left; margin-top: 8px; color:#aaa;">持有道具：</div>
             <div class="modal-list" id="item-list" style="max-height: 80px;"></div>
@@ -205,7 +207,7 @@
         <div class="stats-bar">
             <div class="stat-item"><span style="color: #aaa; font-size: 11px;">層數</span><span class="stat-value" id="val-floor">1</span></div>
             <div class="stat-item"><span style="color: #aaa; font-size: 11px;">金幣</span><span class="stat-value color-gold" id="val-gold">0</span></div>
-            <div class="stat-item"><span style="color: #aaa; font-size: 11px;">當前武器</span><span class="stat-value" id="val-weapon" style="font-size:14px; color:#64b5f6;">木劍</span></div>
+            <div class="stat-item"><span style="color: #aaa; font-size: 11px;">當前武器</span><span class="stat-value" id="val-weapon" style="font-size:13px; color:#64b5f6;">木劍</span></div>
         </div>
 
         <div class="hp-container">
@@ -258,6 +260,7 @@ let currentWeaponIdx = 0;
 
 let princessHelpCount = 0;
 let princessJoined = false;
+let isEnemyFrozen = false; // 霜凍大劍被動狀態
 
 let stats = {
     totalSpent: 0,
@@ -268,12 +271,17 @@ let stats = {
 };
 let currentFight = { dmgTaken: 0, absurdCount: 0 };
 
-// 武器庫與各階級價格
+// 武器庫擴充（現有 4 把未改動，新增 4 把更強武器）
 let weapons = [
-    { name: "木劍", minDmg: 8, maxDmg: 15, unlocked: true, price: 0 },
-    { name: "精鋼長劍", minDmg: 14, maxDmg: 24, unlocked: false, price: 60 },
-    { name: "烈焰魔杖", minDmg: 20, maxDmg: 35, unlocked: false, price: 120 },
-    { name: "吸血鬼匕首", minDmg: 16, maxDmg: 28, unlocked: false, price: 200 }
+    { name: "木劍", minDmg: 8, maxDmg: 15, unlocked: true, price: 0, trait: "無特殊效果" },
+    { name: "精鋼長劍", minDmg: 14, maxDmg: 24, unlocked: false, price: 60, trait: "無特殊效果" },
+    { name: "烈焰魔杖", minDmg: 20, maxDmg: 35, unlocked: false, price: 120, trait: "無特殊效果" },
+    { name: "吸血鬼匕首", minDmg: 16, maxDmg: 28, unlocked: false, price: 200, trait: "吸血 30%" },
+    // --- 新增更高階武器 ---
+    { name: "雷霆破空槌", minDmg: 24, maxDmg: 42, unlocked: false, price: 280, trait: "25% 落雷 +15傷" },
+    { name: "霜凍哀傷大劍", minDmg: 32, maxDmg: 55, unlocked: false, price: 380, trait: "20% 機率冰凍怪物一回合" },
+    { name: "無盡之刃", minDmg: 45, maxDmg: 75, unlocked: false, price: 520, trait: "自帶 30% 機率 1.8倍暴擊" },
+    { name: "滅世弒神之槍", minDmg: 60, maxDmg: 110, unlocked: false, price: 750, trait: "神級：吸血 20% 且無視怪獸防禦" }
 ];
 
 // 防具升級價格計算：基礎 50 金幣，每升級 1 次（防禦 +2）遞增 30 金幣
@@ -287,7 +295,7 @@ function getRestPrice() {
     return 30 + Math.floor((floor - 1) / 5) * 10;
 }
 
-// 完整招式清單（原味經典、精神污染、意外痛點、帥氣奇幻）
+// 完整招式清單
 const allMonsterAttacks = [
     // --- 原有經典招式 ---
     { name: "使出恥度全開的【裸體跳舞】", desc: "畫面太美不敢看，精神打擊造成" },
@@ -328,7 +336,7 @@ const hpText = document.getElementById("hp-text");
 
 function initGame() {
     hp = 100; maxHp = 100; gold = 0; floor = 1; defense = 0; potions = 1;
-    princessHelpCount = 0; princessJoined = false;
+    princessHelpCount = 0; princessJoined = false; isEnemyFrozen = false;
     stats = { totalSpent: 0, consecutiveTraps: 0, bananaMet: false, princessMet: false, achieved: new Set() };
     gameState = "explore";
     weapons.forEach((w, idx) => w.unlocked = (idx === 0));
@@ -347,7 +355,7 @@ function updateShopButtons() {
         btnW.innerText = `🗡️ ${nextW.name} (${nextW.price}金)`;
         btnW.disabled = false;
     } else {
-        btnW.innerText = `🗡️ 武器已達最高階`;
+        btnW.innerText = `🗡️ 武器已達神級最高階`;
         btnW.disabled = true;
     }
 
@@ -432,6 +440,7 @@ function explore() {
     // 2. 怪物 (25%: 0.03 ~ 0.28)
     else if (roll < 0.28) {
         gameState = "combat";
+        isEnemyFrozen = false;
         
         // 1. 怪獸體力值：無上限，每5層提高成長係數
         let hpRoll = Math.floor(Math.random() * 8); // 0 ~ 7
@@ -451,7 +460,7 @@ function explore() {
             enemyMaxHp = Math.floor(18 + hpRoll + floor * 3.0);
         }
         
-        // 2. 怪獸基礎攻擊力：採用階梯成長公式，不設上限
+        // 2. 怪獸基礎攻擊力：階梯成長公式，不設上限
         let baseAtk = 5;
         if (floor <= 5) {
             baseAtk += Math.floor(Math.random() * 5);
@@ -620,6 +629,7 @@ function resolveEvent(event, choice) {
             log(`✨ 真的是超級寶藏！一次獲得 100 金幣！`, "color-gold");
         } else {
             gameState = "combat";
+            isEnemyFrozen = false;
             enemyMaxHp = Math.floor(30 + floor * 5);
             enemyHp = enemyMaxHp;
             enemyAtk = Math.floor(10 + floor * 3);
@@ -673,12 +683,39 @@ function combatAction(action) {
     let playerDmg = Math.floor(w.minDmg + Math.random() * (w.maxDmg - w.minDmg + 1));
     
     if (action === "attack") {
+        // --- 特殊武器特性判定 ---
+        let isPlayerCrit = false;
+        if (w.name === "無盡之刃" && Math.random() < 0.30) {
+            playerDmg = Math.floor(playerDmg * 1.8);
+            isPlayerCrit = true;
+        }
+
         enemyHp -= playerDmg;
-        log(`⚔️ 你使用【${w.name}】造成了 ${playerDmg} 點傷害！`);
+        let critInfo = isPlayerCrit ? `<span class="color-crit">【💥 暴擊 1.8倍！】</span>` : "";
+        log(`⚔️ 你使用【${w.name}】${critInfo}造成了 ${playerDmg} 點傷害！`);
+
+        // 吸血效果
         if (w.name === "吸血鬼匕首") {
             let lifesteal = Math.floor(playerDmg * 0.3);
             hp = Math.min(maxHp, hp + lifesteal);
+        } else if (w.name === "滅世弒神之槍") {
+            let lifesteal = Math.floor(playerDmg * 0.2);
+            hp = Math.min(maxHp, hp + lifesteal);
+            log(`🩸 【弒神之力】汲取生命，恢復了 ${lifesteal} 點 HP！`, "color-weap-effect");
         }
+
+        // 雷霆落雷效果
+        if (w.name === "雷霆破空槌" && Math.random() < 0.25) {
+            enemyHp -= 15;
+            log(`⚡ 【天雷召喚】引動狂暴雷霆！額外轟擊了 15 點落雷傷害！`, "color-weap-effect");
+        }
+
+        // 霜凍冰結效果
+        if (w.name === "霜凍哀傷大劍" && Math.random() < 0.20) {
+            isEnemyFrozen = true;
+            log(`❄️ 【絕對零度】極寒凍結了怪物！下回合怪物無法動彈！`, "color-weap-effect");
+        }
+
     } else if (action === "defend") {
         let counterDmg = Math.floor(playerDmg * 0.4);
         enemyHp -= counterDmg;
@@ -719,6 +756,14 @@ function combatAction(action) {
 
         endCombat();
     } else {
+        // 如果怪物被霜凍，跳過怪物的攻擊回合并解除冰凍
+        if (isEnemyFrozen) {
+            log(`❄️ 怪物被凍成冰棒，動彈不得，錯失了攻擊機會！`, "color-good");
+            isEnemyFrozen = false;
+            updateUI();
+            return;
+        }
+
         // --- 暴擊率與掉金幣設定（不打折，100% 原始傷害） ---
         let critChance = 0;
         let dropGoldMax = 0;
@@ -774,6 +819,7 @@ function combatAction(action) {
 
 function endCombat() {
     gameState = "explore";
+    isEnemyFrozen = false;
     switchControls("explore");
     updateUI();
 }
@@ -788,7 +834,7 @@ function buyItem(type) {
                 stats.totalSpent += cost;
                 weapons[lockedIdx].unlocked = true;
                 currentWeaponIdx = lockedIdx;
-                log(`🗡️ 購買並裝配新武器【${weapons[lockedIdx].name}】！消耗 ${cost} 金幣。`, "color-gold");
+                log(`🗡️ 購買並裝配新武器【${weapons[lockedIdx].name}】！消耗 ${cost} 金幣。<br><span style="color:#00e676; font-size:11px;">特性：${weapons[lockedIdx].trait}</span>`, "color-gold");
             } else {
                 log(`❌ 金幣不足！購買【${weapons[lockedIdx].name}】需要 ${cost} 金幣。`, "color-bad");
             }
@@ -835,7 +881,14 @@ function openBag() {
     weapons.forEach((w, idx) => {
         let div = document.createElement("div");
         div.className = `weapon-option ${idx === currentWeaponIdx ? 'equipped' : ''}`;
-        div.innerHTML = `<span>${w.unlocked ? w.name : '🔒 ???'} (${w.minDmg}-${w.maxDmg}攻)</span> <span>${idx === currentWeaponIdx ? '【裝備中】' : w.unlocked ? '點擊裝備' : '未解鎖'}</span>`;
+        div.innerHTML = `
+            <div>
+                <b style="color:${w.unlocked ? '#fff' : '#777'};">${w.unlocked ? w.name : '🔒 ???'}</b>
+                <div style="font-size:11px; color:#aaa;">${w.unlocked ? `${w.minDmg}-${w.maxDmg}攻 (${w.trait})` : '未解鎖'}</div>
+            </div>
+            <span style="font-size:11px; color:${idx === currentWeaponIdx ? '#ffb300' : '#64b5f6'};">
+                ${idx === currentWeaponIdx ? '【裝備中】' : w.unlocked ? '點擊裝備' : ''}
+            </span>`;
         if (w.unlocked) {
             div.onclick = () => { currentWeaponIdx = idx; log(`🔄 切換裝備：${w.name}`); openBag(); updateUI(); };
         }
