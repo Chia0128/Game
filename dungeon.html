@@ -437,20 +437,28 @@ function explore() {
 
         if (floor <= 5) {
             baseHp += Math.floor(Math.random() * 5);
+            enemyMaxHp = Math.min(30, baseHp);
         } else if (floor <= 10) {
             baseHp += Math.floor(Math.random() * 8);
+            enemyMaxHp = Math.min(35, baseHp);
         } else if (floor <= 15) {
             baseHp += Math.floor(Math.random() * 8) + floor * 0.5;
+            enemyMaxHp = Math.min(45, baseHp);
         } else if (floor <= 20) {
             baseHp += Math.floor(Math.random() * 8) + floor * 1;
+            enemyMaxHp = Math.min(60, baseHp);
         } else if (floor <= 25) {
             baseHp += Math.floor(Math.random() * 8) + floor * 1.5;
+            enemyMaxHp = Math.min(80, baseHp);
         } else if (floor <= 30) {
             baseHp += Math.floor(Math.random() * 8) + floor * 2;
+            enemyMaxHp = baseHp;
         } else if (floor <= 35) {
             baseHp += Math.floor(Math.random() * 8) + floor * 2.5;
+            enemyMaxHp = baseHp;
         } else {
             baseHp += Math.floor(Math.random() * 8) + floor * 3;
+            enemyMaxHp = baseHp;
         }
         
         enemyHp = enemyMaxHp;
