@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>勇闖地下城：怪盜降臨版</title>
+    <title>勇闖地下城：動態物價版</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -93,7 +93,7 @@
         .color-banana { color: #ffee58; font-weight: bold; }
         .color-princess { color: #ff69b4; font-weight: bold; }
         .color-absurd { color: #ffeb3b; font-weight: bold; }
-        .color-thief { color: #ff3d00; font-weight: bold; } /* 大盜警示紅橘色 */
+        .color-thief { color: #ff3d00; font-weight: bold; }
         .color-achieve { color: #00e5ff; font-weight: bold; background: rgba(0,229,255,0.1); padding: 2px 4px; border-radius: 4px; display: inline-block;}
         .color-event { color: #ff9800; font-weight: bold; }
 
@@ -234,8 +234,8 @@
         </div>
 
         <div class="controls" id="ctrl-shop" style="display: none;">
-            <button class="btn btn-shop" onclick="buyItem('weapon')">🗡️ 進階武器 (60金)</button>
-            <button class="btn btn-shop" onclick="buyItem('armor')">🛡️ 升級防具 (+2防, 50金)</button>
+            <button class="btn btn-shop" id="shop-btn-weapon" onclick="buyItem('weapon')">🗡️ 進階武器</button>
+            <button class="btn btn-shop" id="shop-btn-armor" onclick="buyItem('armor')">🛡️ 升級防具</button>
             <button class="btn btn-shop" onclick="buyItem('potion')">🧪 生命藥水 (25金)</button>
             <button class="btn btn-shop" onclick="buyItem('maxhp')">❤️ 上限藥水 (+20HP, 80金)</button>
             <button class="btn btn-explore" onclick="leaveShop()" style="grid-column: span 2;">🚪 離開商人</button>
@@ -267,12 +267,19 @@ let stats = {
 };
 let currentFight = { dmgTaken: 0, absurdCount: 0 };
 
+// 武器庫與各階級價格
 let weapons = [
-    { name: "木劍", minDmg: 8, maxDmg: 15, unlocked: true },
-    { name: "精鋼長劍", minDmg: 14, maxDmg: 24, unlocked: false },
-    { name: "烈焰魔杖", minDmg: 20, maxDmg: 35, unlocked: false },
-    { name: "吸血鬼匕首", minDmg: 16, maxDmg: 28, unlocked: false }
+    { name: "木劍", minDmg: 8, maxDmg: 15, unlocked: true, price: 0 },
+    { name: "精鋼長劍", minDmg: 14, maxDmg: 24, unlocked: false, price: 60 },
+    { name: "烈焰魔杖", minDmg: 20, maxDmg: 35, unlocked: false, price: 120 },
+    { name: "吸血鬼匕首", minDmg: 16, maxDmg: 28, unlocked: false, price: 200 }
 ];
+
+// 防具升級價格計算：基礎 50 金幣，每升級 1 次（防禦 +2）遞增 30 金幣
+function getArmorPrice() {
+    let upgradeTimes = Math.floor(defense / 2);
+    return 50 + upgradeTimes * 30;
+}
 
 const absurdAttacks = [
     { name: "裸體跳舞", desc: "精神打擊造成" },
@@ -301,6 +308,24 @@ function initGame() {
     updateUI();
 }
 
+function updateShopButtons() {
+    // 刷新武器購買按鈕
+    let nextW = weapons.find(w => !w.unlocked);
+    let btnW = document.getElementById("shop-btn-weapon");
+    if (nextW) {
+        btnW.innerText = `🗡️ ${nextW.name} (${nextW.price}金)`;
+        btnW.disabled = false;
+    } else {
+        btnW.innerText = `🗡️ 武器已達最高階`;
+        btnW.disabled = true;
+    }
+
+    // 刷新防具購買按鈕
+    let armorCost = getArmorPrice();
+    let btnA = document.getElementById("shop-btn-armor");
+    btnA.innerText = `🛡️ 升級防具 (+2防, ${armorCost}金)`;
+}
+
 function updateUI() {
     document.getElementById("val-floor").innerText = floor;
     document.getElementById("val-gold").innerText = gold;
@@ -316,6 +341,10 @@ function updateUI() {
         document.getElementById("enemy-hp-text").innerText = `敵方生命：${enemyHp}`;
     } else {
         document.getElementById("enemy-zone").style.display = "none";
+    }
+
+    if (gameState === "shop") {
+        updateShopButtons();
     }
 }
 
@@ -353,15 +382,13 @@ function explore() {
     
     if (roll < 0.35 || roll >= 0.45) stats.consecutiveTraps = 0;
 
-    // 1. 神偷怪盜 (極低機率 3%: 0.00 ~ 0.03)
+    // 1. 神偷怪盜 (3%: 0.00 ~ 0.03)
     if (roll < 0.03) {
         if (gold > 0) {
             let stolen = Math.floor(gold / 2);
             gold -= stolen;
             log(`🦹 <b>一道黑影竄出！你遭遇了【神偷怪盜】！</b><br>他趁你不備順走了一半的財產（扣除 <span style="color:#ff3d00;">${stolen} 金幣</span>）並迅速消失在陰影中！`, "color-thief");
-            if (stolen >= 100) {
-                unlockAchievement("一夜暴窮", "單次被神偷怪盜洗劫超過 100 金幣");
-            }
+            if (stolen >= 100) unlockAchievement("一夜暴窮", "單次被神偷怪盜洗劫超過 100 金幣");
         } else {
             log(`🦹 <b>一道黑影竄出！你遭遇了【神偷怪盜】！</b><br>但他摸了摸你的空口袋，嫌棄地吐了一口口水後離開了...`, "color-neutral");
         }
@@ -646,18 +673,29 @@ function buyItem(type) {
     if (type === "weapon") {
         let lockedIdx = weapons.findIndex(w => !w.unlocked);
         if (lockedIdx !== -1) {
-            if (gold >= 60) {
-                gold -= 60; stats.totalSpent += 60;
+            let cost = weapons[lockedIdx].price;
+            if (gold >= cost) {
+                gold -= cost;
+                stats.totalSpent += cost;
                 weapons[lockedIdx].unlocked = true;
                 currentWeaponIdx = lockedIdx;
-                log(`🗡️ 購買並裝配新武器【${weapons[lockedIdx].name}】！`, "color-gold");
-            } else log(`❌ 金幣不足。`, "color-bad");
-        } else log(`✨ 已解鎖所有武器！`);
+                log(`🗡️ 購買並裝配新武器【${weapons[lockedIdx].name}】！消耗 ${cost} 金幣。`, "color-gold");
+            } else {
+                log(`❌ 金幣不足！購買【${weapons[lockedIdx].name}】需要 ${cost} 金幣。`, "color-bad");
+            }
+        } else {
+            log(`✨ 所有武器已達最高階！`);
+        }
     } else if (type === "armor") {
-        if (gold >= 50) {
-            gold -= 50; stats.totalSpent += 50; defense += 2;
-            log(`🛡️ 防具升級！防禦力 +2 (目前: ${defense})`, "color-good");
-        } else log(`❌ 金幣不足。`, "color-bad");
+        let cost = getArmorPrice();
+        if (gold >= cost) {
+            gold -= cost;
+            stats.totalSpent += cost;
+            defense += 2;
+            log(`🛡️ 防具升級成功！防禦力 +2 (目前: ${defense})，消耗 ${cost} 金幣。`, "color-good");
+        } else {
+            log(`❌ 金幣不足！防具升級需要 ${cost} 金幣。`, "color-bad");
+        }
     } else if (type === "potion") {
         if (gold >= 25) {
             gold -= 25; stats.totalSpent += 25; potions++;
