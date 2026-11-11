@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>電子寵物石 2.0：靈魂覺醒</title>
+    <title>電子寵物石</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -72,6 +72,14 @@
             border: 1px solid #ffeeba;
         }
 
+        .growth-indicator {
+            position: absolute;
+            top: 8px; right: 8px;
+            font-size: 11px;
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
         .rock-avatar {
             font-size: 64px;
             cursor: pointer;
@@ -110,7 +118,6 @@
         .bg-blue { background: #3498db; }
         .bg-orange { background: #e67e22; }
         .bg-gray { background: #95a5a6; }
-        .bg-green { background: #2ecc71; }
         .bg-purple { background: #9b59b6; }
         
         /* 日誌區 */
@@ -131,6 +138,8 @@
         .log-entry { margin-bottom: 4px; border-bottom: 1px dashed #dee2e6; padding-bottom: 3px; }
         .log-evo { color: #d35400; font-weight: bold; }
         .log-event { color: #8e44ad; font-weight: bold; }
+        .color-good { color: #27ae60; font-weight: bold; }
+        .color-bad { color: #e74c3c; font-weight: bold; }
 
         /* 分頁導航 */
         .tabs { display: flex; gap: 4px; margin-bottom: 8px; }
@@ -192,6 +201,7 @@
 
         <div class="stage">
             <div class="personality-badge" id="txt-personality">載入中...</div>
+            <div class="growth-indicator">🌿 光合生長中</div>
             <div class="rock-avatar" id="rock-display" onclick="pokeRock()">🪨</div>
         </div>
         <div class="rock-title" id="rock-evo">普通路邊碎石</div>
@@ -225,10 +235,11 @@
         <div id="tab-act" class="tab-content active">
             <button class="btn-act" onclick="doAction('rub')">🧽 用力打磨</button>
             <button class="btn-act" onclick="doAction('sun')">☀️ 丟在外面風吹</button>
+            <button class="btn-act" onclick="doAction('gather')">🌿 陰暗角落採集</button>
             <button class="btn-act" onclick="doAction('talk')">🗣️ 瘋狂倒垃圾</button>
             <button class="btn-act" onclick="doAction('draw')">🖊️ 畫上動動眼珠</button>
             <button class="btn-act" onclick="doAction('cat')">🐾 丟給貓當玩具</button>
-            <button class="btn-act" onclick="doAction('hammer')">🔨 拿鐵槌敲它 (高風險)</button>
+            <button class="btn-act" onclick="doAction('hammer')" style="grid-column: span 2;">🔨 拿鐵槌敲它 (高風險)</button>
         </div>
 
         <!-- 餵食分頁 -->
@@ -264,7 +275,7 @@ function init() {
     if (saved) {
         try { 
             let parsed = JSON.parse(saved);
-            pet = { ...pet, ...parsed }; // 合併防呆
+            pet = { ...pet, ...parsed };
         } catch (e) {}
     } else {
         pet.personality = personalities[Math.floor(Math.random() * personalities.length)];
@@ -273,6 +284,9 @@ function init() {
     calcOffline();
     updateUI();
     renderDex();
+
+    // 啟動前端放置定時心跳（每 3 秒長出青苔，每 15 秒體重/孤獨動態變化）
+    setInterval(gameTick, 3000);
 }
 
 function save() {
@@ -280,17 +294,51 @@ function save() {
     updateUI();
 }
 
+// 定時放置心跳邏輯
+let tickCounter = 0;
+function gameTick() {
+    tickCounter++;
+    
+    // 每 3 秒自然產出青苔
+    pet.moss += 1;
+    document.getElementById("txt-moss").innerText = pet.moss;
+
+    // 每 15 秒（5 次心跳）體重微降、孤獨感自然上升
+    if (tickCounter % 5 === 0) {
+        if (pet.weight > 30) pet.weight = clamp(pet.weight - 1);
+        if (pet.lonely < 120) pet.lonely = clamp(pet.lonely + 1);
+        
+        // 偶發微型環境事件
+        if (Math.random() < 0.2) {
+            let passiveEvents = [
+                "一隻蝸牛緩緩爬過石頭表面，留下了些微濕潤的黏液痕跡。",
+                "一陣清爽的微風吹過，幾顆塵埃從石身上飄落。",
+                "陽光穿過樹葉間隙灑落，石頭表面散發著溫潤的微光。"
+            ];
+            log(`🍃 ${passiveEvents[Math.floor(Math.random() * passiveEvents.length)]}`);
+        }
+        updateUI();
+        save();
+    }
+}
+
 function calcOffline() {
     let now = Date.now();
     let hours = (now - pet.lastTime) / (1000 * 60 * 60);
-    if (hours > 0.05) { // 離開超過 3 分鐘才算
+    if (hours > 0.02) { // 離線超過約 1 分鐘即結算
         let expGain = Math.floor(hours * 60);
-        let mossGain = Math.floor(hours * 15);
+        let mossGain = Math.floor(hours * 30);
         if (pet.personality === "厭世社恐型") { expGain = Math.floor(expGain * 1.5); }
         
+        // 離線時間影響：體重隨時間消耗減輕，孤獨感隨無人理會而上升
+        let weightLoss = Math.floor(hours * 3);
+        let lonelyGain = Math.floor(hours * 8);
+        pet.weight = clamp(pet.weight - weightLoss, 20);
+        pet.lonely = clamp(pet.lonely + lonelyGain, 0, 150);
+
         addExp(expGain);
         pet.moss += mossGain;
-        log(`💤 離線收益：石頭獨自吸收天地精華，獲得 ${expGain} EXP 與 ${mossGain} 克青苔！`, "color-good");
+        log(`💤 離線結算：你在這段時間吸收日月精華，收穫 ${mossGain} 克青苔與 ${expGain} EXP！（體重 -${weightLoss}，孤獨 +${lonelyGain}）`, "color-good");
     }
     pet.lastTime = now;
     save();
@@ -317,15 +365,21 @@ function clamp(val, min=0, max=150) { return Math.max(min, Math.min(max, val)); 
 function addExp(amount) {
     pet.exp += amount;
     let threshold = pet.level * 100;
-    if (pet.exp >= threshold) {
+    while (pet.exp >= threshold) {
         pet.level++;
         pet.exp -= threshold;
-        log(`🆙 升級了！你的石頭達到了等級 ${pet.level}！`, "log-evo");
+        threshold = pet.level * 100;
+        
+        // 升級額外獎勵：心情回滿 + 空投青苔大禮包
+        pet.mood = 100;
+        let bonusMoss = pet.level * 15;
+        pet.moss += bonusMoss;
+        log(`🎉 <b>等級提升至 Lv.${pet.level}！</b> 心情回滿，額外獲得升級空投獎勵：<b>${bonusMoss} 克青苔</b>！`, "log-evo");
     }
 }
 
 function checkRandomEvent() {
-    if (Math.random() < 0.15) { // 15% 突發事件
+    if (Math.random() < 0.15) {
         let events = [
             { msg: "🐕 一隻野狗路過，對著石頭抬起了後腿... 石頭獲得了異味，光滑度下降，但硬度增加了！", s: -10, h: +15 },
             { msg: "👶 路過的小孩以為它是巧克力想咬一口！小孩牙齒斷了，石頭獲得了實戰經驗！", exp: 50, h: +5 },
@@ -353,8 +407,14 @@ function doAction(type) {
         pet.hard = clamp(pet.hard + 10);
         pet.lonely = clamp(pet.lonely + 5);
         log("☀️ 把它丟在外面風吹日曬，硬度上升，但它覺得有點被冷落。");
+    } else if (type === 'gather') {
+        let gathered = Math.floor(5 + Math.random() * 8);
+        pet.moss += gathered;
+        pet.lonely = clamp(pet.lonely - 3);
+        addExp(15);
+        log(`🌿 你帶著石頭到花圃陰暗角落散步，手動採集了 <b>${gathered} 克青苔</b>！`, "color-good");
     } else if (type === 'talk') {
-        let p = (pet.personality === "厭世社恐型") ? 15 : -15; // 社恐聽人抱怨會加倍煩躁
+        let p = (pet.personality === "厭世社恐型") ? 15 : -15;
         pet.lonely = clamp(pet.lonely - p);
         pet.mood = clamp(pet.mood - 10);
         log("🗣️ 你瘋狂向它倒垃圾，孤獨感變化了，但它吸收太多負能量，心情變差了。");
@@ -424,7 +484,7 @@ function useEquip(type) {
         pet.moss -= 20;
         
         let successRate = (pet.personality === "極限運動員") ? 0.85 : 0.60;
-        if (pet.weight > 100) successRate -= 0.3; // 太胖容易摔
+        if (pet.weight > 100) successRate -= 0.3;
         
         if (Math.random() < successRate) {
             pet.mood = clamp(pet.mood + 40);
@@ -451,7 +511,6 @@ function pokeRock() {
         log(responses[Math.floor(Math.random() * responses.length)]);
     }
     
-    // 點擊觸發 CSS 動畫
     let el = document.getElementById('rock-display');
     el.style.transform = `scale(${getScaleX() * 0.9}, ${getScaleY() * 0.9}) rotate(10deg)`;
     setTimeout(() => { el.style.transform = `scale(${getScaleX()}, ${getScaleY()}) rotate(0deg)`; }, 150);
@@ -462,7 +521,6 @@ function pokeRock() {
 function checkEvolution() {
     let newEvo = pet.evolution;
     
-    // 根據複雜數值判定進化路線 (優先順序)
     if (pet.hard >= 140 && pet.smooth >= 140) newEvo = "永恆璀璨鑽石";
     else if (pet.hard >= 130) newEvo = "天外隕石";
     else if (pet.smooth >= 130) newEvo = "開光水晶球";
@@ -475,7 +533,9 @@ function checkEvolution() {
         pet.evolution = newEvo;
         if (!pet.pokedex.includes(newEvo)) {
             pet.pokedex.push(newEvo);
-            log(`🌟 奇蹟發生！你的石頭覺醒進化成了【${newEvo}】！解鎖新圖鑑！`, "log-evo");
+            // 圖鑑解鎖獎勵：發放大紅包 50 青苔
+            pet.moss += 50;
+            log(`🌟 奇蹟發生！你的石頭覺醒進化成了【${newEvo}】！解鎖圖鑑並獲得 <b>50 青苔獎勵</b>！`, "log-evo");
             renderDex();
         } else {
             log(`🔄 體態改變！石頭變成了【${newEvo}】形態。`, "color-good");
@@ -483,7 +543,6 @@ function checkEvolution() {
     }
 }
 
-// 根據體重計算圖片變形的比例
 function getScaleX() { return clamp(pet.weight / 50, 0.4, 2.5); }
 function getScaleY() { return clamp(50 / pet.weight, 0.4, 2.0); }
 
@@ -503,11 +562,9 @@ function updateUI() {
     document.getElementById("v-weight").innerText = pet.weight;
     document.getElementById("b-weight").style.width = `${(pet.weight/150)*100}%`;
 
-    // 處理外觀形變 (胖瘦)
     let display = document.getElementById("rock-display");
     display.style.transform = `scale(${getScaleX()}, ${getScaleY()})`;
     
-    // 根據進化更換 Emoji
     let emoji = "🪨";
     if (pet.evolution === "永恆璀璨鑽石") emoji = "💎";
     else if (pet.evolution === "天外隕石") emoji = "☄️";
