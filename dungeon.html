@@ -438,13 +438,13 @@ function explore() {
         if (floor <= 5) {
             enemyMaxHp = Math.min(30, baseHp);
         } else if (floor <= 10) {
-            enemyMaxHp = Math.min(40, Math.max(24, baseHp));
+            enemyMaxHp = Math.min(35, Math.max(24, baseHp));
         } else if (floor <= 15) {
-            enemyMaxHp = Math.min(60, Math.max(35, baseHp));
+            enemyMaxHp = Math.min(50, Math.max(35, baseHp));
         } else if (floor <= 20) {
-            enemyMaxHp = Math.min(80, Math.max(50, baseHp));
+            enemyMaxHp = Math.min(90, Math.max(50, baseHp));
         } else if (floor <= 25) {
-            enemyMaxHp = Math.min(120, Math.max(50, baseHp));
+            enemyMaxHp = Math.min(130, Math.max(50, baseHp));
         } else {
             enemyMaxHp = Math.floor(22 + Math.random() * 15 + floor * 4);
         }
@@ -571,14 +571,13 @@ function resolveEvent(event, choice) {
         if (gold >= 20) {
             gold -= 20;
             let r = Math.random();
-            // 10% 兩倍獎金 (40金), 15% 回本 (20金), 15% 藥水一瓶, 60% 血本無歸
             if (r < 0.10) {
                 gold += 40;
                 log(`🎰 <b>大獲全勝！</b> 幸運猜中，贏得兩倍獎金 40 金幣！`, "color-gold");
             } else if (r < 0.25) {
                 gold += 20;
                 log(`🎰 <b>不賺不賠！</b> 拿回原本的 20 金幣賭本！`, "color-neutral");
-            } else if (r < 0.40) {
+            } else if (r < 0.30) {
                 potions++;
                 log(`🎰 <b>安慰獎！</b> 猜中附屬格子，獲得 1 罐生命藥水！`, "color-good");
             } else {
