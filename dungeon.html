@@ -287,13 +287,39 @@ function getRestPrice() {
     return 30 + Math.floor((floor - 1) / 5) * 10;
 }
 
-const absurdAttacks = [
-    { name: "裸體跳舞", desc: "精神打擊造成" },
-    { name: "跳Breaking", desc: "震波造成" },
-    { name: "強力噴口水", desc: "腐蝕造成" },
-    { name: "聽他講當兵往事", desc: "精神耗弱造成" },
-    { name: "生化毒氣臭襪攻擊", desc: "中毒造成" },
-    { name: "瘋狂劇透電影結局", desc: "內傷造成" }
+// 完整招式清單（原味經典、精神污染、意外痛點、帥氣奇幻）
+const allMonsterAttacks = [
+    // --- 原有經典招式 ---
+    { name: "使出恥度全開的【裸體跳舞】", desc: "畫面太美不敢看，精神打擊造成" },
+    { name: "無預警在闖關者身上狂跳【Breaking地板動作】", desc: "頭部直接撞擊地面，震波造成" },
+    { name: "氣噗噗地朝闖關者臉上【強力噴口水】", desc: "強酸口水腐蝕裝甲，造成" },
+    { name: "使出泰山壓頂般的【大力恥辱衝撞】", desc: "撞得你五臟六腑移位，造成" },
+    { name: "突然開始大聲朗誦【自己的恥辱黑歷史詩歌】", desc: "心靈受創嚴重，精神傷害造成" },
+    { name: "用滑稽的姿態原地【旋轉大法大暴走】", desc: "尾巴甩到你屁股，造成" },
+    { name: "從嘴裡吐出黏糊糊的【神祕綠色鼻涕球】", desc: "噁心感爆表，造成" },
+
+    // --- 荒唐與精神污染系 ---
+    { name: "拿出麥克風高歌一曲【走音破嗓死亡重金屬】", desc: "耳膜差點震破，音波造成" },
+    { name: "掏出陳年老照片強迫你聽【三小時當兵往事】", desc: "無聊到靈魂出竅，精神耗弱造成" },
+    { name: "脫下穿了十年的鞋子施展【生化毒氣臭襪攻擊】", desc: "方圓十里寸草不生，中毒造成" },
+    { name: "用無辜的大眼睛對你狂放【油膩大叔眨眼放電】", desc: "生理不適引發胃抽筋，造成" },
+    { name: "突然拿出算盤開始大聲計算【你這個月的卡費帳單】", desc: "面對現實的殘酷打擊，心痛造成" },
+    { name: "對著你瘋狂劇透【你最期待的那部電影結局】", desc: "憤怒值突破天際導致內傷，造成" },
+    { name: "在地下城裡突然擺起路邊攤推銷【過期健康食品】", desc: "腦波太弱差點掏錢，精神耗損造成" },
+    { name: "用指甲用力刮擦【生鏽的地下城黑板】", desc: "雞皮疙瘩掉滿地，物理與精神雙重造成" },
+
+    // --- 意外痛點系 ---
+    { name: "在地板上撒滿了【透明尖銳樂高積木】", desc: "你一腳踩上去痛到升天，造成" },
+    { name: "看準時機用力彈了一下你的【手肘麻筋】", desc: "整隻手臂瞬間觸電麻痺，造成" },
+    { name: "精準地把你的【小拇指撞向地下城桌角】", desc: "痛到在地上打滾三圈，造成" },
+    { name: "拿著剛煮滾的湯匙逼你喝【超燙口濃湯】", desc: "上顎直接燙掉一層皮，灼傷造成" },
+
+    // --- 正統帥氣系 ---
+    { name: "凝聚黑暗能量揮出【暗影裂地斬】", desc: "強烈的劍氣撕裂空氣，造成" },
+    { name: "張開血盆大口發動【狂暴野獸撕咬】", desc: "尖銳的獠牙無情貫穿防禦，造成" },
+    { name: "召喚地下城落石使出【泰坦巨岩崩落】", desc: "沉重的巨石無情砸落，造成" },
+    { name: "身形化作殘影突襲【疾風連環爪擊】", desc: "快到看不清動作的連擊，造成" },
+    { name: "蓄力噴吐出高溫熾熱的【煉獄深淵火球】", desc: "熊熊烈火吞噬了你的四周，造成" }
 ];
 
 const logBox = document.getElementById("log-box");
@@ -340,7 +366,6 @@ function updateUI() {
     hpBar.style.width = hpPercent + "%";
     hpBar.style.backgroundColor = hpPercent > 50 ? "#4caf50" : hpPercent > 20 ? "#ff9800" : "#f44336";
 
-    // 更新休息按鈕價格
     let restCost = getRestPrice();
     let btnRest = document.getElementById("btn-rest");
     if (btnRest) {
@@ -408,14 +433,16 @@ function explore() {
     else if (roll < 0.28) {
         gameState = "combat";
         
-        // 生命值階梯限制：1-5層 <= 30，6-10層 <= 50，11-20層 <= 80
+        // 生命值階梯嚴格限制：1-5層 <= 30，6-10層 <= 40，11-15層 <= 60，16-20層 <= 80
         let baseHp = 18 + Math.floor(Math.random() * 8) + floor * 3;
         if (floor <= 5) {
             enemyMaxHp = Math.min(30, baseHp);
         } else if (floor <= 10) {
-            enemyMaxHp = Math.min(50, Math.max(26, baseHp));
+            enemyMaxHp = Math.min(40, Math.max(24, baseHp));
+        } else if (floor <= 15) {
+            enemyMaxHp = Math.min(60, Math.max(35, baseHp));
         } else if (floor <= 20) {
-            enemyMaxHp = Math.min(80, Math.max(45, baseHp));
+            enemyMaxHp = Math.min(80, Math.max(50, baseHp));
         } else {
             enemyMaxHp = Math.floor(22 + Math.random() * 15 + floor * 4);
         }
@@ -546,13 +573,13 @@ function resolveEvent(event, choice) {
             if (r < 0.10) {
                 gold += 40;
                 log(`🎰 <b>大獲全勝！</b> 幸運猜中，贏得兩倍獎金 40 金幣！`, "color-gold");
-            } else if (r < 0.25) { // 0.10 ~ 0.25 = 15%
+            } else if (r < 0.25) {
                 gold += 20;
                 log(`🎰 <b>不賺不賠！</b> 拿回原本的 20 金幣賭本！`, "color-neutral");
-            } else if (r < 0.40) { // 0.25 ~ 0.40 = 15%
+            } else if (r < 0.40) {
                 potions++;
                 log(`🎰 <b>安慰獎！</b> 猜中附屬格子，獲得 1 罐生命藥水！`, "color-good");
-            } else { // 0.40 ~ 1.00 = 60%
+            } else {
                 log(`😭 <b>血本無歸！</b> 猜錯了，哥布林嘲笑你並帶著 20 金幣溜走。`, "color-bad");
             }
         } else {
@@ -676,7 +703,7 @@ function combatAction(action) {
         let dropGoldMax = 0;
 
         if (floor <= 10) {
-            atkMod = 0.80; // 前 10 層攻擊傷害降低 20%
+            atkMod = 0.85; // 前 10 層攻擊傷害降低 15%
             critChance = 0.01; // 1% 扣兩倍血
         } else if (floor <= 20) {
             atkMod = 0.90; // 11-20 層攻擊力降低 10%
@@ -696,8 +723,9 @@ function combatAction(action) {
         }
 
         let isCrit = Math.random() < critChance;
-        let isAbsurd = Math.random() < 0.2;
-        let randomAttack = absurdAttacks[Math.floor(Math.random() * absurdAttacks.length)];
+        
+        // 隨機選取招式（全庫包含經典、荒唐、意外痛點與帥氣系）
+        let chosenAttack = allMonsterAttacks[Math.floor(Math.random() * allMonsterAttacks.length)];
 
         let baseEnemyAtk = action === "defend" ? Math.floor(enemyAtk * 0.3) : enemyAtk;
         let modifiedAtk = Math.round(baseEnemyAtk * atkMod);
@@ -707,15 +735,10 @@ function combatAction(action) {
             actualAtk *= 2; // 扣兩倍血
         }
 
-        if (isAbsurd) {
-            let critText = isCrit ? `<span class="color-crit">【⚠️ 暴擊兩倍傷害！】</span>` : "";
-            log(`🤪 怪物使出【${randomAttack.name}】！${critText}${randomAttack.desc} ${actualAtk} 傷害。`, "color-absurd");
-            currentFight.absurdCount++;
-            if (currentFight.absurdCount >= 3) unlockAchievement("精神免疫", "一場戰鬥承受3次荒唐攻擊");
-        } else {
-            let critText = isCrit ? `<span class="color-crit">【⚠️ 致命暴擊兩倍血！】</span>` : "";
-            log(`🩸 怪物發動猛攻！${critText}防具抵擋後受到 ${actualAtk} 點傷害。`, "color-bad");
-        }
+        let critText = isCrit ? `<span class="color-crit">【⚠️ 暴擊兩倍傷害！】</span>` : "";
+        log(`💥 怪物${chosenAttack.name}！${critText}${chosenAttack.desc} ${actualAtk} 傷害。`, "color-absurd");
+        currentFight.absurdCount++;
+        if (currentFight.absurdCount >= 3) unlockAchievement("精神免疫", "一場戰鬥承受3次荒唐攻擊");
 
         // 掉落金幣判定 (31層以上有 5% 機率)
         if (dropGoldMax > 0 && Math.random() < 0.05 && gold > 0) {
