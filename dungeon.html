@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>勇闖地下城：動態物價版</title>
+    <title>勇闖地下城</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -221,7 +221,7 @@
 
         <div class="controls" id="ctrl-explore">
             <button class="btn btn-explore" onclick="explore()">🚪 探索下一間房間</button>
-            <button class="btn btn-rest" onclick="rest()">⛺ 紮營休息 (30金)</button>
+            <button class="btn btn-rest" id="btn-rest" onclick="rest()">⛺ 紮營休息 (30金)</button>
             <button class="btn btn-bag" onclick="openBag()">🎒 查看背包</button>
             <button class="btn btn-flee" onclick="retreat()">🏃 攜帶戰利品撤退</button>
         </div>
@@ -281,6 +281,11 @@ function getArmorPrice() {
     return 50 + upgradeTimes * 30;
 }
 
+// 紮營休息價格計算：基礎 30 金幣，每 5 關增加 10 金幣
+function getRestPrice() {
+    return 30 + Math.floor((floor - 1) / 5) * 10;
+}
+
 const absurdAttacks = [
     { name: "裸體跳舞", desc: "精神打擊造成" },
     { name: "跳Breaking", desc: "震波造成" },
@@ -309,7 +314,6 @@ function initGame() {
 }
 
 function updateShopButtons() {
-    // 刷新武器購買按鈕
     let nextW = weapons.find(w => !w.unlocked);
     let btnW = document.getElementById("shop-btn-weapon");
     if (nextW) {
@@ -320,7 +324,6 @@ function updateShopButtons() {
         btnW.disabled = true;
     }
 
-    // 刷新防具購買按鈕
     let armorCost = getArmorPrice();
     let btnA = document.getElementById("shop-btn-armor");
     btnA.innerText = `🛡️ 升級防具 (+2防, ${armorCost}金)`;
@@ -335,6 +338,13 @@ function updateUI() {
     let hpPercent = Math.max(0, (hp / maxHp) * 100);
     hpBar.style.width = hpPercent + "%";
     hpBar.style.backgroundColor = hpPercent > 50 ? "#4caf50" : hpPercent > 20 ? "#ff9800" : "#f44336";
+
+    // 更新休息按鈕價格
+    let restCost = getRestPrice();
+    let btnRest = document.getElementById("btn-rest");
+    if (btnRest) {
+        btnRest.innerText = `⛺ 紮營休息 (${restCost}金)`;
+    }
 
     if (gameState === "combat") {
         document.getElementById("enemy-zone").style.display = "block";
@@ -751,12 +761,15 @@ function usePotion() {
 }
 
 function rest() {
-    if (gold >= 30) {
-        if (hp >= maxHp) { log(`狀態絕佳！`); return; }
-        gold -= 30; hp = Math.min(maxHp, hp + 30);
-        log(`⛺ 紮營休息，恢復了 30 生命。`, "color-good");
+    let cost = getRestPrice();
+    if (gold >= cost) {
+        if (hp >= maxHp) { log(`狀態絕佳，不需要休息！`); return; }
+        gold -= cost; hp = Math.min(maxHp, hp + 30);
+        log(`⛺ 紮營休息，消耗 ${cost} 金幣，恢復了 30 生命。`, "color-good");
         updateUI();
-    } else log(`❌ 金幣不足 30 金`, "color-bad");
+    } else {
+        log(`❌ 金幣不足！紮營休息需要 ${cost} 金幣。`, "color-bad");
+    }
 }
 
 function retreat() {
