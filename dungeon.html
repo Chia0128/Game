@@ -87,6 +87,7 @@
         
         .color-good { color: #4caf50; }
         .color-bad { color: #f44336; }
+        .color-crit { color: #ff1744; font-weight: bold; background: rgba(255,23,68,0.15); padding: 2px 4px; border-radius: 4px; }
         .color-gold { color: #ffb300; }
         .color-neutral { color: #64b5f6; }
         .color-npc { color: #ab47bc; font-weight: bold; }
@@ -406,7 +407,19 @@ function explore() {
     // 2. 怪物 (25%: 0.03 ~ 0.28)
     else if (roll < 0.28) {
         gameState = "combat";
-        enemyMaxHp = Math.floor(22 + Math.random() * 15 + floor * 4);
+        
+        // 生命值階梯限制：1-5層 <= 30，6-10層 <= 50，11-20層 <= 80
+        let baseHp = 18 + Math.floor(Math.random() * 8) + floor * 3;
+        if (floor <= 5) {
+            enemyMaxHp = Math.min(30, baseHp);
+        } else if (floor <= 10) {
+            enemyMaxHp = Math.min(50, Math.max(26, baseHp));
+        } else if (floor <= 20) {
+            enemyMaxHp = Math.min(80, Math.max(45, baseHp));
+        } else {
+            enemyMaxHp = Math.floor(22 + Math.random() * 15 + floor * 4);
+        }
+        
         enemyHp = enemyMaxHp;
         enemyAtk = Math.floor(6 + Math.random() * 7 + floor * 2);
         currentFight = { dmgTaken: 0, absurdCount: 0 };
@@ -482,7 +495,7 @@ function triggerSpecialEvent() {
     eventPanel.innerHTML = "";
 
     if (eventType === 0) {
-        log(`🎲 <b>【賭徒哥布林】</b>：「嘿！冒險者，要玩杯子猜球嗎？只要 20 金幣，贏了拿大獎！」`, "color-event");
+        log(`🎲 <b>【賭徒哥布林】</b>：「嘿！冒險者，要玩杯子猜球嗎？只要 20 金幣，有機會拿兩倍大獎！」`, "color-event");
         eventPanel.innerHTML = `
             <button class="btn btn-event" onclick="resolveEvent('gambler', 'play')">🎲 賭一把 (20金)</button>
             <button class="btn btn-event-safe" onclick="resolveEvent('gambler', 'leave')">🚶 拒絕並離開</button>
@@ -529,14 +542,18 @@ function resolveEvent(event, choice) {
         if (gold >= 20) {
             gold -= 20;
             let r = Math.random();
-            if (r < 0.20) {
-                gold += 80;
-                log(`🎰 大獲全勝！你贏得了 80 金幣！`, "color-gold");
-            } else if (r < 0.40) {
+            // 10% 兩倍獎金 (40金), 15% 回本 (20金), 15% 藥水一瓶, 60% 血本無歸
+            if (r < 0.10) {
+                gold += 40;
+                log(`🎰 <b>大獲全勝！</b> 幸運猜中，贏得兩倍獎金 40 金幣！`, "color-gold");
+            } else if (r < 0.25) { // 0.10 ~ 0.25 = 15%
+                gold += 20;
+                log(`🎰 <b>不賺不賠！</b> 拿回原本的 20 金幣賭本！`, "color-neutral");
+            } else if (r < 0.40) { // 0.25 ~ 0.40 = 15%
                 potions++;
-                log(`🎰 獲得安慰獎！得到了 1 罐生命藥水！`, "color-good");
-            } else {
-                log(`😭 猜錯了！哥布林嘲笑你並帶著 20 金幣溜走。`, "color-bad");
+                log(`🎰 <b>安慰獎！</b> 猜中附屬格子，獲得 1 罐生命藥水！`, "color-good");
+            } else { // 0.40 ~ 1.00 = 60%
+                log(`😭 <b>血本無歸！</b> 猜錯了，哥布林嘲笑你並帶著 20 金幣溜走。`, "color-bad");
             }
         } else {
             log(`❌ 金幣不足 20，哥布林鄙視地看了你一眼。`, "color-bad");
@@ -653,19 +670,60 @@ function combatAction(action) {
 
         endCombat();
     } else {
-        let actualAtk = 0;
-        if (Math.random() < 0.2) {
-            let randomAttack = absurdAttacks[Math.floor(Math.random() * absurdAttacks.length)];
-            let rawAtk = action === "defend" ? Math.floor(enemyAtk * 0.3) : enemyAtk;
-            actualAtk = Math.max(2, rawAtk - defense);
-            log(`🤪 怪物使出【${randomAttack.name}】！${randomAttack.desc} ${actualAtk} 傷害。`, "color-absurd");
-            currentFight.absurdCount++;
-            if(currentFight.absurdCount >= 3) unlockAchievement("精神免疫", "一場戰鬥承受3次荒唐攻擊");
+        // --- 怪物攻擊強度調整與暴擊判定 ---
+        let atkMod = 1.0;
+        let critChance = 0;
+        let dropGoldMax = 0;
+
+        if (floor <= 10) {
+            atkMod = 0.85; // 前 10 層攻擊傷害降低 15%
+            critChance = 0.01; // 1% 扣兩倍血
+        } else if (floor <= 20) {
+            atkMod = 0.90; // 11-20 層攻擊力降低 10%
+            critChance = 0.015; // 1.5% 扣兩倍血
+        } else if (floor <= 30) {
+            atkMod = 1.00; // 21-30 層攻擊力維持
+            critChance = 0.02; // 2% 扣兩倍血
+        } else if (floor <= 40) {
+            critChance = 0.03; // 3% 扣兩倍血
+            dropGoldMax = 50; // 5% 機率掉 50 以內金幣
+        } else if (floor <= 50) {
+            critChance = 0.05; // 5% 扣兩倍血
+            dropGoldMax = 70; // 5% 機率掉 70 以內金幣
         } else {
-            let rawAtk = action === "defend" ? Math.floor(enemyAtk * 0.3) : enemyAtk;
-            actualAtk = Math.max(2, rawAtk - defense);
-            log(`🩸 怪物攻擊！防具抵擋後受到 ${actualAtk} 點傷害。`, "color-bad");
+            critChance = 0.07; // 51 層以後 7% 扣兩倍血
+            dropGoldMax = 90; // 5% 機率掉 90 以內金幣
         }
+
+        let isCrit = Math.random() < critChance;
+        let isAbsurd = Math.random() < 0.2;
+        let randomAttack = absurdAttacks[Math.floor(Math.random() * absurdAttacks.length)];
+
+        let baseEnemyAtk = action === "defend" ? Math.floor(enemyAtk * 0.3) : enemyAtk;
+        let modifiedAtk = Math.round(baseEnemyAtk * atkMod);
+        let actualAtk = Math.max(2, modifiedAtk - defense);
+
+        if (isCrit) {
+            actualAtk *= 2; // 扣兩倍血
+        }
+
+        if (isAbsurd) {
+            let critText = isCrit ? `<span class="color-crit">【⚠️ 暴擊兩倍傷害！】</span>` : "";
+            log(`🤪 怪物使出【${randomAttack.name}】！${critText}${randomAttack.desc} ${actualAtk} 傷害。`, "color-absurd");
+            currentFight.absurdCount++;
+            if (currentFight.absurdCount >= 3) unlockAchievement("精神免疫", "一場戰鬥承受3次荒唐攻擊");
+        } else {
+            let critText = isCrit ? `<span class="color-crit">【⚠️ 致命暴擊兩倍血！】</span>` : "";
+            log(`🩸 怪物發動猛攻！${critText}防具抵擋後受到 ${actualAtk} 點傷害。`, "color-bad");
+        }
+
+        // 掉落金幣判定 (31層以上有 5% 機率)
+        if (dropGoldMax > 0 && Math.random() < 0.05 && gold > 0) {
+            let lostGold = Math.min(gold, Math.floor(1 + Math.random() * dropGoldMax));
+            gold -= lostGold;
+            log(`💸 遭受猛烈衝擊！口袋被震破，掉落了 <span style="color:#ff3d00; font-weight:bold;">${lostGold} 金幣</span>！`, "color-thief");
+        }
+
         hp -= actualAtk;
         if (actualAtk > 0) currentFight.dmgTaken += actualAtk;
         checkDeath();
