@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>電子寵物石</title>
+    <title>電子寵物石 2.0：靈魂覺醒</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
-            background-color: #ffffff;
-            color: #333333;
+            background-color: #f8f9fa;
+            color: #333;
             margin: 0;
             padding: 16px;
             display: flex;
@@ -19,294 +19,530 @@
         }
 
         #game-wrap {
-            background: #242933;
-            padding: 24px;
+            background: #ffffff;
+            padding: 20px;
             border-radius: 16px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-            max-width: 360px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            max-width: 380px;
             width: 100%;
             text-align: center;
             margin-top: 40px;
-            border: 1px solid #3d4452;
+            border: 1px solid #e9ecef;
         }
 
-        h2 { margin: 0 0 6px 0; color: #ced6e0; font-size: 24px; }
-        .tagline { font-size: 13px; color: #747d8c; margin-bottom: 18px; }
+        h2 { margin: 0 0 4px 0; color: #2c3e50; font-size: 22px; }
+        .tagline { font-size: 12px; color: #7f8c8d; margin-bottom: 12px; }
 
-        /* 石頭展示區 */
+        /* 頭部資訊 */
+        .header-stats {
+            display: flex;
+            justify-content: space-between;
+            background: #f1f3f5;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        /* 寵物展示區 */
         .stage {
-            height: 150px;
+            height: 140px;
+            background: #f8f9fa;
+            border: 1px dashed #ced4da;
+            border-radius: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        
+        .personality-badge {
+            position: absolute;
+            top: 8px; left: 8px;
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            border: 1px solid #ffeeba;
         }
 
         .rock-avatar {
-            font-size: 72px;
+            font-size: 64px;
             cursor: pointer;
-            transition: transform 0.15s ease-out;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             user-select: none;
             -webkit-user-select: none;
-            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));
+            filter: drop-shadow(0 6px 10px rgba(0,0,0,0.15));
         }
-        .rock-avatar:active {
-            transform: scale(0.92) rotate(4deg);
-        }
+        .rock-avatar:active { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
 
         .rock-title {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: bold;
-            color: #ffa502;
-            margin-bottom: 16px;
+            color: #d35400;
+            margin-bottom: 12px;
         }
 
         /* 數值儀表條 */
-        .stat-group {
-            background: #1e222a;
-            padding: 12px;
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            padding: 10px;
             border-radius: 10px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             text-align: left;
         }
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: #a4b0be;
-            margin-bottom: 4px;
-            font-weight: 600;
-        }
-        .bar-wrap {
-            background: #2f3542;
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-        .bar-wrap:last-child { margin-bottom: 0; }
-        .bar-fill {
-            height: 100%;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
-        .fill-smooth { background: #70a1ff; }
-        .fill-hard { background: #ff6348; }
-        .fill-lonely { background: #a4b0be; }
-
-        /* 冒險日誌 */
+        .stat-item { font-size: 12px; color: #495057; font-weight: 600; }
+        .stat-item span { float: right; color: #868e96; }
+        
+        .bar-wrap { background: #e9ecef; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+        .bar-fill { height: 100%; width: 0%; transition: width 0.3s ease; }
+        
+        .bg-blue { background: #3498db; }
+        .bg-orange { background: #e67e22; }
+        .bg-gray { background: #95a5a6; }
+        .bg-green { background: #2ecc71; }
+        .bg-purple { background: #9b59b6; }
+        
+        /* 日誌區 */
         .log-box {
-            background: #14171d;
-            border: 1px solid #2f3542;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
             border-radius: 8px;
             height: 90px;
             overflow-y: auto;
             padding: 8px;
             font-size: 12px;
             line-height: 1.5;
-            color: #ced6e0;
+            color: #495057;
             text-align: left;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             scroll-behavior: smooth;
         }
-        .log-line { margin-bottom: 4px; }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px dashed #dee2e6; padding-bottom: 3px; }
+        .log-evo { color: #d35400; font-weight: bold; }
+        .log-event { color: #8e44ad; font-weight: bold; }
 
-        /* 互動按鈕區 */
-        .grid-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        .btn-act {
-            background: #3742fa;
-            color: white;
-            border: none;
-            padding: 10px 8px;
+        /* 分頁導航 */
+        .tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+        .tab-btn {
+            flex: 1;
+            padding: 8px 0;
             font-size: 13px;
+            font-weight: bold;
+            background: #f1f3f5;
+            color: #868e96;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .tab-btn.active { background: #3498db; color: white; border-color: #3498db; }
+
+        /* 內容區塊 */
+        .tab-content { display: none; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .tab-content.active { display: grid; }
+
+        .btn-act {
+            background: #ffffff;
+            color: #2c3e50;
+            border: 1px solid #ced4da;
+            padding: 10px 4px;
+            font-size: 12px;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
-            transition: opacity 0.2s, transform 0.1s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: all 0.15s;
         }
-        .btn-act:active { transform: scale(0.96); opacity: 0.9; }
-        .btn-reset {
-            background: #57606f;
-            grid-column: span 2;
-            margin-top: 4px;
-            font-size: 12px;
-            padding: 6px;
-        }
+        .btn-act:hover { background: #f8f9fa; }
+        .btn-act:active { transform: scale(0.96); background: #e9ecef; }
+        
+        /* 圖鑑區 */
+        .pokedex-list { grid-column: span 2; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .dex-item { background: #f1f3f5; padding: 6px 12px; border-radius: 12px; font-size: 12px; border: 1px solid #dee2e6; }
+        .dex-item.unlocked { background: #fff3cd; color: #856404; border-color: #ffeeba; font-weight: bold; }
+
+        .btn-reset { grid-column: span 2; background: #ff7675; color: white; border: none; margin-top: 8px; }
     </style>
 </head>
 <body>
 
-    <!-- 返回大廳按鈕 -->
     <button onclick="window.location.href='index.html'" style="all: unset; position: fixed; top: 15px; left: 15px; z-index: 99999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;">
         ⬅️ 返回大廳
     </button>
 
     <div id="game-wrap">
-        <h2>🪨 電子寵物石</h2>
-        <div class="tagline">它不需要被餵食，因為它只是一顆石頭。</div>
+        <h2>🪨 電子寵物石 2.0</h2>
+        <div class="tagline">靈魂覺醒的放置養成小品</div>
+
+        <div class="header-stats">
+            <div>等級: <span id="txt-lvl">1</span></div>
+            <div>青苔: <span id="txt-moss" style="color: #2ecc71;">0</span> 克</div>
+            <div>EXP: <span id="txt-exp">0/100</span></div>
+        </div>
 
         <div class="stage">
+            <div class="personality-badge" id="txt-personality">載入中...</div>
             <div class="rock-avatar" id="rock-display" onclick="pokeRock()">🪨</div>
         </div>
-        <div class="rock-title" id="rock-rank">普通路邊碎石</div>
+        <div class="rock-title" id="rock-evo">普通路邊碎石</div>
 
-        <!-- 屬性條 -->
-        <div class="stat-group">
-            <div class="stat-row"><span>✨ 光滑度</span><span id="txt-smooth">0 / 100</span></div>
-            <div class="bar-wrap"><div class="bar-fill fill-smooth" id="bar-smooth"></div></div>
-
-            <div class="stat-row"><span>🛡️ 硬度</span><span id="txt-hard">10 / 100</span></div>
-            <div class="bar-wrap"><div class="bar-fill fill-hard" id="bar-hard"></div></div>
-
-            <div class="stat-row"><span>🌧️ 孤獨感</span><span id="txt-lonely">80 / 100</span></div>
-            <div class="bar-wrap"><div class="bar-fill fill-lonely" id="bar-lonely"></div></div>
+        <!-- 多維度數值 -->
+        <div class="stat-grid">
+            <div class="stat-item">✨ 光滑 <span id="v-smooth">0</span>
+                <div class="bar-wrap"><div class="bar-fill bg-blue" id="b-smooth"></div></div>
+            </div>
+            <div class="stat-item">🛡️ 硬度 <span id="v-hard">10</span>
+                <div class="bar-wrap"><div class="bar-fill bg-orange" id="b-hard"></div></div>
+            </div>
+            <div class="stat-item">🌧️ 孤獨 <span id="v-lonely">80</span>
+                <div class="bar-wrap"><div class="bar-fill bg-gray" id="b-lonely"></div></div>
+            </div>
+            <div class="stat-item">🍔 體重 <span id="v-weight">50</span>
+                <div class="bar-wrap"><div class="bar-fill bg-purple" id="b-weight"></div></div>
+            </div>
         </div>
 
         <div class="log-box" id="log-box"></div>
 
-        <!-- 互動控制 -->
-        <div class="grid-buttons">
-            <button class="btn-act" onclick="rubRock()">🧽 用抹布擦拭</button>
-            <button class="btn-act" onclick="talkRock()">🗣️ 傾訴心事</button>
-            <button class="btn-act" onclick="sunbathRock()">☀️ 帶去曬太陽</button>
-            <button class="btn-act" onclick="stareRock()">👀 深情盯著它</button>
-            <button class="btn-act btn-reset" onclick="resetRock()">🔄 撿一顆新的石頭（重設）</button>
+        <!-- 導航 Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('act')">日常互動</button>
+            <button class="tab-btn" onclick="switchTab('feed')">餵食與裝備</button>
+            <button class="tab-btn" onclick="switchTab('dex')">進化圖鑑</button>
+        </div>
+
+        <!-- 互動分頁 -->
+        <div id="tab-act" class="tab-content active">
+            <button class="btn-act" onclick="doAction('rub')">🧽 用力打磨</button>
+            <button class="btn-act" onclick="doAction('sun')">☀️ 丟在外面風吹</button>
+            <button class="btn-act" onclick="doAction('talk')">🗣️ 瘋狂倒垃圾</button>
+            <button class="btn-act" onclick="doAction('draw')">🖊️ 畫上動動眼珠</button>
+            <button class="btn-act" onclick="doAction('cat')">🐾 丟給貓當玩具</button>
+            <button class="btn-act" onclick="doAction('hammer')">🔨 拿鐵槌敲它 (高風險)</button>
+        </div>
+
+        <!-- 餵食分頁 -->
+        <div id="tab-feed" class="tab-content">
+            <button class="btn-act" onclick="feed('boba')">🧋 餵珍珠奶茶 (10青苔)</button>
+            <button class="btn-act" onclick="feed('stinky')">🍛 餵過期臭豆腐 (5青苔)</button>
+            <button class="btn-act" onclick="feed('protein')">💪 餵高蛋白粉 (15青苔)</button>
+            <button class="btn-act" onclick="feed('wind')">🌬️ 餵一口微風 (免費)</button>
+            <button class="btn-act" onclick="useEquip('skate')" style="grid-column: span 2; background:#fff3cd; border-color:#ffeeba;">🛹 帶去滑板場兜風 (需 20青苔)</button>
+        </div>
+
+        <!-- 圖鑑分頁 -->
+        <div id="tab-dex" class="tab-content">
+            <div class="pokedex-list" id="dex-list"></div>
+            <button class="btn-act btn-reset" onclick="resetRock()">🔄 將它放歸自然 (重新開局)</button>
         </div>
     </div>
 
 <script>
+const personalities = ["厭世社恐型", "極限運動員", "頂級老饕型", "暴躁易怒型", "隨遇而安型"];
+const allEvos = ["普通路邊碎石", "開光水晶球", "天外隕石", "肥厚巨石", "風化薄石片", "永恆璀璨鑽石", "生態塗鴉石", "受詛咒的暗影石"];
+
 let pet = {
-    smooth: 0,
-    hard: 10,
-    lonely: 80,
-    touches: 0
+    level: 1, exp: 0, moss: 0,
+    smooth: 0, hard: 10, lonely: 80, weight: 50, mood: 50,
+    personality: "隨遇而安型", evolution: "普通路邊碎石",
+    pokedex: ["普通路邊碎石"],
+    lastTime: Date.now()
 };
 
-const silentReplies = [
-    "石頭默默地看著你，沒有任何回應。",
-    "一陣微風吹過，石頭依舊佇立在原地。",
-    "它似乎聽進去了，也可能根本不在乎。",
-    "石頭保持了絕對的冷靜與中立。",
-    "你感覺心靈得到了淨化，石頭依舊是一顆石頭。",
-    "四周很安靜，只有空氣流動的聲音。"
-];
-
 function init() {
-    loadData();
-    updateUI();
-    log("你在路邊撿起了一顆不起眼的石頭。");
-}
-
-function saveData() {
-    localStorage.setItem("pet_rock_data", JSON.stringify(pet));
-}
-
-function loadData() {
-    let saved = localStorage.getItem("pet_rock_data");
+    let saved = localStorage.getItem("pet_rock_v2");
     if (saved) {
-        try {
-            pet = JSON.parse(saved);
-        } catch (e) {
-            console.error("載入失敗", e);
-        }
+        try { 
+            let parsed = JSON.parse(saved);
+            pet = { ...pet, ...parsed }; // 合併防呆
+        } catch (e) {}
+    } else {
+        pet.personality = personalities[Math.floor(Math.random() * personalities.length)];
     }
+    
+    calcOffline();
+    updateUI();
+    renderDex();
 }
 
-function log(msg) {
+function save() {
+    localStorage.setItem("pet_rock_v2", JSON.stringify(pet));
+    updateUI();
+}
+
+function calcOffline() {
+    let now = Date.now();
+    let hours = (now - pet.lastTime) / (1000 * 60 * 60);
+    if (hours > 0.05) { // 離開超過 3 分鐘才算
+        let expGain = Math.floor(hours * 60);
+        let mossGain = Math.floor(hours * 15);
+        if (pet.personality === "厭世社恐型") { expGain = Math.floor(expGain * 1.5); }
+        
+        addExp(expGain);
+        pet.moss += mossGain;
+        log(`💤 離線收益：石頭獨自吸收天地精華，獲得 ${expGain} EXP 與 ${mossGain} 克青苔！`, "color-good");
+    }
+    pet.lastTime = now;
+    save();
+}
+
+function log(msg, type = "") {
     let box = document.getElementById("log-box");
     let line = document.createElement("div");
-    line.className = "log-line";
-    line.innerHTML = `• ${msg}`;
+    line.className = "log-entry";
+    line.innerHTML = `<span class="${type}">${msg}</span>`;
     box.appendChild(line);
     box.scrollTop = box.scrollHeight;
 }
 
-function pokeRock() {
-    pet.touches++;
-    pet.lonely = Math.max(0, pet.lonely - 1);
-    log("你戳了戳石頭。觸感很硬，它沒有任何動靜。");
-    saveData();
-    updateUI();
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tabId).classList.add('active');
 }
 
-function rubRock() {
-    pet.smooth = Math.min(100, pet.smooth + 5);
-    pet.lonely = Math.max(0, pet.lonely - 2);
-    log("🧽 你用乾淨的布擦拭石頭表面，它變得稍微光滑發亮了！");
-    saveData();
-    updateUI();
-}
+function clamp(val, min=0, max=150) { return Math.max(min, Math.min(max, val)); }
 
-function talkRock() {
-    pet.lonely = Math.max(0, pet.lonely - 8);
-    let reply = silentReplies[Math.floor(Math.random() * silentReplies.length)];
-    log(`🗣️ 你向石頭坦白了生活裡的煩惱。<br><span style="color:#a4b0be;">${reply}</span>`);
-    saveData();
-    updateUI();
-}
-
-function sunbathRock() {
-    pet.hard = Math.min(100, pet.hard + 6);
-    pet.lonely = Math.max(0, pet.lonely - 4);
-    log("☀️ 你把它放到窗邊曬太陽，石身吸飽陽光變得暖洋洋的。");
-    saveData();
-    updateUI();
-}
-
-function stareRock() {
-    log("👀 你和石頭對視了整整 10 秒鐘... 什麼都沒有發生。");
-}
-
-function resetRock() {
-    if (confirm("確定要丟棄這顆石頭，重新在路邊撿一顆嗎？")) {
-        pet = { smooth: 0, hard: 10, lonely: 80, touches: 0 };
-        localStorage.removeItem("pet_rock_data");
-        document.getElementById("log-box").innerHTML = "";
-        log("你把原來的石頭放回了大自然，重新挑選了一顆小石頭。");
-        updateUI();
+function addExp(amount) {
+    pet.exp += amount;
+    let threshold = pet.level * 100;
+    if (pet.exp >= threshold) {
+        pet.level++;
+        pet.exp -= threshold;
+        log(`🆙 升級了！你的石頭達到了等級 ${pet.level}！`, "log-evo");
     }
 }
 
-function updateUI() {
-    // 更新數值條
-    document.getElementById("txt-smooth").innerText = `${pet.smooth} / 100`;
-    document.getElementById("bar-smooth").style.width = `${pet.smooth}%`;
+function checkRandomEvent() {
+    if (Math.random() < 0.15) { // 15% 突發事件
+        let events = [
+            { msg: "🐕 一隻野狗路過，對著石頭抬起了後腿... 石頭獲得了異味，光滑度下降，但硬度增加了！", s: -10, h: +15 },
+            { msg: "👶 路過的小孩以為它是巧克力想咬一口！小孩牙齒斷了，石頭獲得了實戰經驗！", exp: 50, h: +5 },
+            { msg: "🦅 一隻烏鴉把石頭當作寶物叼走，飛了一圈又嫌重丟下來！心情大亂，但見過世面了！", m: -20, exp: 80 }
+        ];
+        let e = events[Math.floor(Math.random() * events.length)];
+        log(`⚠️ 突發事件：${e.msg}`, "log-event");
+        if(e.s) pet.smooth = clamp(pet.smooth + e.s);
+        if(e.h) pet.hard = clamp(pet.hard + e.h);
+        if(e.m) pet.mood = clamp(pet.mood + e.m);
+        if(e.exp) addExp(e.exp);
+    }
+}
 
-    document.getElementById("txt-hard").innerText = `${pet.hard} / 100`;
-    document.getElementById("bar-hard").style.width = `${pet.hard}%`;
+function doAction(type) {
+    pet.lastTime = Date.now();
+    addExp(10);
+    
+    if (type === 'rub') {
+        pet.smooth = clamp(pet.smooth + 8);
+        pet.hard = clamp(pet.hard - 2);
+        pet.lonely = clamp(pet.lonely - 2);
+        log("🧽 你用力打磨石頭，它變得亮晶晶，但也磨損了一點硬度。");
+    } else if (type === 'sun') {
+        pet.hard = clamp(pet.hard + 10);
+        pet.lonely = clamp(pet.lonely + 5);
+        log("☀️ 把它丟在外面風吹日曬，硬度上升，但它覺得有點被冷落。");
+    } else if (type === 'talk') {
+        let p = (pet.personality === "厭世社恐型") ? 15 : -15; // 社恐聽人抱怨會加倍煩躁
+        pet.lonely = clamp(pet.lonely - p);
+        pet.mood = clamp(pet.mood - 10);
+        log("🗣️ 你瘋狂向它倒垃圾，孤獨感變化了，但它吸收太多負能量，心情變差了。");
+    } else if (type === 'draw') {
+        pet.smooth = 0;
+        pet.lonely = 0;
+        log("🖊️ 你給它畫上動動眼珠！洗不掉了，但它看起來再也不孤單了。");
+    } else if (type === 'cat') {
+        pet.smooth = clamp(pet.smooth - 15);
+        addExp(30);
+        log("🐾 貓咪瘋狂巴它！表面被刮花了，但石頭經歷了風浪獲得大量 EXP。");
+    } else if (type === 'hammer') {
+        if (Math.random() < 0.15) {
+            pet.smooth = clamp(pet.smooth + 50);
+            pet.hard = clamp(pet.hard + 20);
+            log("🔨 奇蹟雕刻！你精準地敲出藝術品的形狀，屬性暴漲！", "log-evo");
+        } else {
+            pet.hard = clamp(pet.hard - 30);
+            pet.weight = clamp(pet.weight - 10);
+            log("🔨 糟糕，敲太大力碎掉了一角，硬度與體重慘跌...", "color-bad");
+        }
+    }
+    
+    checkRandomEvent();
+    checkEvolution();
+    save();
+}
 
-    document.getElementById("txt-lonely").innerText = `${pet.lonely} / 100`;
-    document.getElementById("bar-lonely").style.width = `${pet.lonely}%`;
+function feed(type) {
+    let mult = (pet.personality === "頂級老饕型") ? 2 : 1;
+    pet.lastTime = Date.now();
+    
+    if (type === 'boba') {
+        if (pet.moss < 10) return log("❌ 青苔不足！", "color-bad");
+        pet.moss -= 10;
+        pet.smooth = clamp(pet.smooth - 10);
+        pet.weight = clamp(pet.weight + 5 * mult);
+        pet.mood = clamp(pet.mood + 15 * mult);
+        log("🧋 餵食珍珠奶茶：太甜了！表面黏黏的光滑度下降，但體重與心情上升。");
+    } else if (type === 'stinky') {
+        if (pet.moss < 5) return log("❌ 青苔不足！", "color-bad");
+        pet.moss -= 5;
+        pet.hard = clamp(pet.hard + 15);
+        pet.mood = clamp(pet.mood - 20 * mult);
+        log("🍛 餵食過期臭豆腐：太臭了！心情暴跌，但毒抗與硬度奇蹟般上升。");
+    } else if (type === 'protein') {
+        if (pet.moss < 15) return log("❌ 青苔不足！", "color-bad");
+        pet.moss -= 15;
+        pet.hard = clamp(pet.hard + 5);
+        pet.weight = clamp(pet.weight + 8 * mult);
+        log("💪 餵食高蛋白粉：試圖讓石頭長肌肉，體重穩健上升！");
+    } else if (type === 'wind') {
+        pet.weight = clamp(pet.weight - 2);
+        pet.mood = clamp(pet.mood + 5);
+        log("🌬️ 餵食一口微風：最純天然的食物，石頭感覺輕盈了一些。");
+    }
+    
+    addExp(5);
+    checkRandomEvent();
+    checkEvolution();
+    save();
+}
 
-    // 形態進化判定
-    let display = document.getElementById("rock-display");
-    let rank = document.getElementById("rock-rank");
+function useEquip(type) {
+    if (type === 'skate') {
+        if (pet.moss < 20) return log("❌ 租用滑板場需要 20 青苔！", "color-bad");
+        pet.moss -= 20;
+        
+        let successRate = (pet.personality === "極限運動員") ? 0.85 : 0.60;
+        if (pet.weight > 100) successRate -= 0.3; // 太胖容易摔
+        
+        if (Math.random() < successRate) {
+            pet.mood = clamp(pet.mood + 40);
+            pet.weight = clamp(pet.weight - 5);
+            addExp(50);
+            log("🛹 極限滑行大成功！速度感爆棚，心情大漲，路過的小孩紛紛鼓掌！", "color-good");
+        } else {
+            pet.hard = clamp(pet.hard - 15);
+            pet.mood = clamp(pet.mood - 20);
+            log("💥 滑板翻車！石頭滾進草叢，摔掉了幾塊碎屑，硬度下降。", "color-bad");
+        }
+        checkEvolution();
+        save();
+    }
+}
 
-    if (pet.smooth >= 90 && pet.hard >= 90) {
-        display.innerText = "💎";
-        rank.innerText = "超究極·永恆璀璨鑽石";
-        rank.style.color = "#70a1ff";
-    } else if (pet.hard >= 70) {
-        display.innerText = "🗿";
-        rank.innerText = "神秘古代莫埃巨石";
-        rank.style.color = "#eccc68";
-    } else if (pet.smooth >= 60) {
-        display.innerText = "🔮";
-        rank.innerText = "圓潤剔透鵝卵魔石";
-        rank.style.color = "#a55eea";
-    } else if (pet.smooth >= 30) {
-        display.innerText = "🪨";
-        rank.innerText = "乾淨有型的小石子";
-        rank.style.color = "#ffa502";
+function pokeRock() {
+    pet.lonely = clamp(pet.lonely - 1);
+    let responses = ["你戳了戳它，感覺硬硬的。", "石頭微微晃動了一下。", "它依然保持著石頭的尊嚴。"];
+    if (pet.personality === "暴躁易怒型" && Math.random() < 0.3) {
+        pet.mood = clamp(pet.mood - 10);
+        log("💢 你戳了它！它（看起來）非常不爽！");
     } else {
-        display.innerText = "🪨";
-        rank.innerText = "普通路邊碎石";
-        rank.style.color = "#ced6e0";
+        log(responses[Math.floor(Math.random() * responses.length)]);
+    }
+    
+    // 點擊觸發 CSS 動畫
+    let el = document.getElementById('rock-display');
+    el.style.transform = `scale(${getScaleX() * 0.9}, ${getScaleY() * 0.9}) rotate(10deg)`;
+    setTimeout(() => { el.style.transform = `scale(${getScaleX()}, ${getScaleY()}) rotate(0deg)`; }, 150);
+    
+    save();
+}
+
+function checkEvolution() {
+    let newEvo = pet.evolution;
+    
+    // 根據複雜數值判定進化路線 (優先順序)
+    if (pet.hard >= 140 && pet.smooth >= 140) newEvo = "永恆璀璨鑽石";
+    else if (pet.hard >= 130) newEvo = "天外隕石";
+    else if (pet.smooth >= 130) newEvo = "開光水晶球";
+    else if (pet.weight >= 120) newEvo = "肥厚巨石";
+    else if (pet.weight <= 20) newEvo = "風化薄石片";
+    else if (pet.smooth === 0 && pet.lonely === 0) newEvo = "生態塗鴉石";
+    else if (pet.mood === 0 && pet.lonely >= 100) newEvo = "受詛咒的暗影石";
+
+    if (newEvo !== pet.evolution) {
+        pet.evolution = newEvo;
+        if (!pet.pokedex.includes(newEvo)) {
+            pet.pokedex.push(newEvo);
+            log(`🌟 奇蹟發生！你的石頭覺醒進化成了【${newEvo}】！解鎖新圖鑑！`, "log-evo");
+            renderDex();
+        } else {
+            log(`🔄 體態改變！石頭變成了【${newEvo}】形態。`, "color-good");
+        }
+    }
+}
+
+// 根據體重計算圖片變形的比例
+function getScaleX() { return clamp(pet.weight / 50, 0.4, 2.5); }
+function getScaleY() { return clamp(50 / pet.weight, 0.4, 2.0); }
+
+function updateUI() {
+    document.getElementById("txt-lvl").innerText = pet.level;
+    document.getElementById("txt-exp").innerText = `${pet.exp}/${pet.level * 100}`;
+    document.getElementById("txt-moss").innerText = pet.moss;
+    document.getElementById("txt-personality").innerText = pet.personality;
+    document.getElementById("rock-evo").innerText = pet.evolution;
+
+    document.getElementById("v-smooth").innerText = pet.smooth;
+    document.getElementById("b-smooth").style.width = `${(pet.smooth/150)*100}%`;
+    document.getElementById("v-hard").innerText = pet.hard;
+    document.getElementById("b-hard").style.width = `${(pet.hard/150)*100}%`;
+    document.getElementById("v-lonely").innerText = pet.lonely;
+    document.getElementById("b-lonely").style.width = `${(pet.lonely/150)*100}%`;
+    document.getElementById("v-weight").innerText = pet.weight;
+    document.getElementById("b-weight").style.width = `${(pet.weight/150)*100}%`;
+
+    // 處理外觀形變 (胖瘦)
+    let display = document.getElementById("rock-display");
+    display.style.transform = `scale(${getScaleX()}, ${getScaleY()})`;
+    
+    // 根據進化更換 Emoji
+    let emoji = "🪨";
+    if (pet.evolution === "永恆璀璨鑽石") emoji = "💎";
+    else if (pet.evolution === "天外隕石") emoji = "☄️";
+    else if (pet.evolution === "開光水晶球") emoji = "🔮";
+    else if (pet.evolution === "肥厚巨石") emoji = "🥔"; 
+    else if (pet.evolution === "受詛咒的暗影石") emoji = "👁️‍🗨️";
+    display.innerText = emoji;
+}
+
+function renderDex() {
+    let list = document.getElementById("dex-list");
+    list.innerHTML = "";
+    allEvos.forEach(evo => {
+        let unlocked = pet.pokedex.includes(evo);
+        let el = document.createElement("div");
+        el.className = `dex-item ${unlocked ? 'unlocked' : ''}`;
+        el.innerText = unlocked ? evo : "???";
+        list.appendChild(el);
+    });
+}
+
+function resetRock() {
+    if (confirm("這會將目前的石頭放歸自然，並重新領養一顆新石頭（保留青苔與圖鑑）。確定嗎？")) {
+        let keepMoss = pet.moss;
+        let keepDex = pet.pokedex;
+        pet = {
+            level: 1, exp: 0, moss: keepMoss,
+            smooth: 0, hard: 10, lonely: 80, weight: 50, mood: 50,
+            personality: personalities[Math.floor(Math.random() * personalities.length)],
+            evolution: "普通路邊碎石", pokedex: keepDex, lastTime: Date.now()
+        };
+        document.getElementById("log-box").innerHTML = "";
+        log("你把石頭放回了大自然，重新挑選了一顆小石頭。新石頭的個性是：" + pet.personality);
+        save();
+        renderDex();
     }
 }
 
