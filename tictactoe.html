@@ -24,7 +24,7 @@
             max-width: 320px;
             width: 100%;
             text-align: center;
-            margin-top: 40px; /* 避免被左上角按鈕擋住 */
+            margin-top: 40px; 
         }
 
         .cell {
@@ -42,7 +42,7 @@
             transition: background 0.15s;
         }
 
-        /* 經典井字分割線（只留內線，無外框線、無底色） */
+        /* 經典井字分割線 */
         #c0 { border-right: 3px solid #546e7a; border-bottom: 3px solid #546e7a; border-top: none; border-left: none; }
         #c1 { border-right: 3px solid #546e7a; border-bottom: 3px solid #546e7a; border-top: none; border-left: none; }
         #c2 { border-bottom: 3px solid #546e7a; border-top: none; border-right: none; border-left: none; }
@@ -62,20 +62,32 @@
 </head>
 <body>
 
-    <!-- 懸浮返回大廳按鈕 -->
-    <button onclick="window.location.href='index.html'" style="position: fixed; top: 15px; left: 15px; z-index: 9999; background: #ffffff; color: #333; border: 1px solid #ddd; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15); width: auto;">
+    <!-- 統一尺寸的懸浮返回大廳按鈕 -->
+    <button onclick="window.location.href='index.html'" style="position: fixed; top: 15px; left: 15px; z-index: 9999; box-sizing: border-box; height: 36px; padding: 0 14px; font-size: 14px; line-height: 34px; font-weight: bold; background: #ffffff; color: #333; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15); width: auto;">
         ⬅️ 返回大廳
     </button>
 
     <div id="tictactoe-wrap">
-        <h2 style="margin: 0 0 6px 0; color: #37474f;">🎮 圈圈叉叉（人機對戰）</h2>
-        <div style="font-size: 14px; font-weight: bold; color: #555; margin-bottom: 6px;">
+        <h2 style="margin: 0 0 6px 0; color: #37474f;">🎮 圈圈叉叉</h2>
+        
+        <div style="font-size: 14px; font-weight: bold; color: #555; margin-bottom: 12px;">
             玩家：<span style="color: #1976d2; font-size: 18px;">X</span> ｜ 電腦：<span style="color: #d32f2f; font-size: 18px;">O</span>
         </div>
+
+        <!-- 難度選擇選單 -->
+        <div style="margin-bottom: 12px; font-weight: bold; color: #555; background: #eee; padding: 6px; border-radius: 8px; display: inline-block;">
+            🧠 難度：
+            <select id="difficulty" onchange="resetGame()" style="border: 1px solid #ccc; background: white; padding: 4px; font-weight: bold; border-radius: 4px; cursor: pointer;">
+                <option value="easy">🟢 簡單 (隨機亂下)</option>
+                <option value="normal" selected>🟡 中等 (偶爾放水)</option>
+                <option value="hard">🔴 困難 (絕對無敵)</option>
+            </select>
+        </div>
+
         <div id="status-msg" style="font-size: 14px; color: #1976d2; height: 22px; font-weight: bold;">👉 請點擊任意空格落子</div>
 
         <!-- 3x3 經典井字邊框棋盤 -->
-        <div style="display: grid; grid-template-columns: repeat(3, 75px); justify-content: center; margin: 16px auto;">
+        <div style="display: grid; grid-template-columns: repeat(3, 75px); justify-content: center; margin: 12px auto 16px auto;">
             <button class="cell" id="c0" onclick="playerMove(0)"></button>
             <button class="cell" id="c1" onclick="playerMove(1)"></button>
             <button class="cell" id="c2" onclick="playerMove(2)"></button>
@@ -112,7 +124,7 @@ function isFull(b) {
 function playerMove(index) {
     if (gameOver || board[index] !== "") return;
 
-    // 玩家落子 (X)
+    // 玩家落子
     board[index] = "X";
     renderCell(index, "X", "#1976d2");
 
@@ -128,9 +140,8 @@ function playerMove(index) {
         return;
     }
 
-    // 電腦回合
     document.getElementById('status-msg').innerHTML = "<span style='color: #757575;'>🤖 電腦正在思考...</span>";
-    setTimeout(aiMove, 260); // 短暫延遲模擬思考
+    setTimeout(aiMove, 300); // 短暫延遲模擬思考
 }
 
 function aiMove() {
@@ -142,47 +153,56 @@ function aiMove() {
     }
 
     let move = -1;
+    let difficulty = document.getElementById('difficulty').value;
 
-    // 1. 電腦能贏就直接下（進攻）
-    for (let i of emptyIndices) {
-        let copy = [...board];
-        copy[i] = "O";
-        if (checkWin(copy, "O")) {
-            move = i;
-            break;
-        }
+    // 判斷是否要直接亂下 (簡單模式 100%，中等模式 40% 放水)
+    let playRandomly = false;
+    if (difficulty === 'easy') {
+        playRandomly = true;
+    } else if (difficulty === 'normal') {
+        if (Math.random() < 0.4) playRandomly = true;
     }
 
-    // 2. 玩家下一步會贏就搶先堵住（防守）
-    if (move === -1) {
+    if (playRandomly) {
+        move = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    } else {
+        // --- 聰明 AI 邏輯 ---
+        // 1. 電腦能贏就直接下（進攻）
         for (let i of emptyIndices) {
             let copy = [...board];
-            copy[i] = "X";
-            if (checkWin(copy, "X")) {
-                move = i;
-                break;
+            copy[i] = "O";
+            if (checkWin(copy, "O")) { move = i; break; }
+        }
+
+        // 2. 玩家下一步會贏就搶先堵住（防守）
+        if (move === -1) {
+            for (let i of emptyIndices) {
+                let copy = [...board];
+                copy[i] = "X";
+                if (checkWin(copy, "X")) { move = i; break; }
             }
         }
-    }
 
-    // 3. 搶佔中心格 (索引 4)
-    if (move === -1 && emptyIndices.includes(4)) {
-        move = 4;
-    }
+        // 3. 搶佔中心格 (索引 4)
+        if (move === -1 && emptyIndices.includes(4)) {
+            move = 4;
+        }
 
-    // 4. 搶佔四個角落 (0, 2, 6, 8)
-    if (move === -1) {
-        let corners = [0, 2, 6, 8].filter(c => emptyIndices.includes(c));
-        if (corners.length > 0) {
-            move = corners[Math.floor(Math.random() * corners.length)];
+        // 4. 搶佔四個角落
+        if (move === -1) {
+            let corners = [0, 2, 6, 8].filter(c => emptyIndices.includes(c));
+            if (corners.length > 0) {
+                move = corners[Math.floor(Math.random() * corners.length)];
+            }
+        }
+
+        // 5. 隨機下剩餘邊格
+        if (move === -1 && emptyIndices.length > 0) {
+            move = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
         }
     }
 
-    // 5. 隨機下剩餘邊格
-    if (move === -1 && emptyIndices.length > 0) {
-        move = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
-    }
-
+    // 執行落子
     if (move !== -1) {
         board[move] = "O";
         renderCell(move, "O", "#d32f2f");
