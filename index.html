@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <!-- 關鍵：防止手機雙擊縮放，優化點擊響應速度 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>歡樂打地鼠 - 手機網頁版</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px 10px;
+            background-color: #fafafa;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            touch-action: manipulation; /* 移除點擊延遲 */
+        }
+        #game-wrap {
+            text-align: center;
+            max-width: 320px;
+            width: 100%;
+        }
+        .mole-btn {
+            width: 75px;
+            height: 75px;
+            font-size: 32px;
+            background: #d7ccc8;
+            border: 2px solid #bcaaa4;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.05s;
+            user-select: none;
+            -webkit-user-select: none;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mole-btn:active {
+            transform: scale(0.92);
+        }
+        .ctrl-btn {
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-wrap">
+    <h2 style="margin: 0 0 8px 0; color: #5d4037;">🔨 歡樂打地鼠</h2>
+    <div style="display: flex; justify-content: space-around; font-size: 16px; font-weight: bold; margin-bottom: 8px;">
+        <span>得分：<b id="score-txt" style="color: #e65100; font-size: 20px;">0</b></span>
+        <span>倒數：<b id="timer-txt" style="color: #c62828; font-size: 20px;">30s</b></span>
+    </div>
+    <div id="status-msg" style="font-size: 13px; color: #555; height: 22px; font-weight: bold;">注意避開炸彈 💣！</div>
+
+    <!-- 3x3 九宮格 -->
+    <div style="display: grid; grid-template-columns: repeat(3, 75px); gap: 10px; justify-content: center; margin: 15px 0;">
+        <button class="mole-btn" onclick="hit(0)">🟩</button>
+        <button class="mole-btn" onclick="hit(1)">🟩</button>
+        <button class="mole-btn" onclick="hit(2)">🟩</button>
+        <button class="mole-btn" onclick="hit(3)">🟩</button>
+        <button class="mole-btn" onclick="hit(4)">🟩</button>
+        <button class="mole-btn" onclick="hit(5)">🟩</button>
+        <button class="mole-btn" onclick="hit(6)">🟩</button>
+        <button class="mole-btn" onclick="hit(7)">🟩</button>
+        <button class="mole-btn" onclick="hit(8)">🟩</button>
+    </div>
+
+    <!-- 控制列 -->
+    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
+        <button id="start-btn" class="ctrl-btn" onclick="startGame()" style="background: #2e7d32;">
+            🎮 開始遊戲
+        </button>
+        <button id="pause-btn" class="ctrl-btn" onclick="togglePause()" disabled style="background: #9e9e9e; cursor: not-allowed;">
+            ⏸️ 暫停
+        </button>
+    </div>
+</div>
+
+<script>
+let score = 0;
+let timeLeft = 30;
+let currentPos = -1;
+let currentType = null;
+let gameInterval = null;
+let spawnInterval = null;
+let isPlaying = false;
+let isPaused = false;
+
+function startIntervals() {
+    gameInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft < 0) timeLeft = 0;
+        document.getElementById('timer-txt').innerText = timeLeft + 's';
+        if (timeLeft <= 0) {
+            endGame();
+        }
+    }, 1000);
+
+    spawnInterval = setInterval(nextSpawn, 700);
+}
+
+function clearIntervals() {
+    clearInterval(gameInterval);
+    clearInterval(spawnInterval);
+    gameInterval = null;
+    spawnInterval = null;
+}
+
+function startGame() {
+    clearIntervals();
+    isPlaying = true;
+    isPaused = false;
+    score = 0;
+    timeLeft = 30;
+    currentPos = -1;
+    currentType = null;
+
+    document.getElementById('score-txt').innerText = score;
+    document.getElementById('timer-txt').innerText = timeLeft + 's';
+    document.getElementById('status-msg').innerHTML = "🔥 打地鼠 🐹 (+1) | 避開炸彈 💣 (-2分/-3秒)！";
+
+    let startBtn = document.getElementById('start-btn');
+    startBtn.innerText = "🔄 重新開始";
+    startBtn.style.background = "#e65100";
+
+    let pauseBtn = document.getElementById('pause-btn');
+    pauseBtn.disabled = false;
+    pauseBtn.innerText = "⏸️ 暫停";
+    pauseBtn.style.background = "#1976d2";
+    pauseBtn.style.cursor = "pointer";
+
+    resetHoles();
+    nextSpawn();
+    startIntervals();
+}
+
+function togglePause() {
+    if (!isPlaying) return;
+
+    let pauseBtn = document.getElementById('pause-btn');
+    if (!isPaused) {
+        isPaused = true;
+        clearIntervals();
+        pauseBtn.innerText = "▶️ 繼續";
+        pauseBtn.style.background = "#2e7d32";
+        document.getElementById('status-msg').innerHTML = "<span style='color: #1976d2;'>⏸️ 遊戲已暫停</span>";
+    } else {
+        isPaused = false;
+        pauseBtn.innerText = "⏸️ 暫停";
+        pauseBtn.style.background = "#1976d2";
+        document.getElementById('status-msg').innerHTML = "🔥 繼續集中精神！";
+        startIntervals();
+    }
+}
+
+function nextSpawn() {
+    resetHoles();
+    let newPos;
+    do {
+        newPos = Math.floor(Math.random() * 9);
+    } while (newPos === currentPos);
+
+    currentPos = newPos;
+    currentType = Math.random() < 0.25 ? 'bomb' : 'mole';
+
+    let btns = document.querySelectorAll('.mole-btn');
+    if (currentType === 'mole') {
+        btns[currentPos].innerText = "🐹";
+        btns[currentPos].style.background = "#c8e6c9";
+    } else {
+        btns[currentPos].innerText = "💣";
+        btns[currentPos].style.background = "#ffcdd2";
+    }
+}
+
+function resetHoles() {
+    let btns = document.querySelectorAll('.mole-btn');
+    btns.forEach(b => {
+        b.innerText = "🟩";
+        b.style.background = "#d7ccc8";
+    });
+}
+
+function hit(index) {
+    if (!isPlaying || isPaused) return;
+    let btns = document.querySelectorAll('.mole-btn');
+
+    if (index === currentPos) {
+        if (currentType === 'mole') {
+            score++;
+            document.getElementById('score-txt').innerText = score;
+            btns[index].innerText = "💥";
+            btns[index].style.background = "#ffe0b2";
+            document.getElementById('status-msg').innerHTML = "<span style='color: #2e7d32;'>擊中地鼠！+1 分</span>";
+        } else if (currentType === 'bomb') {
+            score = Math.max(0, score - 2);
+            timeLeft = Math.max(0, timeLeft - 3);
+            document.getElementById('score-txt').innerText = score;
+            document.getElementById('timer-txt').innerText = timeLeft + 's';
+            btns[index].innerText = "🧨";
+            btns[index].style.background = "#e53935";
+            document.getElementById('status-msg').innerHTML = "<span style='color: #c62828;'>碰！踩到炸彈！-2 分 & -3 秒！</span>";
+            if (timeLeft <= 0) {
+                endGame();
+                return;
+            }
+        }
+        currentPos = -1;
+        currentType = null;
+    }
+}
+
+function endGame() {
+    clearIntervals();
+    isPlaying = false;
+    isPaused = false;
+    currentPos = -1;
+    currentType = null;
+    resetHoles();
+
+    let startBtn = document.getElementById('start-btn');
+    startBtn.innerText = "🎮 開始遊戲";
+    startBtn.style.background = "#2e7d32";
+
+    let pauseBtn = document.getElementById('pause-btn');
+    pauseBtn.disabled = true;
+    pauseBtn.innerText = "⏸️ 暫停";
+    pauseBtn.style.background = "#9e9e9e";
+    pauseBtn.style.cursor = "not-allowed";
+
+    document.getElementById('status-msg').innerHTML = `⏰ 時間到！最終得分：<b style="color: #e65100;">${score}</b> 分！🎉`;
+}
+</script>
+</body>
+</html>
