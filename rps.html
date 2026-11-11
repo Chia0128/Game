@@ -42,6 +42,7 @@
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 16px;
+            box-sizing: border-box;
         }
         button {
             background: var(--primary);
@@ -128,7 +129,7 @@
         <h2>🕒 等待連線中...</h2>
         <p>你的名字：<b id="lobby-my-name" style="color: var(--primary);"></b></p>
         <p>房間代號：<b id="lobby-room"></b></p>
-        <div class="status-box">請等待對手加入...<br><small>(若朋友已進入，稍等幾秒即會連線)</small></div>
+        <div class="status-box" id="lobby-status">正在尋找對手中...<br><small>只要雙方都在此頁面就會自動配對！</small></div>
         <button onclick="leaveRoom()" style="background: #9e9e9e; width: 60%; margin-top: 10px; padding: 8px;">取消並離開</button>
     </div>
 
@@ -176,29 +177,27 @@ let myName = "";
 let oppName = "對手";
 let baseUrl = "";
 let eventSource = null;
+let myId = Math.random().toString(36).substring(2, 9); // 玩家唯一標識
 
 let isHost = false;
-let myRole = "";
-let oppRole = "";
-
 let myScore = 0;
 let oppScore = 0;
 let roundNum = 1;
-let winGoal = 2; // 預設 2 勝
+let winGoal = 2;
 let myChoice = null;
 let oppChoice = null;
 let gameStarted = false;
+let pingTimer = null;
 
 const msgBox = document.getElementById('game-msg');
 const handBtns = document.getElementById('hand-buttons');
 
-// 當關閉網頁或重整時，自動發送離開通知
 window.addEventListener('beforeunload', () => {
     if (roomCode) sendMsg('leave', {});
 });
 
 // ================= 1. 連線與進房邏輯 =================
-async function joinRoom() {
+function joinRoom() {
     roomCode = document.getElementById('room-input').value.trim();
     myName = document.getElementById('name-input').value.trim() || "玩家";
     
@@ -214,57 +213,29 @@ async function joinRoom() {
     document.getElementById('lobby-my-name').innerText = myName;
     document.getElementById('lobby-room').innerText = roomCode;
 
-    try {
-        // 優化 1：使用 since=10m 搭配 timeout 防止死等，進房瞬間完成
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        
-        let res = await fetch(`${baseUrl}/json?since=10m`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        
-        let text = await res.text();
-        let lines = text.trim().split('\n').filter(Boolean);
-        
-        let roomReady = false;
-        if (lines.length > 0) {
-            let lastMsg = JSON.parse(lines[lines.length - 1]);
-            let content = JSON.parse(lastMsg.message || "{}");
-            if (content.action === 'waiting') {
-                isHost = false;
-                myRole = "p2";
-                oppRole = "p1";
-                oppName = content.data.name || "玩家 1";
-                roomReady = true;
-            }
-        }
-        
-        if (!roomReady) {
-            isHost = true;
-            myRole = "p1";
-            oppRole = "p2";
-            sendMsg('waiting', { name: myName });
+    startListening();
+
+    // 每 800ms 發送一次尋找封包（Ping），避免任何一方卡住
+    pingTimer = setInterval(() => {
+        if (!gameStarted) {
+            sendMsg('hello', { name: myName, id: myId });
         } else {
-            sendMsg('join', { name: myName });
+            clearInterval(pingTimer);
         }
-        
-        startListening();
-        
-    } catch (e) {
-        alert("連線逾時，請檢查網路並重試！");
-        window.location.reload();
-    }
+    }, 800);
 }
 
 // ================= 2. 訊息發送與接收 =================
 function sendMsg(action, data) {
+    if (!baseUrl) return;
     fetch(baseUrl, {
         method: 'POST',
-        headers: { "X-Retain": "1" },
-        body: JSON.stringify({ sender: myRole, action: action, data: data })
+        body: JSON.stringify({ senderId: myId, action: action, data: data })
     }).catch(()=>{});
 }
 
 function startListening() {
+    if (eventSource) eventSource.close();
     eventSource = new EventSource(`${baseUrl}/sse`);
     
     eventSource.onmessage = (e) => {
@@ -273,47 +244,58 @@ function startListening() {
             if (!parsed.message) return;
             
             let content = JSON.parse(parsed.message);
-            let sender = content.sender;
-            let action = content.action;
-            let data = content.data;
+            if (content.senderId === myId) return; // 忽略自己發送的訊息
             
-            if (sender === oppRole) {
-                if (action === 'join' && isHost) {
-                    oppName = data.name;
-                    sendMsg('start', { name: myName });
+            let action = content.action;
+            let data = content.data || {};
+            
+            if (action === 'hello') {
+                if (!gameStarted) {
+                    oppName = data.name || "對手";
+                    // 根據隨機 ID 大小裁定誰當主機 (Host)，保證雙方角色互補且一致
+                    isHost = myId > content.senderId;
+                    sendMsg('ready', { name: myName });
                     startGameUI();
-                } else if (action === 'start' && !isHost) {
-                    oppName = data.name;
-                    startGameUI();
-                } else if (action === 'choice') {
-                    if (data.round === roundNum) {
-                        oppChoice = data.choice;
-                        checkRoundResult();
-                    }
-                } else if (action === 'round_end' && !isHost) {
-                    if (data.round === roundNum) {
-                        handleGuestResult(data);
-                    }
-                } else if (action === 'play_again') {
-                    resetGameState();
-                    startRound();
-                } else if (action === 'set_goal') {
-                    // 同步對方設定的勝利條件
-                    winGoal = data.goal;
-                    document.getElementById('win-goal').value = winGoal;
-                } else if (action === 'leave') {
-                    // 偵測到對方離開，自動踢回登入頁
-                    alert("對方已離開房間！");
-                    window.location.reload();
                 }
+            } else if (action === 'ready') {
+                if (!gameStarted) {
+                    oppName = data.name || "對手";
+                    isHost = myId > content.senderId;
+                    startGameUI();
+                }
+            } else if (action === 'choice') {
+                if (data.round === roundNum) {
+                    oppChoice = data.choice;
+                    checkRoundResult();
+                }
+            } else if (action === 'round_end' && !isHost) {
+                if (data.round === roundNum) {
+                    handleGuestResult(data);
+                }
+            } else if (action === 'play_again') {
+                resetGameState();
+                startRound();
+            } else if (action === 'set_goal') {
+                winGoal = data.goal;
+                document.getElementById('win-goal').value = winGoal;
+            } else if (action === 'leave') {
+                alert("對方已離開房間！");
+                window.location.reload();
             }
         } catch (err) {}
+    };
+
+    eventSource.onerror = () => {
+        // SSE 異常中斷時保持重連
     };
 }
 
 // ================= 3. 遊戲流程 =================
 function startGameUI() {
+    if (gameStarted) return;
     gameStarted = true;
+    if (pingTimer) clearInterval(pingTimer);
+    
     document.getElementById('lobby-screen').classList.remove('active');
     document.getElementById('game-screen').classList.add('active');
     
@@ -386,7 +368,7 @@ function checkRoundResult() {
             guest_score: oppScore
         });
         
-        setTimeout(nextRoundCheck, 2500);
+        setTimeout(nextRoundCheck, 2200);
     } else if (myChoice && oppChoice && !isHost) {
         msgBox.innerHTML = `⏳ 雙方已出拳，結算中...`;
     }
@@ -409,7 +391,7 @@ function handleGuestResult(data) {
     updateScores();
     msgBox.innerHTML = resultMsg;
     
-    setTimeout(nextRoundCheck, 2500);
+    setTimeout(nextRoundCheck, 2200);
 }
 
 function updateScores() {
@@ -431,7 +413,7 @@ function nextRoundCheck() {
                 <button onclick="playAgain()" style="background: var(--primary); width: auto; padding: 10px 16px;">🔄 再玩一局</button>
                 <button onclick="leaveRoom()" style="background: #9e9e9e; width: auto; padding: 10px 16px;">🚪 離開房間</button>
             </div>`;
-        }, 1500);
+        }, 1200);
     } else {
         roundNum++;
         startRound();
@@ -447,14 +429,14 @@ window.playAgain = function() {
 window.leaveRoom = function() {
     sendMsg('leave', {});
     setTimeout(() => {
-        window.location.reload(); // 重新整理退回輸入房號畫面
+        window.location.reload(); 
     }, 100);
 }
 
 window.exitToLobby = function() {
-    if(roomCode) sendMsg('leave', {});
+    if (roomCode) sendMsg('leave', {});
     setTimeout(() => {
-        window.location.href = 'index.html'; // 完全離開遊戲，回大廳
+        window.location.href = 'index.html'; 
     }, 100);
 }
 
