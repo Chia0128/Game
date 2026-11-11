@@ -433,36 +433,46 @@ function explore() {
     else if (roll < 0.28) {
         gameState = "combat";
         
-        let baseHp = 5;
-
+        // 1. 怪獸體力值：無上限，每5層提高成長係數
+        let hpRoll = Math.floor(Math.random() * 8); // 0 ~ 7
         if (floor <= 5) {
-            baseHp += Math.floor(Math.random() * 5);
-            enemyMaxHp = Math.min(30, baseHp);
+            enemyMaxHp = 18 + hpRoll;
         } else if (floor <= 10) {
-            baseHp += Math.floor(Math.random() * 8);
-            enemyMaxHp = Math.min(35, baseHp);
+            enemyMaxHp = Math.floor(18 + hpRoll + floor * 0.5);
         } else if (floor <= 15) {
-            baseHp += Math.floor(Math.random() * 8) + floor * 0.5;
-            enemyMaxHp = Math.min(45, baseHp);
+            enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.0);
         } else if (floor <= 20) {
-            baseHp += Math.floor(Math.random() * 8) + floor * 1;
-            enemyMaxHp = Math.min(60, baseHp);
+            enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.5);
         } else if (floor <= 25) {
-            baseHp += Math.floor(Math.random() * 8) + floor * 1.5;
-            enemyMaxHp = Math.min(80, baseHp);
+            enemyMaxHp = Math.floor(18 + hpRoll + floor * 2.0);
         } else if (floor <= 30) {
-            baseHp += Math.floor(Math.random() * 8) + floor * 2;
-            enemyMaxHp = baseHp;
-        } else if (floor <= 35) {
-            baseHp += Math.floor(Math.random() * 8) + floor * 2.5;
-            enemyMaxHp = baseHp;
+            enemyMaxHp = Math.floor(18 + hpRoll + floor * 2.5);
         } else {
-            baseHp += Math.floor(Math.random() * 8) + floor * 3;
-            enemyMaxHp = baseHp;
+            enemyMaxHp = Math.floor(18 + hpRoll + floor * 3.0);
         }
         
+        // 2. 怪獸基礎攻擊力：採用階梯成長公式，不設上限
+        let baseAtk = 5;
+        if (floor <= 5) {
+            baseAtk += Math.floor(Math.random() * 5);
+        } else if (floor <= 10) {
+            baseAtk += Math.floor(Math.random() * 8);
+        } else if (floor <= 15) {
+            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 0.5);
+        } else if (floor <= 20) {
+            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 1.0);
+        } else if (floor <= 25) {
+            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 1.5);
+        } else if (floor <= 30) {
+            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 2.0);
+        } else if (floor <= 35) {
+            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 2.5);
+        } else {
+            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 3.0);
+        }
+        enemyAtk = baseAtk;
+
         enemyHp = enemyMaxHp;
-        enemyAtk = Math.floor(6 + Math.random() * 7 + floor * 2);
         currentFight = { dmgTaken: 0, absurdCount: 0 };
         document.getElementById("enemy-emoji").innerText = ["👾", "🐺", "🧛", "🧟", "🐉"][Math.min(Math.floor(floor/3), 4)];
         log(`危險！遭遇了地牢怪獸！`, "color-bad");
@@ -563,8 +573,7 @@ function triggerSpecialEvent() {
         log(`🗿 <b>【遠古神祕祭壇】</b> 石碑上寫著：「等價交換，庇護降臨。」`, "color-event");
         eventPanel.innerHTML = `
             <button class="btn btn-event" onclick="resolveEvent('altar', 'potion')">🧪 獻祭 1 罐藥水</button>
-            <button class="btn btn-event" onclick="resolveEvent('altar', 'gold')">💰 獻祭 40 金幣</button>
-            <button class="btn btn-event-safe" onclick="resolveEvent('altar', 'leave')" style="grid-column: span 2;">🚶 什麼都不做</button>
+            <button class="btn btn-event-safe" onclick="resolveEvent('altar', 'leave')">🚶 什麼都不做</button>
         `;
     }
     switchControls("event");
@@ -710,18 +719,15 @@ function combatAction(action) {
 
         endCombat();
     } else {
-        // --- 怪物攻擊強度調整與暴擊判定 ---
-        let atkMod = 1.0;
+        // --- 暴擊率與掉金幣設定（不打折，100% 原始傷害） ---
         let critChance = 0;
         let dropGoldMax = 0;
 
         if (floor <= 10) {
-            atkMod = 0.70; // 前 10 層攻擊傷害降低 30%
+            critChance = 0.00;
         } else if (floor <= 20) {
-            atkMod = 0.70; // 11-20 層攻擊力降低 30%
             critChance = 0.01; // 1% 扣兩倍血
         } else if (floor <= 30) {
-            atkMod = 1.00; // 21-30 層攻擊力維持
             critChance = 0.02; // 2% 扣兩倍血
         } else if (floor <= 40) {
             critChance = 0.03; // 3% 扣兩倍血
@@ -736,14 +742,15 @@ function combatAction(action) {
 
         let isCrit = Math.random() < critChance;
         
-        // 隨機選取招式（全庫包含經典、荒唐、意外痛點與帥氣系）
+        // 隨機選取招式
         let chosenAttack = allMonsterAttacks[Math.floor(Math.random() * allMonsterAttacks.length)];
+        
+        // 舉盾抵擋 70% 傷害，未舉盾則為 100% 完整原傷
         let baseEnemyAtk = action === "defend" ? Math.floor(enemyAtk * 0.3) : enemyAtk;
-        let modifiedAtk = Math.round(baseEnemyAtk * atkMod);
-        let actualAtk = Math.max(2, modifiedAtk - defense);
+        let actualAtk = Math.max(2, baseEnemyAtk - defense);
 
         if (isCrit) {
-            actualAtk *= 2; // 扣兩倍血
+            actualAtk *= 2; // 暴擊雙倍傷害
         }
 
         let critText = isCrit ? `<span class="color-crit">【⚠️ 暴擊兩倍傷害！】</span>` : "";
