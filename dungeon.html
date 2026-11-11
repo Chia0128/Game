@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>勇闖地下城</title>
+    <title>勇闖地下城：深度冒險版</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -23,34 +23,34 @@
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-            max-width: 360px;
+            max-width: 380px;
             width: 100%;
             margin-top: 40px;
         }
 
-        h2 { margin: 0 0 16px 0; color: #ffb300; text-align: center; }
+        h2 { margin: 0 0 12px 0; color: #ffb300; text-align: center; }
 
         /* 狀態列 */
         .stats-bar {
             display: flex;
             justify-content: space-between;
             background: #2c2c2c;
-            padding: 10px;
+            padding: 8px 12px;
             border-radius: 8px;
-            margin-bottom: 12px;
-            font-size: 15px;
+            margin-bottom: 8px;
+            font-size: 14px;
             font-weight: bold;
         }
         .stat-item { display: flex; flex-direction: column; align-items: center; }
-        .stat-value { font-size: 18px; color: #fff; }
+        .stat-value { font-size: 16px; color: #fff; }
 
         /* 血條 */
         .hp-container {
             background: #424242;
-            height: 16px;
-            border-radius: 8px;
+            height: 14px;
+            border-radius: 7px;
             overflow: hidden;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             position: relative;
         }
         .hp-bar {
@@ -63,42 +63,42 @@
             position: absolute;
             top: 0; left: 0; right: 0;
             text-align: center;
-            font-size: 12px;
-            line-height: 16px;
+            font-size: 11px;
+            line-height: 14px;
             font-weight: bold;
             color: white;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
 
-        /* 遊戲日誌區 (Log) */
+        /* 遊戲日誌區 */
         .log-box {
             background: #000;
             border: 1px solid #444;
             border-radius: 8px;
-            height: 180px;
+            height: 150px;
             overflow-y: auto;
             padding: 10px;
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.5;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             scroll-behavior: smooth;
         }
-        .log-entry { margin-bottom: 6px; border-bottom: 1px dashed #333; padding-bottom: 4px; }
-        .log-entry:last-child { border-bottom: none; }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px dashed #333; padding-bottom: 3px; }
         
         .color-good { color: #4caf50; }
         .color-bad { color: #f44336; }
         .color-gold { color: #ffb300; }
         .color-neutral { color: #64b5f6; }
-        .color-banana { color: #ffee58; font-weight: bold; } /* 香蕉人專屬顏色 */
+        .color-npc { color: #ab47bc; font-weight: bold; }
+        .color-banana { color: #ffee58; font-weight: bold; }
 
-        /* 怪物狀態區 (戰鬥時顯示) */
+        /* 敵方狀態區 */
         #enemy-zone {
             display: none;
             background: #3e2723;
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             text-align: center;
             border: 1px solid #5d4037;
         }
@@ -107,14 +107,14 @@
         .controls {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
         }
         .btn {
             background: #37474f;
             color: white;
             border: none;
-            padding: 12px;
-            font-size: 15px;
+            padding: 10px;
+            font-size: 14px;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
@@ -128,7 +128,48 @@
         .btn-attack { background: #c62828; }
         .btn-defend { background: #1565c0; }
         .btn-rest { background: #2e7d32; }
-        .btn-flee { background: #424242; }
+        .btn-shop { background: #e65100; }
+        .btn-bag { background: #6a1b9a; }
+        .btn-flee { background: #424242; grid-column: span 2; }
+
+        /* 背包彈窗 */
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+        .modal-card {
+            background: #242424;
+            padding: 20px;
+            border-radius: 12px;
+            width: 300px;
+            border: 1px solid #555;
+            text-align: center;
+        }
+        .modal-list {
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+            background: #111;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .weapon-option {
+            padding: 6px;
+            margin: 4px 0;
+            background: #333;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+        .weapon-option.equipped { border: 1px solid #ffb300; background: #3e3214; }
     </style>
 </head>
 <body>
@@ -138,18 +179,26 @@
         ⬅️ 返回大廳
     </button>
 
+    <!-- 背包/武器視窗 -->
+    <div id="modal-overlay">
+        <div class="modal-card">
+            <h3 style="margin-top:0; color:#ffb300;">🎒 冒險背包與裝備</h3>
+            <div style="font-size: 13px; text-align: left; margin-bottom: 6px; color:#aaa;">防具防禦力：<span id="bag-def" style="color:#fff; font-weight:bold;">0</span></div>
+            <div style="font-size: 13px; text-align: left; margin-bottom: 4px; color:#aaa;">持有武器（點擊可切換裝備）：</div>
+            <div class="modal-list" id="weapon-list"></div>
+            <div style="font-size: 13px; text-align: left; margin-top: 8px; color:#aaa;">持有道具：</div>
+            <div class="modal-list" id="item-list" style="max-height: 80px;"></div>
+            <button class="btn" onclick="closeBag()" style="width:100%; background:#c62828; margin-top:10px;">關閉背包</button>
+        </div>
+    </div>
+
     <div id="game-wrap">
         <h2>🏰 勇闖地下城</h2>
         
         <div class="stats-bar">
-            <div class="stat-item">
-                <span style="color: #aaa; font-size: 12px;">層數</span>
-                <span class="stat-value" id="val-floor">1</span>
-            </div>
-            <div class="stat-item">
-                <span style="color: #aaa; font-size: 12px;">金幣</span>
-                <span class="stat-value color-gold" id="val-gold">0</span>
-            </div>
+            <div class="stat-item"><span style="color: #aaa; font-size: 11px;">層數</span><span class="stat-value" id="val-floor">1</span></div>
+            <div class="stat-item"><span style="color: #aaa; font-size: 11px;">金幣</span><span class="stat-value color-gold" id="val-gold">0</span></div>
+            <div class="stat-item"><span style="color: #aaa; font-size: 11px;">當前武器</span><span class="stat-value" id="val-weapon" style="font-size:14px; color:#64b5f6;">木劍</span></div>
         </div>
 
         <div class="hp-container">
@@ -158,18 +207,19 @@
         </div>
 
         <div id="enemy-zone">
-            <div style="font-size: 24px; margin-bottom: 4px;" id="enemy-emoji">👾</div>
-            <div style="font-weight: bold; color: #ff5252;" id="enemy-hp-text">敵方生命：30</div>
+            <div style="font-size: 22px; margin-bottom: 2px;" id="enemy-emoji">👾</div>
+            <div style="font-weight: bold; color: #ff5252; font-size: 13px;" id="enemy-hp-text">敵方生命：30</div>
         </div>
 
         <div class="log-box" id="log-box">
-            <div class="log-entry color-neutral">冒險開始！你踏入了未知的地下城...</div>
+            <div class="log-entry color-neutral">冒險開始！選擇你的武器，踏入地下城...</div>
         </div>
 
         <!-- 探索模式按鈕 -->
         <div class="controls" id="ctrl-explore">
             <button class="btn btn-explore" onclick="explore()">🚪 探索下一間房間</button>
-            <button class="btn btn-rest" onclick="rest()">⛺ 休息 (耗費 30 金幣)</button>
+            <button class="btn btn-rest" onclick="rest()">⛺ 紮營休息 (30金)</button>
+            <button class="btn btn-bag" onclick="openBag()">🎒 查看背包</button>
             <button class="btn btn-flee" onclick="retreat()">🏃 攜帶戰利品撤退</button>
         </div>
 
@@ -177,7 +227,16 @@
         <div class="controls" id="ctrl-combat" style="display: none;">
             <button class="btn btn-attack" onclick="combatAction('attack')">⚔️ 攻擊</button>
             <button class="btn btn-defend" onclick="combatAction('defend')">🛡️ 防禦</button>
-            <button class="btn btn-flee" onclick="combatAction('flee')" style="grid-column: span 2;">🏃 嘗試逃跑</button>
+            <button class="btn btn-bag" onclick="openBag()">🎒 查看背包</button>
+            <button class="btn btn-flee" onclick="combatAction('flee')">🏃 嘗試逃跑</button>
+        </div>
+
+        <!-- 商人模式按鈕 -->
+        <div class="controls" id="ctrl-shop" style="display: none;">
+            <button class="btn btn-shop" onclick="buyItem('weapon')">🗡️ 購買進階武器 (60金)</button>
+            <button class="btn btn-shop" onclick="buyItem('armor')">🛡️ 升級防具 (+2防, 50金)</button>
+            <button class="btn btn-shop" onclick="buyItem('potion')">🧪 購買生命藥水 (25金)</button>
+            <button class="btn btn-explore" onclick="leaveShop()">🚪 離開商人</button>
         </div>
 
         <!-- 結束模式按鈕 -->
@@ -187,27 +246,42 @@
     </div>
 
 <script>
-// 遊戲狀態變數
+// 遊戲狀態與裝備庫
 let hp, maxHp, gold, floor, gameState;
 let enemyHp, enemyMaxHp, enemyAtk;
+let defense = 0;
+
+// 武器庫定義
+let weapons = [
+    { name: "木劍", minDmg: 8, maxDmg: 15, unlocked: true },
+    { name: "精鋼長劍", minDmg: 14, maxDmg: 24, unlocked: false },
+    { name: "烈焰魔杖", minDmg: 20, maxDmg: 35, unlocked: false },
+    { name: "吸血鬼匕首", minDmg: 16, maxDmg: 28, unlocked: false }
+];
+let currentWeaponIdx = 0;
+let potions = 1; // 初始帶 1 罐藥水
 
 const logBox = document.getElementById("log-box");
 const hpBar = document.getElementById("hp-bar");
 const hpText = document.getElementById("hp-text");
 const valFloor = document.getElementById("val-floor");
 const valGold = document.getElementById("val-gold");
+const valWeapon = document.getElementById("val-weapon");
 const enemyZone = document.getElementById("enemy-zone");
 const enemyHpText = document.getElementById("enemy-hp-text");
 
-// 初始化遊戲
 function initGame() {
     hp = 100;
     maxHp = 100;
     gold = 0;
     floor = 1;
+    defense = 0;
+    potions = 1;
     gameState = "explore";
+    weapons.forEach((w, idx) => w.unlocked = (idx === 0));
+    currentWeaponIdx = 0;
     
-    logBox.innerHTML = '<div class="log-entry color-neutral">冒險開始！你踏入了未知的地下城...</div>';
+    logBox.innerHTML = '<div class="log-entry color-neutral">冒險開始！選擇你的武器，踏入地下城...</div>';
     switchControls("explore");
     updateUI();
 }
@@ -215,14 +289,12 @@ function initGame() {
 function updateUI() {
     valFloor.innerText = floor;
     valGold.innerText = gold;
+    valWeapon.innerText = weapons[currentWeaponIdx].name;
     hpText.innerText = `${hp} / ${maxHp}`;
     
     let hpPercent = Math.max(0, (hp / maxHp) * 100);
     hpBar.style.width = hpPercent + "%";
-    
-    if (hpPercent > 50) hpBar.style.backgroundColor = "#4caf50";
-    else if (hpPercent > 20) hpBar.style.backgroundColor = "#ff9800";
-    else hpBar.style.backgroundColor = "#f44336";
+    hpBar.style.backgroundColor = hpPercent > 50 ? "#4caf50" : hpPercent > 20 ? "#ff9800" : "#f44336";
 
     if (gameState === "combat") {
         enemyZone.style.display = "block";
@@ -237,12 +309,13 @@ function log(msg, type = "") {
     div.className = `log-entry ${type}`;
     div.innerHTML = msg;
     logBox.appendChild(div);
-    logBox.scrollTop = logBox.scrollHeight; // 自動捲動到底部
+    logBox.scrollTop = logBox.scrollHeight;
 }
 
 function switchControls(state) {
     document.getElementById("ctrl-explore").style.display = state === "explore" ? "grid" : "none";
     document.getElementById("ctrl-combat").style.display = state === "combat" ? "grid" : "none";
+    document.getElementById("ctrl-shop").style.display = state === "shop" ? "grid" : "none";
     document.getElementById("ctrl-over").style.display = state === "over" ? "grid" : "none";
 }
 
@@ -253,12 +326,12 @@ function explore() {
     
     let roll = Math.random();
     
-    if (roll < 0.35) {
-        // 遭遇怪物 (機率降至 35%)
+    if (roll < 0.32) {
+        // 遭遇怪物 (32%)
         gameState = "combat";
-        enemyMaxHp = Math.floor(20 + Math.random() * 15 + floor * 4);
+        enemyMaxHp = Math.floor(22 + Math.random() * 15 + floor * 4);
         enemyHp = enemyMaxHp;
-        enemyAtk = Math.floor(5 + Math.random() * 8 + floor * 2);
+        enemyAtk = Math.floor(6 + Math.random() * 7 + floor * 2);
         
         const monsters = ["👾", "🐺", "🧛", "🧟", "🐉"];
         document.getElementById("enemy-emoji").innerText = monsters[Math.min(Math.floor(floor/3), 4)];
@@ -266,30 +339,36 @@ function explore() {
         log(`危險！遭遇了地牢怪獸！`, "color-bad");
         switchControls("combat");
     } 
-    else if (roll < 0.60) {
-        // 寶箱 (25%)
-        let earned = Math.floor(20 + Math.random() * 30 + floor * 2);
+    else if (roll < 0.55) {
+        // 寶箱 (23%)
+        let earned = Math.floor(20 + Math.random() * 25 + floor * 2);
         gold += earned;
         log(`💎 發現古老寶箱！獲得 ${earned} 枚金幣。`, "color-gold");
     } 
-    else if (roll < 0.75) {
+    else if (roll < 0.70) {
         // 泉水 (15%)
         let heal = Math.floor(15 + Math.random() * 15);
         hp = Math.min(maxHp, hp + heal);
         log(`✨ 發現精靈泉水！恢復了 ${heal} 點生命。`, "color-good");
     } 
-    else if (roll < 0.90) {
-        // 陷阱 (15%)
-        let dmg = Math.floor(10 + Math.random() * 10 + floor);
+    else if (roll < 0.82) {
+        // 陷阱 (12%)
+        let dmg = Math.max(5, Math.floor(12 + Math.random() * 10 + floor - defense));
         hp -= dmg;
-        log(`⚠️ 踩到毒刺陷阱！受到 ${dmg} 點傷害。`, "color-bad");
+        log(`⚠️ 踩到毒刺陷阱！防具減傷後受到 ${dmg} 點傷害。`, "color-bad");
         checkDeath();
     }
+    else if (roll < 0.92) {
+        // 地精商人 NPC (10%)
+        gameState = "shop";
+        log(`💰 遇到了神祕的【地精商人】！快來看看有什麼好貨！`, "color-npc");
+        switchControls("shop");
+    }
     else {
-        // 香蕉人 NPC (10%)
+        // 香蕉人 NPC (8%)
         maxHp += 20;
         hp = maxHp;
-        log(`🍌 遇見了神秘的 NPC【香蕉人】！他請你吃魔法香蕉，生命值全滿且上限 +20！`, "color-banana");
+        log(`🍌 遇見了神秘的 NPC【香蕉人】！生命上限 +20 且血量全滿！`, "color-banana");
     }
     
     updateUI();
@@ -297,20 +376,27 @@ function explore() {
 
 // 戰鬥操作
 function combatAction(action) {
-    let playerDmg = Math.floor(10 + Math.random() * 12); // 玩家基礎傷害 10~21
+    let w = weapons[currentWeaponIdx];
+    let playerDmg = Math.floor(w.minDmg + Math.random() * (w.maxDmg - w.minDmg + 1));
     
     if (action === "attack") {
         enemyHp -= playerDmg;
-        log(`⚔️ 你揮劍造成了 ${playerDmg} 點傷害！`);
+        log(`⚔️ 你使用【${w.name}】造成了 ${playerDmg} 點傷害！`);
+        // 吸血匕首特殊效果
+        if (w.name === "吸血鬼匕首") {
+            let lifesteal = Math.floor(playerDmg * 0.3);
+            hp = Math.min(maxHp, hp + lifesteal);
+            log(`🧛 匕首吸取了 ${lifesteal} 點生命！`, "color-good");
+        }
     } 
     else if (action === "defend") {
-        let counterDmg = Math.floor(playerDmg * 0.5);
+        let counterDmg = Math.floor(playerDmg * 0.4);
         enemyHp -= counterDmg;
-        log(`🛡️ 你舉盾防禦，並反擊造成 ${counterDmg} 點傷害！`);
+        log(`🛡️ 舉盾防禦，反擊造成 ${counterDmg} 點傷害！`);
     } 
     else if (action === "flee") {
         if (Math.random() < 0.5) {
-            log(`🏃 你成功逃跑了！但掉落了少許金幣...`);
+            log(`🏃 成功逃跑！但掉落了 10 枚金幣。`);
             gold = Math.max(0, gold - 10);
             endCombat();
             return;
@@ -320,15 +406,15 @@ function combatAction(action) {
     }
 
     if (enemyHp <= 0) {
-        let earned = Math.floor(15 + Math.random() * 20 + floor * 3);
+        let earned = Math.floor(18 + Math.random() * 20 + floor * 3);
         gold += earned;
         log(`🏆 擊敗怪物！獲得 ${earned} 枚金幣！`, "color-gold");
         endCombat();
     } else {
-        // 怪物反擊
-        let actualAtk = action === "defend" ? Math.floor(enemyAtk * 0.4) : enemyAtk;
+        let rawAtk = action === "defend" ? Math.floor(enemyAtk * 0.3) : enemyAtk;
+        let actualAtk = Math.max(2, rawAtk - defense);
         hp -= actualAtk;
-        log(`🩸 怪物攻擊！你受到 ${actualAtk} 點傷害。`, "color-bad");
+        log(`🩸 怪物攻擊！防具抵擋後受到 ${actualAtk} 點傷害。`, "color-bad");
         checkDeath();
     }
     updateUI();
@@ -340,25 +426,121 @@ function endCombat() {
     updateUI();
 }
 
-// 休息功能 (花費金幣補血)
-function rest() {
-    if (gold >= 30) {
+// 買東西
+function buyItem(type) {
+    if (type === "weapon") {
+        // 解鎖下一把武器
+        let lockedIdx = weapons.findIndex(w => !w.unlocked);
+        if (lockedIdx !== -1) {
+            if (gold >= 60) {
+                gold -= 60;
+                weapons[lockedIdx].unlocked = true;
+                currentWeaponIdx = lockedIdx;
+                log(`🗡️ 成功購買並裝配新武器【${weapons[lockedIdx].name}】！`, "color-gold");
+            } else {
+                log(`❌ 金幣不足！需要 60 金幣。`, "color-bad");
+            }
+        } else {
+            log(`✨ 你已經解鎖了所有最強武器！`);
+        }
+    } else if (type === "armor") {
+        if (gold >= 50) {
+            gold -= 50;
+            defense += 2;
+            log(`🛡️ 防具升級成功！防禦力 +2 (目前防禦: ${defense})`, "color-good");
+        } else {
+            log(`❌ 金幣不足！需要 50 金幣。`, "color-bad");
+        }
+    } else if (type === "potion") {
+        if (gold >= 25) {
+            gold -= 25;
+            potions++;
+            log(`🧪 購買了一罐生命藥水！(目前擁有: ${potions})`, "color-good");
+        } else {
+            log(`❌ 金幣不足！需要 25 金幣。`, "color-bad");
+        }
+    }
+    updateUI();
+}
+
+function leaveShop() {
+    gameState = "explore";
+    log(`你離開了地精商人，繼續向下探索。`, "color-neutral");
+    switchControls("explore");
+    updateUI();
+}
+
+// 背包系統
+function openBag() {
+    document.getElementById("bag-def").innerText = defense;
+    
+    // 渲染武器清單
+    let wList = document.getElementById("weapon-list");
+    wList.innerHTML = "";
+    weapons.forEach((w, idx) => {
+        let div = document.createElement("div");
+        div.className = `weapon-option ${idx === currentWeaponIdx ? 'equipped' : ''}`;
+        div.innerHTML = `<span>${w.unlocked ? w.name : '🔒 ???'} (${w.minDmg}-${w.maxDmg}攻)</span> <span>${idx === currentWeaponIdx ? '【裝備中】' : w.unlocked ? '點擊裝備' : '未解鎖'}</span>`;
+        if (w.unlocked) {
+            div.onclick = () => {
+                currentWeaponIdx = idx;
+                log(`🔄 切換裝備：${w.name}`);
+                openBag();
+                updateUI();
+            };
+        }
+        wList.appendChild(div);
+    });
+
+    // 渲染道具清單
+    let iList = document.getElementById("item-list");
+    iList.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🧪 生命藥水 (恢復 50HP) x${potions}</span>
+            <button class="btn" style="padding:4px 8px; font-size:12px; background:#2e7d32;" onclick="usePotion()">使用</button>
+        </div>
+    `;
+
+    document.getElementById("modal-overlay").style.display = "flex";
+}
+
+function closeBag() {
+    document.getElementById("modal-overlay").style.display = "none";
+}
+
+function usePotion() {
+    if (potions > 0) {
         if (hp >= maxHp) {
-            log(`狀態絕佳，不需要休息！`);
+            log(`生命值已滿，不需要使用藥水！`);
             return;
         }
-        gold -= 30;
-        let heal = 25;
+        potions--;
+        let heal = 50;
         hp = Math.min(maxHp, hp + heal);
-        log(`⛺ 消耗 30 金幣紮營休息，恢復了 ${heal} 點生命。`, "color-good");
+        log(`🧪 使用了生命藥水，恢復了 ${heal} 點生命！`, "color-good");
+        openBag();
         updateUI();
     } else {
-        log(`❌ 金幣不足，無法購買補給！(需要 30 金幣)`, "color-bad");
+        log(`❌ 背包裡沒有生命藥水了！`, "color-bad");
+    }
+}
+
+function rest() {
+    if (gold >= 30) {
+        if (hp >= maxHp) { log(`狀態絕佳，不需要休息！`); return; }
+        gold -= 30;
+        let heal = 30;
+        hp = Math.min(maxHp, hp + heal);
+        log(`⛺ 紮營休息，恢復了 ${heal} 點生命。`, "color-good");
+        updateUI();
+    } else {
+        log(`❌ 金幣不足！(需要 30 金)`, "color-bad");
     }
 }
 
 function retreat() {
-    log(`\n🎉 你見好就收，帶著 ${gold} 枚金幣安然退休！`, "color-gold");
+    let totalScore = gold + floor * 10;
+    log(`\n🎉 帶著 ${gold} 金幣安然撤退！總評分：${totalScore}`, "color-gold");
     gameState = "over";
     switchControls("over");
 }
@@ -366,14 +548,12 @@ function retreat() {
 function checkDeath() {
     if (hp <= 0) {
         hp = 0;
-        log(`\n💀 你的體力耗盡，倒在了第 ${floor} 層...`, "color-bad");
-        log(`最終遺留金幣：${gold} 枚`, "color-gold");
+        log(`\n💀 體力耗盡，倒在了第 ${floor} 層...`, "color-bad");
         gameState = "over";
         switchControls("over");
     }
 }
 
-// 啟動遊戲
 initGame();
 </script>
 </body>
