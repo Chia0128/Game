@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2048 - 網頁版</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #faf8ef;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            touch-action: none; /* 防止滑動棋盤時網頁跟著滾動 */
+        }
+
+        #game-container {
+            width: 320px;
+            margin-top: 40px;
+        }
+
+        /* 頂部三段式元件 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .score-box {
+            background-color: #bbada0;
+            padding: 4px 12px;
+            border-radius: 6px;
+            text-align: center;
+            color: white;
+            min-width: 60px;
+        }
+        .score-title { font-size: 10px; font-weight: bold; }
+        .score-val { font-size: 18px; font-weight: bold; }
+        
+        .title {
+            color: #776e65;
+            font-size: 32px;
+            font-weight: bold;
+            margin: 0;
+            text-align: center;
+        }
+
+        .btn-restart {
+            background-color: #f0ad4e;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .msg {
+            text-align: center;
+            font-size: 14px;
+            color: #776e65;
+            font-weight: bold;
+            margin-bottom: 12px;
+            height: 20px;
+        }
+
+        /* 棋盤 */
+        .grid {
+            background-color: #bbada0;
+            padding: 8px;
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .cell {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: #cdc1b4;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #776e65;
+            transition: transform 0.1s ease-in-out;
+        }
+        /* 新增方塊時的縮放動畫 */
+        .cell.new { animation: pop 0.2s ease-in-out; }
+        @keyframes pop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+
+        /* 控制方向鍵 */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .ctrl-row {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-dir {
+            width: 60px;
+            height: 45px;
+            font-size: 20px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .btn-dir:active { transform: scale(0.95); background: #d5d5d5; }
+        .btn-empty { width: 60px; height: 45px; visibility: hidden; }
+    </style>
+</head>
+<body>
+
+    <!-- 像素級統一的懸浮返回大廳按鈕 -->
+    <button onclick="window.location.href='index.html'" style="all: unset; position: fixed; top: 15px; left: 15px; z-index: 99999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;">
+        ⬅️ 返回大廳
+    </button>
+
+    <div id="game-container">
+        <!-- 頂部列 -->
+        <div class="header">
+            <div class="score-box">
+                <div class="score-title">SCORE</div>
+                <div class="score-val" id="score">0</div>
+            </div>
+            <div class="title">2048</div>
+            <button class="btn-restart" onclick="resetGame()">🔄 重置</button>
+        </div>
+        
+        <div class="msg" id="msg">使用按鈕、鍵盤或滑動！</div>
+
+        <!-- 4x4 棋盤 -->
+        <div class="grid" id="grid">
+            <!-- JS 動態生成格子 -->
+        </div>
+
+        <!-- 十字方向鍵 -->
+        <div class="controls">
+            <div class="ctrl-row">
+                <div class="btn-empty"></div>
+                <button class="btn-dir" onclick="move('up')">⬆️</button>
+                <div class="btn-empty"></div>
+            </div>
+            <div class="ctrl-row">
+                <button class="btn-dir" onclick="move('left')">⬅️</button>
+                <button class="btn-dir" onclick="move('down')">⬇️</button>
+                <button class="btn-dir" onclick="move('right')">➡️</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+const TILE_STYLES = {
+    0: { bg: "#cdc1b4", color: "#776e65" },
+    2: { bg: "#eee4da", color: "#776e65" },
+    4: { bg: "#ede0c8", color: "#776e65" },
+    8: { bg: "#f2b179", color: "#f9f6f2" },
+    16: { bg: "#f59563", color: "#f9f6f2" },
+    32: { bg: "#f67c5f", color: "#f9f6f2" },
+    64: { bg: "#f65e3b", color: "#f9f6f2" },
+    128: { bg: "#edcf72", color: "#f9f6f2" },
+    256: { bg: "#edcc61", color: "#f9f6f2" },
+    512: { bg: "#edc850", color: "#f9f6f2" },
+    1024: { bg: "#edc53f", color: "#f9f6f2" },
+    2048: { bg: "#edc22e", color: "#f9f6f2" }
+};
+
+let board = [];
+let score = 0;
+let gameOver = false;
+
+function initGrid() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            let cell = document.createElement('div');
+            cell.id = `c-${r}-${c}`;
+            cell.className = 'cell';
+            grid.appendChild(cell);
+        }
+    }
+}
+
+function resetGame() {
+    board = [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+    ];
+    score = 0;
+    gameOver = false;
+    document.getElementById('msg').innerHTML = "使用按鈕、鍵盤或滑動！";
+    document.getElementById('msg').style.color = "#776e65";
+    
+    addRandomTile();
+    addRandomTile();
+    renderBoard();
+}
+
+function addRandomTile() {
+    let empty = [];
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            if (board[r][c] === 0) empty.push({r, c});
+        }
+    }
+    if (empty.length > 0) {
+        let rand = empty[Math.floor(Math.random() * empty.length)];
+        board[rand.r][rand.c] = Math.random() < 0.9 ? 2 : 4;
+        
+        // 加上一點動畫效果標記
+        setTimeout(() => {
+            let el = document.getElementById(`c-${rand.r}-${rand.c}`);
+            if(el) {
+                el.classList.add('new');
+                setTimeout(() => el.classList.remove('new'), 200);
+            }
+        }, 10);
+    }
+}
+
+function renderBoard() {
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            let val = board[r][c];
+            let cell = document.getElementById(`c-${r}-${c}`);
+            cell.innerText = val === 0 ? "" : val;
+            
+            // 如果超出2048，使用2048的顏色
+            let style = TILE_STYLES[val] || TILE_STYLES[2048];
+            cell.style.backgroundColor = style.bg;
+            cell.style.color = style.color;
+            
+            // 動態調整字體大小避免文字破版
+            if (val > 100 && val < 1000) cell.style.fontSize = "20px";
+            else if (val >= 1000) cell.style.fontSize = "16px";
+            else cell.style.fontSize = "24px";
+        }
+    }
+    document.getElementById('score').innerText = score;
+}
+
+function compressAndMerge(row) {
+    let nonZero = row.filter(val => val !== 0);
+    let merged = [];
+    let skip = false;
+    
+    for (let i = 0; i < nonZero.length; i++) {
+        if (skip) {
+            skip = false;
+            continue;
+        }
+        if (i + 1 < nonZero.length && nonZero[i] === nonZero[i+1]) {
+            merged.push(nonZero[i] * 2);
+            score += nonZero[i] * 2;
+            skip = true;
+        } else {
+            merged.push(nonZero[i]);
+        }
+    }
+    while (merged.length < 4) merged.push(0);
+    return merged;
+}
+
+function transpose(matrix) {
+    let newMatrix = [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]];
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            newMatrix[c][r] = matrix[r][c];
+        }
+    }
+    return newMatrix;
+}
+
+function move(direction) {
+    if (gameOver) return;
+    
+    let prevBoard = JSON.stringify(board);
+    
+    if (direction === 'left') {
+        for (let r = 0; r < 4; r++) board[r] = compressAndMerge(board[r]);
+    } else if (direction === 'right') {
+        for (let r = 0; r < 4; r++) board[r] = compressAndMerge(board[r].reverse()).reverse();
+    } else if (direction === 'up') {
+        board = transpose(board);
+        for (let r = 0; r < 4; r++) board[r] = compressAndMerge(board[r]);
+        board = transpose(board);
+    } else if (direction === 'down') {
+        board = transpose(board);
+        for (let r = 0; r < 4; r++) board[r] = compressAndMerge(board[r].reverse()).reverse();
+        board = transpose(board);
+    }
+    
+    if (JSON.stringify(board) !== prevBoard) {
+        addRandomTile();
+        renderBoard();
+        checkGameState();
+    }
+}
+
+function checkGameState() {
+    // 檢查獲勝 (2048) - 僅提示一次
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            if (board[r][c] === 2048 && !document.getElementById('msg').innerText.includes("🎉")) {
+                let msg = document.getElementById('msg');
+                msg.innerHTML = "🎉 恭喜達成 2048！繼續挑戰吧！";
+                msg.style.color = "#2e7d32";
+            }
+        }
+    }
+
+    // 檢查是否還能移動
+    let canMove = false;
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            if (board[r][c] === 0) canMove = true;
+            if (c < 3 && board[r][c] === board[r][c+1]) canMove = true;
+            if (r < 3 && board[r][c] === board[r+1][c]) canMove = true;
+        }
+    }
+    
+    if (!canMove) {
+        gameOver = true;
+        let msg = document.getElementById('msg');
+        msg.innerHTML = "💀 無步可走，Game Over！請按重置。";
+        msg.style.color = "#c62828";
+    }
+}
+
+// 支援鍵盤控制
+document.addEventListener('keydown', (e) => {
+    if (["ArrowUp", "w", "W"].includes(e.key)) move('up');
+    if (["ArrowDown", "s", "S"].includes(e.key)) move('down');
+    if (["ArrowLeft", "a", "A"].includes(e.key)) move('left');
+    if (["ArrowRight", "d", "D"].includes(e.key)) move('right');
+    // 防止方向鍵預設捲動視窗
+    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+        e.preventDefault();
+    }
+});
+
+// 支援手機觸控滑動
+let touchStartX = 0;
+let touchStartY = 0;
+const gridElement = document.getElementById('grid');
+
+gridElement.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+}, {passive: false});
+
+gridElement.addEventListener('touchend', (e) => {
+    let touchEndX = e.changedTouches[0].screenX;
+    let touchEndY = e.changedTouches[0].screenY;
+    handleSwipe(touchStartX, touchStartY, touchEndX, touchEndY);
+}, {passive: false});
+
+function handleSwipe(startX, startY, endX, endY) {
+    let dx = endX - startX;
+    let dy = endY - startY;
+    if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return; // 滑動距離太短忽略
+    
+    if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) move('right');
+        else move('left');
+    } else {
+        if (dy > 0) move('down');
+        else move('up');
+    }
+}
+
+// 初始化啟動
+initGrid();
+resetGame();
+</script>
+</body>
+</html>
