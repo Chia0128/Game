@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>勇闖地下城：深度冒險版</title>
+    <title>勇闖地下城：公主同行版</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -91,6 +91,7 @@
         .color-neutral { color: #64b5f6; }
         .color-npc { color: #ab47bc; font-weight: bold; }
         .color-banana { color: #ffee58; font-weight: bold; }
+        .color-princess { color: #ff69b4; font-weight: bold; } /* 地洞公主專屬粉色 */
 
         /* 敵方狀態區 */
         #enemy-zone {
@@ -152,7 +153,7 @@
         }
         .modal-list {
             text-align: left;
-            max-height: 200px;
+            max-height: 160px;
             overflow-y: auto;
             margin: 10px 0;
             background: #111;
@@ -251,6 +252,10 @@ let hp, maxHp, gold, floor, gameState;
 let enemyHp, enemyMaxHp, enemyAtk;
 let defense = 0;
 
+// 地洞公主養成變數
+let princessHelpCount = 0;
+let princessJoined = false;
+
 // 武器庫定義
 let weapons = [
     { name: "木劍", minDmg: 8, maxDmg: 15, unlocked: true },
@@ -259,7 +264,7 @@ let weapons = [
     { name: "吸血鬼匕首", minDmg: 16, maxDmg: 28, unlocked: false }
 ];
 let currentWeaponIdx = 0;
-let potions = 1; // 初始帶 1 罐藥水
+let potions = 1;
 
 const logBox = document.getElementById("log-box");
 const hpBar = document.getElementById("hp-bar");
@@ -277,6 +282,8 @@ function initGame() {
     floor = 1;
     defense = 0;
     potions = 1;
+    princessHelpCount = 0;
+    princessJoined = false;
     gameState = "explore";
     weapons.forEach((w, idx) => w.unlocked = (idx === 0));
     currentWeaponIdx = 0;
@@ -326,8 +333,8 @@ function explore() {
     
     let roll = Math.random();
     
-    if (roll < 0.32) {
-        // 遭遇怪物 (32%)
+    if (roll < 0.25) {
+        // 遭遇怪物 (25%)
         gameState = "combat";
         enemyMaxHp = Math.floor(22 + Math.random() * 15 + floor * 4);
         enemyHp = enemyMaxHp;
@@ -339,33 +346,49 @@ function explore() {
         log(`危險！遭遇了地牢怪獸！`, "color-bad");
         switchControls("combat");
     } 
-    else if (roll < 0.55) {
-        // 寶箱 (23%)
+    else if (roll < 0.50) {
+        // 寶箱 (25%)
         let earned = Math.floor(20 + Math.random() * 25 + floor * 2);
         gold += earned;
         log(`💎 發現古老寶箱！獲得 ${earned} 枚金幣。`, "color-gold");
     } 
-    else if (roll < 0.70) {
+    else if (roll < 0.65) {
         // 泉水 (15%)
         let heal = Math.floor(15 + Math.random() * 15);
         hp = Math.min(maxHp, hp + heal);
         log(`✨ 發現精靈泉水！恢復了 ${heal} 點生命。`, "color-good");
     } 
-    else if (roll < 0.82) {
-        // 陷阱 (12%)
+    else if (roll < 0.75) {
+        // 陷阱 (10%)
         let dmg = Math.max(5, Math.floor(12 + Math.random() * 10 + floor - defense));
         hp -= dmg;
         log(`⚠️ 踩到毒刺陷阱！防具減傷後受到 ${dmg} 點傷害。`, "color-bad");
         checkDeath();
     }
-    else if (roll < 0.92) {
+    else if (roll < 0.85) {
         // 地精商人 NPC (10%)
         gameState = "shop";
         log(`💰 遇到了神祕的【地精商人】！快來看看有什麼好貨！`, "color-npc");
         switchControls("shop");
     }
+    else if (roll < 0.90) {
+        // 地洞公主 NPC (5%)
+        if (!princessJoined) {
+            princessHelpCount++;
+            potions += 3; // 每次遇到送 3 個隨機道具(此處以生命藥水補充作為隨機道具實現)
+            if (princessHelpCount >= 3) {
+                princessJoined = true;
+                log(`👑 你伸出援手，這是第 3 次幫助【地洞公主】！她深受感動，正式加入隊伍成為夥伴！戰鬥中將自動協助你！`, "color-princess");
+            } else {
+                log(`👸 遇到了落難的【地洞公主】給予她幫助！(累積幫助次數: ${princessHelpCount}/3)。公主為了答謝你，贈送了 3 罐生命藥水！`, "color-princess");
+            }
+        } else {
+            log(`👑 你的夥伴【地洞公主】巡視四周，開心地給了你一個擁抱，並順手塞了 3 罐生命藥水給你！`, "color-princess");
+            potions += 3;
+        }
+    }
     else {
-        // 香蕉人 NPC (8%)
+        // 香蕉人 NPC (10%)
         maxHp += 20;
         hp = maxHp;
         log(`🍌 遇見了神秘的 NPC【香蕉人】！生命上限 +20 且血量全滿！`, "color-banana");
@@ -382,7 +405,6 @@ function combatAction(action) {
     if (action === "attack") {
         enemyHp -= playerDmg;
         log(`⚔️ 你使用【${w.name}】造成了 ${playerDmg} 點傷害！`);
-        // 吸血匕首特殊效果
         if (w.name === "吸血鬼匕首") {
             let lifesteal = Math.floor(playerDmg * 0.3);
             hp = Math.min(maxHp, hp + lifesteal);
@@ -402,6 +424,22 @@ function combatAction(action) {
             return;
         } else {
             log(`🏃 逃跑失敗！怪物封鎖了退路！`, "color-bad");
+        }
+    }
+
+    // --- 地洞公主夥伴戰鬥自動支援 ---
+    if (princessJoined && enemyHp > 0) {
+        let pAction = Math.random();
+        if (pAction < 0.5) {
+            // 公主自動攻擊
+            let pDmg = Math.floor(12 + floor * 2);
+            enemyHp -= pDmg;
+            log(`💖 夥伴【地洞公主】扔出王室飛刀，對怪物造成了 ${pDmg} 點支援傷害！`, "color-princess");
+        } else {
+            // 公主自動補血
+            let pHeal = Math.floor(10 + floor * 2);
+            hp = Math.min(maxHp, hp + pHeal);
+            log(`💖 夥伴【地洞公主】施展治癒魔法，為你恢復了 ${pHeal} 點生命！`, "color-princess");
         }
     }
 
@@ -429,7 +467,6 @@ function endCombat() {
 // 買東西
 function buyItem(type) {
     if (type === "weapon") {
-        // 解鎖下一把武器
         let lockedIdx = weapons.findIndex(w => !w.unlocked);
         if (lockedIdx !== -1) {
             if (gold >= 60) {
@@ -474,7 +511,6 @@ function leaveShop() {
 function openBag() {
     document.getElementById("bag-def").innerText = defense;
     
-    // 渲染武器清單
     let wList = document.getElementById("weapon-list");
     wList.innerHTML = "";
     weapons.forEach((w, idx) => {
@@ -492,7 +528,6 @@ function openBag() {
         wList.appendChild(div);
     });
 
-    // 渲染道具清單
     let iList = document.getElementById("item-list");
     iList.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
