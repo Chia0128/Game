@@ -703,10 +703,10 @@ function combatAction(action) {
         let dropGoldMax = 0;
 
         if (floor <= 10) {
-            atkMod = 0.85; // 前 10 層攻擊傷害降低 15%
+            atkMod = 0.80; // 前 10 層攻擊傷害降低 20%
             critChance = 0.01; // 1% 扣兩倍血
         } else if (floor <= 20) {
-            atkMod = 0.90; // 11-20 層攻擊力降低 10%
+            atkMod = 0.85; // 11-20 層攻擊力降低 15%
             critChance = 0.015; // 1.5% 扣兩倍血
         } else if (floor <= 30) {
             atkMod = 1.00; // 21-30 層攻擊力維持
