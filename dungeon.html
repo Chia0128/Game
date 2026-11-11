@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>勇闖地下城：公主同行版</title>
+    <title>勇闖地下城：荒唐爆笑版</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -92,6 +92,7 @@
         .color-npc { color: #ab47bc; font-weight: bold; }
         .color-banana { color: #ffee58; font-weight: bold; }
         .color-princess { color: #ff69b4; font-weight: bold; }
+        .color-absurd { color: #ffeb3b; font-weight: bold; } /* 荒唐攻擊專屬金黃色 */
 
         /* 敵方狀態區 */
         #enemy-zone {
@@ -264,6 +265,17 @@ let weapons = [
 let currentWeaponIdx = 0;
 let potions = 1;
 
+// 荒唐怪獸攻擊庫
+const absurdAttacks = [
+    { name: "使出恥度全開的【裸體跳舞】", desc: "畫面太美不敢看，精神打擊造成" },
+    { name: "無預警在闖關者身上狂跳【Breaking地板動作】", desc: "頭部直接撞擊地面，震波造成" },
+    { name: "氣噗噗地朝闖關者臉上【強力噴口水】", desc: "強酸口水腐蝕裝甲，造成" },
+    { name: "使出泰山壓頂般的【大力恥辱衝撞】", desc: "撞得你五臟六腑移位，造成" },
+    { name: "突然開始大聲朗誦【自己的恥辱黑歷史詩歌】", desc: "心靈受創嚴重，精神傷害造成" },
+    { name: "用滑稽的姿態原地【旋轉大法大暴走】", desc: "尾巴甩到你屁股，造成" },
+    { name: "從嘴裡吐出黏糊糊的【神祕綠色鼻涕球】", desc: "噁心感爆表，造成" }
+];
+
 const logBox = document.getElementById("log-box");
 const hpBar = document.getElementById("hp-bar");
 const hpText = document.getElementById("hp-text");
@@ -435,10 +447,13 @@ function combatAction(action) {
         log(`🏆 擊敗怪物！獲得 ${earned} 枚金幣！`, "color-gold");
         endCombat();
     } else {
+        // 隨機抽選一招荒唐攻擊
+        let randomAttack = absurdAttacks[Math.floor(Math.random() * absurdAttacks.length)];
         let rawAtk = action === "defend" ? Math.floor(enemyAtk * 0.3) : enemyAtk;
         let actualAtk = Math.max(2, rawAtk - defense);
         hp -= actualAtk;
-        log(`🩸 怪物攻擊！防具抵擋後受到 ${actualAtk} 點傷害。`, "color-bad");
+        
+        log(`🤪 怪物突然${randomAttack.name}！${randomAttack.desc} <span style="color:#ff5252; font-weight:bold;">${actualAtk} 點傷害</span>。`, "color-absurd");
         checkDeath();
     }
     updateUI();
