@@ -80,8 +80,9 @@
         ⬅️ 返回大廳
     </button>
 
-    <div id="game-wrap" id="main-container">
-        <h2>🪨 電子寵物石</h2>
+    <div id="game-wrap">
+        <h2>🪨 電子寵物石 2.0</h2>
+        <div class="tagline">靈魂覺醒的放置養成小品</div>
 
         <div class="header-stats">
             <div>Lv.<span id="txt-lvl">1</span> (<span id="txt-exp">0</span>/<span id="txt-maxexp">100</span>)</div>
@@ -90,8 +91,8 @@
 
         <div class="stage" id="stage">
             <div class="personality-badge" onclick="showPersonality()">📜 <span id="txt-personality">載入中</span></div>
-            <div class="status-panel-btn" onclick="showStatusDashboard()">📊 狀態面板</div>
-            <div class="auto-mode-toggle" id="btn-auto" onclick="toggleAuto()">🤖 託管: 關</div>
+            <div class="status-panel-btn" onclick="showStatusDashboard()">📊 狀態</div>
+            <div class="auto-mode-toggle" id="btn-auto" onclick="toggleAuto()">🤖 自動抉擇: 關</div>
             <div class="rock-avatar" id="rock-display" onclick="pokeRock()">🪨</div>
         </div>
         <div class="rock-title" id="rock-evo">普通路邊碎石</div>
@@ -114,12 +115,12 @@
         </div>
 
         <div id="tab-act" class="tab-content active">
-            <button class="btn-act" onclick="doAction('rub')">🧽 用力打磨</button>
-            <button class="btn-act" onclick="doAction('sun')">☀️ 丟在外面</button>
-            <button class="btn-act" onclick="doAction('gather')">🌿 陰暗處採集</button>
-            <button class="btn-act" onclick="doAction('talk')">🗣️ 瘋狂倒垃圾</button>
-            <button class="btn-act" onclick="doAction('cat')">🐾 丟給貓玩</button>
-            <button class="btn-act" onclick="doAction('hammer')">🔨 拿鐵槌敲</button>
+            <button class="btn-act" onclick="doAction('rub')">🧽 用力打磨 (-0.5)</button>
+            <button class="btn-act" onclick="doAction('sun')">☀️ 丟在外面 (-0.5)</button>
+            <button class="btn-act" id="btn-gather" onclick="doAction('gather')">🌿 陰暗處採集</button>
+            <button class="btn-act" onclick="doAction('talk')">🗣️ 瘋狂倒垃圾 (-0.5)</button>
+            <button class="btn-act" onclick="doAction('cat')">🐾 丟給貓玩 (-0.5)</button>
+            <button class="btn-act" onclick="doAction('hammer')">🔨 拿鐵槌敲 (-0.5)</button>
         </div>
 
         <div id="tab-feed" class="tab-content">
@@ -135,6 +136,8 @@
             <button class="btn-act" onclick="buy('skate')">🛹 滑板 (50)</button>
             <button class="btn-act" onclick="buy('fridge')">❄️ 冷凍特訓 (80)</button>
             <button class="btn-act" onclick="buy('car')">🏎️ 遙控車 (150)</button>
+            <button class="btn-act" onclick="buy('banana')">🍌 香蕉皮 (10)</button>
+            <button class="btn-act" onclick="buy('incense')">🕯️ 薰香 (40)</button>
             <button class="btn-act" onclick="buy('sunglasses')" style="grid-column: span 2;">🕶️ 墨鏡金鍊套組 (200)</button>
         </div>
 
@@ -165,13 +168,14 @@ let pet = {
     personality: "隨遇而安型", evolution: "普通路邊碎石",
     pokedex: ["普通路邊碎石"],
     lastTime: Date.now(),
-    isSplit: false, hasShades: false, autoMode: false
+    isSplit: false, hasShades: false, autoMode: false,
+    gatherCooldown: 0
 };
 
 let eventOptions = null;
 
 function init() {
-    let saved = localStorage.getItem("pet_rock_v4");
+    let saved = localStorage.getItem("pet_rock_v5");
     if (saved) {
         try { pet = { ...pet, ...JSON.parse(saved) }; } catch (e) {}
     } else {
@@ -184,14 +188,13 @@ function init() {
     setInterval(gameTick, 5000);
 }
 
-function save() { localStorage.setItem("pet_rock_v4", JSON.stringify(pet)); updateUI(); }
+function save() { localStorage.setItem("pet_rock_v5", JSON.stringify(pet)); updateUI(); }
 
 function getMaxMoss() { return 50 + (pet.level - 1) * 30; }
 
 function gameTick() {
-    // 心情極端值心跳懲罰或加成
-    if (pet.mood >= 100) pet.moss = Math.min(pet.moss + 1, getMaxMoss()); // 心情極佳額外產出
-    else if (pet.mood <= 20) pet.moss = Math.max(0, pet.moss - 1); // 憂鬱枯萎
+    if (pet.mood >= 100) pet.moss = Math.min(pet.moss + 1, getMaxMoss());
+    else if (pet.mood <= 20) pet.moss = Math.max(0, pet.moss - 1);
 
     let gain = pet.isSplit ? 1.5 : 1;
     pet.moss = Math.min(pet.moss + gain, getMaxMoss());
@@ -205,7 +208,8 @@ function gameTick() {
     stage.appendChild(floatTxt);
     setTimeout(() => floatTxt.remove(), 1200);
 
-    if (Math.random() < 0.03 && document.getElementById("modal-overlay").style.display !== "flex") {
+    // 突發事件機率 10%
+    if (Math.random() < 0.10 && document.getElementById("modal-overlay").style.display !== "flex") {
         triggerEvent();
     }
     save();
@@ -252,9 +256,7 @@ function clamp(val, min=0, max=150) { return Math.max(min, Math.min(max, val)); 
 function applyMod(val) { return pet.personality === "隨遇而安型" ? val * 0.75 : val; }
 
 function addExp(amount) {
-    // 心情極佳加成
     if (pet.mood >= 100) amount = Math.floor(amount * 1.5);
-
     pet.exp += amount;
     let threshold = pet.level * 100;
     while (pet.exp >= threshold) {
@@ -269,7 +271,19 @@ function addExp(amount) {
     }
 }
 
-// 動態點擊互動與物理彈跳
+// 超豐富點擊反饋文字庫
+const clickFeedbacks = [
+    "你戳了它一下，它發出了一聲沉悶的『咚』，像是在鄙視你的無聊。",
+    "石頭表面似乎有一點微溫，不對，那只是你自己的手汗。",
+    "你摸了摸它，它沒有躲開，廢話，因為它是一顆石頭。",
+    "你深情地對它眨了眨眼，它回以絕對的冷靜與沈默。",
+    "你拍了拍它的頭（如果你找得到頭在哪裡的話），它感覺很結實。",
+    "遠處似乎有路人投來關切的眼神，你趕忙裝作若無其事地收回手。",
+    "你試圖用指甲刮它，結果指甲差點斷掉。",
+    "它靜靜地躺在那裡，彷彿看透了世間的風雨。",
+    "你對它講了一個冷笑話，周遭的溫度彷彿下降了兩度。"
+];
+
 function pokeRock() {
     pet.lonely = clamp(pet.lonely - 1);
     if(pet.personality === "厭世社恐型") pet.mood = clamp(pet.mood - 3);
@@ -277,25 +291,20 @@ function pokeRock() {
     let el = document.getElementById('rock-display');
     let wrap = document.getElementById('game-wrap');
 
-    // 依據體重與光滑度的動態反饋
     if (pet.weight < 30 && pet.smooth > 80) {
-        // 輕且光滑：彈跳飛起
         el.style.transform = `translateY(-35px) scale(${getScaleX() * 1.1}, ${getScaleY() * 0.8}) rotate(15deg)`;
         setTimeout(() => { el.style.transform = `scale(${getScaleX()}, ${getScaleY()}) rotate(0deg)`; }, 200);
         log("🪀 石頭咕溜地彈了起來，手感極佳！");
     } else if (pet.weight > 100 || pet.hard > 100) {
-        // 重或超硬：不動如山並震動畫面
         wrap.classList.add("shake");
         setTimeout(() => wrap.classList.remove("shake"), 200);
         log("🗿 你用力戳了戳，石頭紋絲不動，整個地面跟著震動了一下！");
     } else {
-        // 一般晃動
         el.style.transform = `scale(${getScaleX() * 0.9}, ${getScaleY() * 0.9}) rotate(10deg)`;
         setTimeout(() => { el.style.transform = `scale(${getScaleX()}, ${getScaleY()}) rotate(0deg)`; }, 150);
-        log("你戳了戳石頭，它微微晃動了一下。");
+        log(clickFeedbacks[Math.floor(Math.random() * clickFeedbacks.length)]);
     }
     
-    // 碎裂判定
     let breakChance = 0.01;
     if(pet.personality === "暴躁易怒型") breakChance = 0.04;
     if(pet.hard < 20) breakChance += 0.05;
@@ -319,7 +328,6 @@ function buy(type) {
     pet.lastTime = Date.now();
     let m = pet.personality === "頂級老饕型" ? 2 : 1;
 
-    // 心情憂鬱時拒絕進食
     if (pet.mood <= 20 && ['boba', 'stinky', 'protein', 'truffle'].includes(type)) {
         return log("❌ 石頭處於重度憂鬱狀態，絕食抗議，什麼都不肯吃！", "color-bad");
     }
@@ -339,14 +347,16 @@ function buy(type) {
         } },
         'skate': { c: 50, food: false, f: () => { 
             let rate = pet.personality === "極限運動員" ? 0.9 : 0.6;
-            if(pet.weight > 100) rate -= 0.3; // 太胖翻車
-            if(pet.weight < 30) rate += 0.15; // 太輕靈活
+            if(pet.weight > 100) rate -= 0.3;
+            if(pet.weight < 30) rate += 0.15;
 
             if(Math.random() < rate) { pet.mood=clamp(pet.mood+(40*m)); pet.weight=clamp(pet.weight-5); addExp(50); log("🛹 滑板大成功！帥翻全場。"); }
             else { pet.hard=clamp(pet.hard-15); pet.mood=clamp(pet.mood-20); log("💥 滑板翻車，摔掉硬度。"); }
         } },
         'fridge':{ c: 80, food: false, f: () => { pet.hard=clamp(pet.hard+30); pet.moss = Math.min(pet.moss+30, getMaxMoss()); log("❄️ 冷凍庫極限特訓！硬度狂升，退冰大噴 30 青苔！"); } },
         'car':   { c: 150, food: false, f: () => { pet.weight=clamp(pet.weight-15); pet.mood=clamp(pet.mood+50); addExp(80); log("🏎️ 遙控車狂飆！體重狂掉心情超嗨！"); } },
+        'banana':{ c: 10, food: false, f: () => { pet.mood=clamp(pet.mood+20); log("🍌 在旁邊放香蕉皮，路過野狗滑倒，心情大好！獲得成就【惡作劇大師】"); } },
+        'incense':{ c: 40, food: false, f: () => { addExp(150); pet.lonely=150; log("🕯️ 點燃靈魂薰香，EXP 暴增，但孤獨感直接飆到最高點！"); } },
         'sunglasses':{ c: 200, food: false, f: () => { pet.hasShades=true; log("🕶️ 裝備墨鏡金鍊！從此心情不會低於 50！"); } }
     };
 
@@ -360,20 +370,48 @@ function buy(type) {
 }
 
 function doAction(type) {
+    // 檢查青苔是否足夠 0.5
+    if (pet.moss < 0.5) return log("❌ 青苔不足 0.5 克，無法執行互動！", "color-bad");
+    pet.moss -= 0.5;
+
     pet.lastTime = Date.now(); addExp(5);
     
-    if (type === 'rub') { pet.smooth=clamp(pet.smooth+applyMod(8)); pet.hard=clamp(pet.hard-applyMod(2)); log("🧽 用力打磨，變滑但微磨損。"); }
-    else if (type === 'sun') { pet.hard=clamp(pet.hard+applyMod(10)); pet.lonely=clamp(pet.lonely+applyMod(5)); log("☀️ 丟外面風吹，變硬但有點孤單。"); }
-    else if (type === 'gather') { let g=Math.floor(3+Math.random()*5); pet.moss=Math.min(pet.moss+g, getMaxMoss()); addExp(10); log(`🌿 陰暗處手動採集了 ${g} 青苔！`); }
-    else if (type === 'talk') { pet.lonely=clamp(pet.lonely-applyMod(15)); pet.mood=clamp(pet.mood-applyMod(10)); log("🗣️ 瘋狂倒垃圾，孤獨感降了但它有點煩。"); }
+    if (type === 'rub') { pet.smooth=clamp(pet.smooth+applyMod(8)); pet.hard=clamp(pet.hard-applyMod(2)); log("🧽 用力打磨 (-0.5青苔)，變滑但微磨損。"); }
+    else if (type === 'sun') { pet.hard=clamp(pet.hard+applyMod(10)); pet.lonely=clamp(pet.lonely+applyMod(5)); log("☀️ 丟外面風吹 (-0.5青苔)，變硬但有點孤單。"); }
+    else if (type === 'gather') { 
+        if(pet.gatherCooldown > 0) {
+            pet.moss += 0.5; // 退回剛剛扣的
+            return log(`⏳ 採集冷卻中！還需等待 ${pet.gatherCooldown} 秒。`, "color-bad");
+        }
+        let g=Math.floor(3+Math.random()*5); 
+        pet.moss=Math.min(pet.moss+g, getMaxMoss()); 
+        addExp(10); 
+        log(`🌿 陰暗處手動採集了 <b>${g} 青苔</b>！`);
+        
+        // 啟動 20 秒冷卻
+        pet.gatherCooldown = 20;
+        let btnGather = document.getElementById("btn-gather");
+        btnGather.disabled = true;
+        let cdInterval = setInterval(() => {
+            pet.gatherCooldown--;
+            if(pet.gatherCooldown <= 0) {
+                clearInterval(cdInterval);
+                btnGather.innerText = "🌿 陰暗處採集";
+                btnGather.disabled = false;
+            } else {
+                btnGather.innerText = `🌿 採集中 (${pet.gatherCooldown}s)`;
+            }
+        }, 1000);
+    }
+    else if (type === 'talk') { pet.lonely=clamp(pet.lonely-applyMod(15)); pet.mood=clamp(pet.mood-applyMod(10)); log("🗣️ 瘋狂倒垃圾 (-0.5青苔)，孤獨感降了但它有點煩。"); }
     else if (type === 'cat') { 
-        let scratch = pet.weight < 30 ? 25 : 15; // 太輕容易被貓抓花
-        pet.smooth=clamp(pet.smooth-scratch); addExp(25); log("🐾 被貓瘋狂巴，表面花掉但獲得 EXP。"); 
+        let scratch = pet.weight < 30 ? 25 : 15;
+        pet.smooth=clamp(pet.smooth-scratch); addExp(25); log("🐾 被貓瘋狂巴 (-0.5青苔)，表面花掉但獲得 EXP。"); 
     }
     else if (type === 'hammer') {
-        let hammerChance = pet.weight > 100 ? 0.35 : 0.15; // 太胖有厚實裝甲，敲擊不容易壞
-        if(Math.random() < hammerChance) { pet.smooth+=50; pet.hard+=20; log("🔨 厚實裝甲保護下，你精準敲出完美形狀！", "log-evo"); }
-        else { pet.hard-=30; pet.weight-=10; log("🔨 敲碎一角... 慘不忍睹。", "color-bad"); }
+        let hammerChance = pet.weight > 100 ? 0.35 : 0.15;
+        if(Math.random() < hammerChance) { pet.smooth+=50; pet.hard+=20; log("🔨 厚實裝甲保護下 (-0.5青苔)，你精準敲出完美形狀！", "log-evo"); }
+        else { pet.hard-=30; pet.weight-=10; log("🔨 敲碎一角 (-0.5青苔)... 慘不忍睹。", "color-bad"); }
     }
     if(pet.hasShades && pet.mood < 50) pet.mood = 50;
     checkEvolution(); save();
@@ -399,7 +437,7 @@ function triggerEvent() {
     if (pet.autoMode) {
         let choice = Math.random() < 0.5 ? e.opt1 : e.opt2;
         let res = choice.f();
-        log(`🤖 [隨緣託管] 面對 ${e.t}，選擇了【${choice.text}】！${res}。`, "log-auto");
+        log(`🤖 [自動抉擇] 面對 ${e.t}，選擇了【${choice.text}】！${res}。`, "log-auto");
         save();
     } else {
         eventOptions = e;
@@ -422,7 +460,7 @@ function resolveEvent(optNum) {
 function toggleAuto() {
     pet.autoMode = !pet.autoMode;
     let btn = document.getElementById("btn-auto");
-    btn.innerText = pet.autoMode ? "🤖 託管: 開" : "🤖 託管: 關";
+    btn.innerText = pet.autoMode ? "🤖 自動抉擇: 開" : "🤖 自動抉擇: 關";
     if(pet.autoMode) btn.classList.add("active"); else btn.classList.remove("active");
     save();
 }
@@ -433,7 +471,6 @@ function showPersonality() {
     showModal(html);
 }
 
-// 寵物狀態總覽面板 (Status Dashboard)
 function showStatusDashboard() {
     let pInfo = personalities.find(p => p.name === pet.personality);
     
@@ -445,7 +482,7 @@ function showStatusDashboard() {
 
     let splitStatus = pet.isSplit ? "💥 【分裂狀態】一分為二！青苔產量 1.5 倍，但孤獨感加倍上升。" : "✨ 【單體完整】身心靈結構完整。";
 
-    let html = `<h3>📊 寵物詳細狀態面板</h3>
+    let html = `<h3>📊 寵物詳細狀態</h3>
         <div class="status-badge-item"><b>天生個性：</b>${pInfo.name}<br><span style="color:#666;">${pInfo.desc}</span></div>
         <div class="status-badge-item"><b>體型狀態：</b>${weightStatus}</div>
         <div class="status-badge-item"><b>情緒狀態：</b>${moodStatus}</div>
@@ -491,7 +528,7 @@ function updateUI() {
     document.getElementById("txt-lvl").innerText = pet.level;
     document.getElementById("txt-exp").innerText = pet.exp;
     document.getElementById("txt-maxexp").innerText = pet.level * 100;
-    document.getElementById("txt-moss").innerText = Math.floor(pet.moss);
+    document.getElementById("txt-moss").innerText = Math.floor(pet.moss * 10) / 10;
     document.getElementById("txt-maxmoss").innerText = getMaxMoss();
     document.getElementById("txt-personality").innerText = pet.personality;
     document.getElementById("rock-evo").innerText = pet.evolution;
@@ -525,7 +562,7 @@ function updateUI() {
     document.querySelector('.c-truffle').innerText = getCost(120, true);
 
     let btnAuto = document.getElementById("btn-auto");
-    btnAuto.innerText = pet.autoMode ? "🤖 託管: 開" : "🤖 託管: 關";
+    btnAuto.innerText = pet.autoMode ? "🤖 自動抉擇: 開" : "🤖 自動抉擇: 關";
     if(pet.autoMode) btnAuto.classList.add("active"); else btnAuto.classList.remove("active");
 }
 
@@ -544,7 +581,7 @@ function renderDex() {
 function resetRock() {
     if (confirm("這會將石頭放歸自然重新領養（保留青苔與圖鑑）。確定？")) {
         let keepMoss = pet.moss, keepDex = pet.pokedex;
-        pet = { level: 1, exp: 0, moss: keepMoss, smooth: 0, hard: 10, lonely: 80, weight: 50, mood: 50, personality: personalities[Math.floor(Math.random() * personalities.length)].name, evolution: "普通路邊碎石", pokedex: keepDex, lastTime: Date.now(), isSplit: false, hasShades: false, autoMode: false };
+        pet = { level: 1, exp: 0, moss: keepMoss, smooth: 0, hard: 10, lonely: 80, weight: 50, mood: 50, personality: personalities[Math.floor(Math.random() * personalities.length)].name, evolution: "普通路邊碎石", pokedex: keepDex, lastTime: Date.now(), isSplit: false, hasShades: false, autoMode: false, gatherCooldown: 0 };
         if(pet.personality === "暴躁易怒型") pet.hard = 40;
         document.getElementById("log-box").innerHTML = "";
         log("你重新挑選了一顆小石頭。新個性：" + pet.personality);
