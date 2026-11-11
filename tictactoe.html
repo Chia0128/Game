@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>經典圈圈叉叉</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+        }
+        
+        #tictactoe-wrap {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 320px;
+            width: 100%;
+            text-align: center;
+            margin-top: 40px; /* 避免被左上角按鈕擋住 */
+        }
+
+        .cell {
+            width: 75px;
+            height: 75px;
+            font-size: 38px;
+            font-weight: bold;
+            background: transparent;
+            cursor: pointer;
+            user-select: none;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+
+        /* 經典井字分割線（只留內線，無外框線、無底色） */
+        #c0 { border-right: 3px solid #546e7a; border-bottom: 3px solid #546e7a; border-top: none; border-left: none; }
+        #c1 { border-right: 3px solid #546e7a; border-bottom: 3px solid #546e7a; border-top: none; border-left: none; }
+        #c2 { border-bottom: 3px solid #546e7a; border-top: none; border-right: none; border-left: none; }
+
+        #c3 { border-right: 3px solid #546e7a; border-bottom: 3px solid #546e7a; border-top: none; border-left: none; }
+        #c4 { border-right: 3px solid #546e7a; border-bottom: 3px solid #546e7a; border-top: none; border-left: none; }
+        #c5 { border-bottom: 3px solid #546e7a; border-top: none; border-right: none; border-left: none; }
+
+        #c6 { border-right: 3px solid #546e7a; border-top: none; border-bottom: none; border-left: none; }
+        #c7 { border-right: 3px solid #546e7a; border-top: none; border-bottom: none; border-left: none; }
+        #c8 { border: none; }
+
+        .cell:hover {
+            background: rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 懸浮返回大廳按鈕 -->
+    <button onclick="window.location.href='index.html'" style="position: fixed; top: 15px; left: 15px; z-index: 9999; background: #ffffff; color: #333; border: 1px solid #ddd; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15); width: auto;">
+        ⬅️ 返回大廳
+    </button>
+
+    <div id="tictactoe-wrap">
+        <h2 style="margin: 0 0 6px 0; color: #37474f;">🎮 圈圈叉叉（人機對戰）</h2>
+        <div style="font-size: 14px; font-weight: bold; color: #555; margin-bottom: 6px;">
+            玩家：<span style="color: #1976d2; font-size: 18px;">X</span> ｜ 電腦：<span style="color: #d32f2f; font-size: 18px;">O</span>
+        </div>
+        <div id="status-msg" style="font-size: 14px; color: #1976d2; height: 22px; font-weight: bold;">👉 請點擊任意空格落子</div>
+
+        <!-- 3x3 經典井字邊框棋盤 -->
+        <div style="display: grid; grid-template-columns: repeat(3, 75px); justify-content: center; margin: 16px auto;">
+            <button class="cell" id="c0" onclick="playerMove(0)"></button>
+            <button class="cell" id="c1" onclick="playerMove(1)"></button>
+            <button class="cell" id="c2" onclick="playerMove(2)"></button>
+            <button class="cell" id="c3" onclick="playerMove(3)"></button>
+            <button class="cell" id="c4" onclick="playerMove(4)"></button>
+            <button class="cell" id="c5" onclick="playerMove(5)"></button>
+            <button class="cell" id="c6" onclick="playerMove(6)"></button>
+            <button class="cell" id="c7" onclick="playerMove(7)"></button>
+            <button class="cell" id="c8" onclick="playerMove(8)"></button>
+        </div>
+
+        <button id="reset-btn" onclick="resetGame()" style="background: #e65100; color: white; border: none; padding: 10px 22px; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%;">
+            🔄 重新開始
+        </button>
+    </div>
+
+<script>
+let board = ["", "", "", "", "", "", "", "", ""];
+let gameOver = false;
+const winPatterns = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8], // 橫向
+    [0, 3, 6], [1, 4, 7], [2, 5, 8], // 直向
+    [0, 4, 8], [2, 4, 6]             // 對角線
+];
+
+function checkWin(b, player) {
+    return winPatterns.some(pattern => pattern.every(idx => b[idx] === player));
+}
+
+function isFull(b) {
+    return b.every(cell => cell !== "");
+}
+
+function playerMove(index) {
+    if (gameOver || board[index] !== "") return;
+
+    // 玩家落子 (X)
+    board[index] = "X";
+    renderCell(index, "X", "#1976d2");
+
+    if (checkWin(board, "X")) {
+        gameOver = true;
+        document.getElementById('status-msg').innerHTML = "<span style='color: #2e7d32;'>🎉 恭喜！你成功擊敗了電腦！🏆</span>";
+        return;
+    }
+
+    if (isFull(board)) {
+        gameOver = true;
+        document.getElementById('status-msg').innerHTML = "<span style='color: #555;'>🤝 平手！勢均力敵！</span>";
+        return;
+    }
+
+    // 電腦回合
+    document.getElementById('status-msg').innerHTML = "<span style='color: #757575;'>🤖 電腦正在思考...</span>";
+    setTimeout(aiMove, 260); // 短暫延遲模擬思考
+}
+
+function aiMove() {
+    if (gameOver) return;
+
+    let emptyIndices = [];
+    for (let i = 0; i < 9; i++) {
+        if (board[i] === "") emptyIndices.push(i);
+    }
+
+    let move = -1;
+
+    // 1. 電腦能贏就直接下（進攻）
+    for (let i of emptyIndices) {
+        let copy = [...board];
+        copy[i] = "O";
+        if (checkWin(copy, "O")) {
+            move = i;
+            break;
+        }
+    }
+
+    // 2. 玩家下一步會贏就搶先堵住（防守）
+    if (move === -1) {
+        for (let i of emptyIndices) {
+            let copy = [...board];
+            copy[i] = "X";
+            if (checkWin(copy, "X")) {
+                move = i;
+                break;
+            }
+        }
+    }
+
+    // 3. 搶佔中心格 (索引 4)
+    if (move === -1 && emptyIndices.includes(4)) {
+        move = 4;
+    }
+
+    // 4. 搶佔四個角落 (0, 2, 6, 8)
+    if (move === -1) {
+        let corners = [0, 2, 6, 8].filter(c => emptyIndices.includes(c));
+        if (corners.length > 0) {
+            move = corners[Math.floor(Math.random() * corners.length)];
+        }
+    }
+
+    // 5. 隨機下剩餘邊格
+    if (move === -1 && emptyIndices.length > 0) {
+        move = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+    }
+
+    if (move !== -1) {
+        board[move] = "O";
+        renderCell(move, "O", "#d32f2f");
+
+        if (checkWin(board, "O")) {
+            gameOver = true;
+            document.getElementById('status-msg').innerHTML = "<span style='color: #c62828;'>💀 電腦連線獲勝！再挑戰一局吧！</span>";
+            return;
+        }
+
+        if (isFull(board)) {
+            gameOver = true;
+            document.getElementById('status-msg').innerHTML = "<span style='color: #555;'>🤝 平手！棋盤已滿。</span>";
+            return;
+        }
+
+        document.getElementById('status-msg').innerHTML = "👉 輪到你落子！";
+    }
+}
+
+function renderCell(idx, symbol, color) {
+    let btn = document.getElementById("c" + idx);
+    btn.innerText = symbol;
+    btn.style.color = color;
+}
+
+function resetGame() {
+    board = ["", "", "", "", "", "", "", "", ""];
+    gameOver = false;
+    for (let i = 0; i < 9; i++) {
+        let btn = document.getElementById("c" + i);
+        btn.innerText = "";
+    }
+    document.getElementById('status-msg').innerHTML = "👉 遊戲已重置，請點擊任意空格落子！";
+}
+</script>
+</body>
+</html>
