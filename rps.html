@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>連線猜拳對戰</title>
+    <style>
+        :root {
+            --primary: #1976d2;
+            --success: #2e7d32;
+            --bg: #f5f5f5;
+        }
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+        }
+        .container {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+        }
+        h2 { margin-top: 0; color: #333; }
+        
+        /* 畫面區塊切換 */
+        #login-screen, #lobby-screen, #game-screen { display: none; }
+        #login-screen.active, #lobby-screen.active, #game-screen.active { display: block; }
+        
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 8px 0 16px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 8px;
+            transition: opacity 0.2s;
+        }
+        button:active { opacity: 0.8; }
+        button:disabled { background: #bdbdbd; cursor: not-allowed; }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            background: #e3f2fd;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .hands-grid {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .hand-btn {
+            font-size: 40px;
+            padding: 15px 0;
+            background: #fff;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            width: 30%;
+            color: #333;
+        }
+        .hand-btn.selected {
+            border-color: var(--primary);
+            background: #e3f2fd;
+        }
+        
+        .status-box {
+            min-height: 48px;
+            color: #d32f2f;
+            font-weight: bold;
+            margin: 16px 0;
+        }
+        .result-anim {
+            font-size: 24px;
+            animation: pop 0.4s ease-out;
+        }
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- 1. 登入畫面 -->
+    <div id="login-screen" class="active">
+        <h2>✌️ 連線猜拳對戰 ✊</h2>
+        <input type="text" id="room-input" placeholder="輸入房間代號 (例: room888)" />
+        <input type="text" id="name-input" placeholder="輸入你的名字" />
+        <button onclick="joinRoom()">進入房間</button>
+        <p style="font-size: 13px; color: #777;">與朋友輸入相同代號即可連線</p>
+    </div>
+
+    <!-- 2. 等待大廳 -->
+    <div id="lobby-screen">
+        <h2>🕒 等待連線中...</h2>
+        <p>你的名字：<b id="lobby-my-name" style="color: var(--primary);"></b></p>
+        <p>房間代號：<b id="lobby-room"></b></p>
+        <div class="status-box">請等待對手加入...<br><small>(若朋友已進入，稍等幾秒即會連線)</small></div>
+    </div>
+
+    <!-- 3. 遊戲畫面 -->
+    <div id="game-screen">
+        <h2>第 <span id="round-num">1</span> 回合</h2>
+        
+        <div class="score-board">
+            <div>
+                <div style="color: var(--primary);" id="my-name-display">我</div>
+                <div style="font-size: 24px;" id="my-score">0</div>
+            </div>
+            <div style="align-self: center; font-size: 20px;">VS</div>
+            <div>
+                <div style="color: #d32f2f;" id="opp-name-display">對手</div>
+                <div style="font-size: 24px;" id="opp-score">0</div>
+            </div>
+        </div>
+
+        <div class="status-box" id="game-msg">👉 請選擇要出的拳！</div>
+        
+        <div class="hands-grid" id="hand-buttons">
+            <button class="hand-btn" onclick="makeChoice('✌️')">✌️</button>
+            <button class="hand-btn" onclick="makeChoice('✊')">✊</button>
+            <button class="hand-btn" onclick="makeChoice('✋')">✋</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ================= 全域變數 =================
+let roomCode = "";
+let myName = "";
+let oppName = "對手";
+let baseUrl = "";
+let eventSource = null;
+
+let isHost = false;
+let myRole = "";
+let oppRole = "";
+
+let myScore = 0;
+let oppScore = 0;
+let roundNum = 1;
+let myChoice = null;
+let oppChoice = null;
+let gameStarted = false;
+
+const msgBox = document.getElementById('game-msg');
+const handBtns = document.getElementById('hand-buttons');
+
+// ================= 1. 連線與進房邏輯 =================
+async function joinRoom() {
+    roomCode = document.getElementById('room-input').value.trim();
+    myName = document.getElementById('name-input').value.trim() || "玩家";
+    
+    if (!roomCode) {
+        alert("請輸入房間代號！");
+        return;
+    }
+    
+    baseUrl = `https://ntfy.sh/${roomCode}`;
+    
+    // 切換到大廳
+    document.getElementById('login-screen').classList.remove('active');
+    document.getElementById('lobby-screen').classList.add('active');
+    document.getElementById('lobby-my-name').innerText = myName;
+    document.getElementById('lobby-room').innerText = roomCode;
+
+    // 探測房間狀態
+    try {
+        let res = await fetch(`${baseUrl}/json?poll=1`);
+        let text = await res.text();
+        let lines = text.trim().split('\n').filter(Boolean);
+        
+        let roomReady = false;
+        if (lines.length > 0) {
+            let lastMsg = JSON.parse(lines[lines.length - 1]);
+            let content = JSON.parse(lastMsg.message || "{}");
+            if (content.action === 'waiting') {
+                isHost = false;
+                myRole = "p2";
+                oppRole = "p1";
+                oppName = content.data.name || "玩家 1";
+                roomReady = true;
+            }
+        }
+        
+        if (!roomReady) {
+            isHost = true;
+            myRole = "p1";
+            oppRole = "p2";
+            sendMsg('waiting', { name: myName });
+        } else {
+            sendMsg('join', { name: myName });
+        }
+        
+        startListening();
+        
+    } catch (e) {
+        alert("連線發生錯誤，請重試！");
+        location.reload();
+    }
+}
+
+// ================= 2. 訊息發送與接收 =================
+function sendMsg(action, data) {
+    fetch(baseUrl, {
+        method: 'POST',
+        headers: { "X-Retain": "1" },
+        body: JSON.stringify({ sender: myRole, action: action, data: data })
+    }).catch(()=>{});
+}
+
+function startListening() {
+    // 使用 SSE (Server-Sent Events) 保持長連線監聽
+    eventSource = new EventSource(`${baseUrl}/sse`);
+    
+    eventSource.onmessage = (e) => {
+        try {
+            let parsed = JSON.parse(e.data);
+            if (!parsed.message) return;
+            
+            let content = JSON.parse(parsed.message);
+            let sender = content.sender;
+            let action = content.action;
+            let data = content.data;
+            
+            if (sender === oppRole) {
+                if (action === 'join' && isHost) {
+                    oppName = data.name;
+                    sendMsg('start', { name: myName });
+                    startGameUI();
+                } else if (action === 'start' && !isHost) {
+                    oppName = data.name;
+                    startGameUI();
+                } else if (action === 'choice') {
+                    if (data.round === roundNum) {
+                        oppChoice = data.choice;
+                        checkRoundResult();
+                    }
+                } else if (action === 'round_end' && !isHost) {
+                    if (data.round === roundNum) {
+                        handleGuestResult(data);
+                    }
+                }
+            }
+        } catch (err) {}
+    };
+}
+
+// ================= 3. 遊戲流程 =================
+function startGameUI() {
+    gameStarted = true;
+    document.getElementById('lobby-screen').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+    
+    document.getElementById('my-name-display').innerText = myName;
+    document.getElementById('opp-name-display').innerText = oppName;
+    
+    startRound();
+}
+
+function startRound() {
+    myChoice = null;
+    oppChoice = null;
+    document.getElementById('round-num').innerText = roundNum;
+    
+    // 重置按鈕樣式
+    Array.from(handBtns.children).forEach(btn => {
+        btn.classList.remove('selected');
+        btn.disabled = false;
+    });
+    
+    msgBox.innerHTML = `👉 <span style="color:#1976d2">請選擇要出的拳！</span>`;
+    handBtns.style.display = 'flex';
+}
+
+// 玩家點擊按鈕出拳
+window.makeChoice = function(choice) {
+    if (myChoice) return; // 已經出過了
+    
+    myChoice = choice;
+    
+    // 鎖定按鈕與樣式
+    Array.from(handBtns.children).forEach(btn => {
+        btn.disabled = true;
+        if (btn.innerText === choice) btn.classList.add('selected');
+    });
+    
+    msgBox.innerHTML = `✔️ 你出了 <b>${choice}</b>，等待對手...`;
+    
+    sendMsg('choice', { round: roundNum, choice: myChoice });
+    checkRoundResult();
+}
+
+// 房主負責結算並廣播
+function checkRoundResult() {
+    if (myChoice && oppChoice && isHost) {
+        let resultMsg = "";
+        
+        if (myChoice === oppChoice) {
+            resultMsg = `<div class="result-anim">🤝 雙方都出 ${myChoice}，平手！</div>`;
+        } else if (
+            (myChoice === '✌️' && oppChoice === '✋') ||
+            (myChoice === '✊' && oppChoice === '✌️') ||
+            (myChoice === '✋' && oppChoice === '✊')
+        ) {
+            myScore++;
+            resultMsg = `<div class="result-anim" style="color:var(--success)">🎉 ${myChoice} 贏 ${oppChoice}，你贏了這回合！</div>`;
+        } else {
+            oppScore++;
+            resultMsg = `<div class="result-anim" style="color:#d32f2f">😭 ${myChoice} 輸 ${oppChoice}，對手得分！</div>`;
+        }
+        
+        updateScores();
+        msgBox.innerHTML = resultMsg;
+        
+        sendMsg('round_end', {
+            round: roundNum,
+            host_choice: myChoice,
+            guest_choice: oppChoice,
+            host_score: myScore,
+            guest_score: oppScore
+        });
+        
+        setTimeout(nextRoundCheck, 2500);
+    } else if (myChoice && oppChoice && !isHost) {
+        // 房客(P2)雖然知道雙方出什麼，但等待房主權威廣播再結算畫面
+        msgBox.innerHTML = `⏳ 雙方已出拳，結算中...`;
+    }
+}
+
+// 房客接收房主結算結果
+function handleGuestResult(data) {
+    oppChoice = data.host_choice;
+    myScore = data.guest_score;
+    oppScore = data.host_score;
+    
+    let resultMsg = "";
+    if (myChoice === oppChoice) {
+        resultMsg = `<div class="result-anim">🤝 雙方都出 ${myChoice}，平手！</div>`;
+    } else if (myScore > parseInt(document.getElementById('my-score').innerText)) {
+        resultMsg = `<div class="result-anim" style="color:var(--success)">🎉 ${myChoice} 贏 ${oppChoice}，你贏了這回合！</div>`;
+    } else {
+        resultMsg = `<div class="result-anim" style="color:#d32f2f">😭 ${myChoice} 輸 ${oppChoice}，對手得分！</div>`;
+    }
+    
+    updateScores();
+    msgBox.innerHTML = resultMsg;
+    
+    setTimeout(nextRoundCheck, 2500);
+}
+
+function updateScores() {
+    document.getElementById('my-score').innerText = myScore;
+    document.getElementById('opp-score').innerText = oppScore;
+}
+
+function nextRoundCheck() {
+    if (myScore >= 2 || oppScore >= 2) {
+        let winner = myScore >= 2 ? "你" : oppName;
+        let color = myScore >= 2 ? "var(--success)" : "#d32f2f";
+        msgBox.innerHTML = `<div style="font-size:20px; color:${color}">🏁 遊戲結束！<br>🏆 恭喜 <b>${winner}</b> 獲得最終勝利！</div>`;
+        handBtns.style.display = 'none';
+        
+        // 加上重新整理按鈕
+        setTimeout(() => {
+            msgBox.innerHTML += `<br><button onclick="location.reload()" style="margin-top:15px; width:auto;">🔄 回首頁</button>`;
+        }, 1500);
+    } else {
+        roundNum++;
+        startRound();
+    }
+}
+</script>
+
+</body>
+</html>
