@@ -16,7 +16,8 @@
         /* 寵物展示區 */
         .stage { height: 140px; background: #f8f9fa; border: 1px dashed #ced4da; border-radius: 12px; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 8px; overflow: hidden; }
         .personality-badge { position: absolute; top: 8px; left: 8px; background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid #ffeeba; cursor: pointer;}
-        .status-panel-btn { position: absolute; top: 8px; right: 8px; background: #d1ecf1; color: #0c5460; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid #bee5eb; cursor: pointer; }
+        .status-panel-btn { position: absolute; top: 8px; right: 52px; background: #d1ecf1; color: #0c5460; padding: 4px 6px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid #bee5eb; cursor: pointer; }
+        .item-panel-btn { position: absolute; top: 8px; right: 8px; background: #e2d9f3; color: #512da8; padding: 4px 6px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid #d1c4e9; cursor: pointer; }
         .auto-mode-toggle { position: absolute; bottom: 8px; right: 8px; font-size: 11px; font-weight: bold; cursor: pointer; background: #e9ecef; padding: 4px 8px; border-radius: 12px; border: 1px solid #ced4da; }
         .auto-mode-toggle.active { background: #d4edda; color: #155724; border-color: #c3e6cb; }
 
@@ -24,11 +25,9 @@
         .rock-avatar:active { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
         .rock-title { font-size: 16px; font-weight: bold; color: #d35400; margin-bottom: 12px; }
 
-        /* 畫面震動動畫 */
+        /* 畫面震動與飄字動畫 */
         @keyframes screenShake { 0% { transform: translate(0, 0); } 25% { transform: translate(-3px, 2px); } 50% { transform: translate(3px, -2px); } 75% { transform: translate(-2px, -1px); } 100% { transform: translate(0, 0); } }
         .shake { animation: screenShake 0.2s ease-in-out; }
-
-        /* 浮動飄字特效 */
         @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-25px) scale(1.2); } }
         .floating-text { position: absolute; animation: floatUp 1.2s ease-out forwards; color: #2ecc71; font-weight: bold; font-size: 14px; pointer-events: none; z-index: 10; text-shadow: 1px 1px 0 #fff; }
 
@@ -81,7 +80,7 @@
     </button>
 
     <div id="game-wrap">
-        <h2>🪨 電子寵物石 2.0</h2>
+        <h2>🪨 電子寵物石</h2>
         <div class="tagline">靈魂覺醒的放置養成小品</div>
 
         <div class="header-stats">
@@ -92,6 +91,7 @@
         <div class="stage" id="stage">
             <div class="personality-badge" onclick="showPersonality()">📜 <span id="txt-personality">載入中</span></div>
             <div class="status-panel-btn" onclick="showStatusDashboard()">📊 狀態</div>
+            <div class="item-panel-btn" onclick="showItemQueryPanel()">🔍 道具</div>
             <div class="auto-mode-toggle" id="btn-auto" onclick="toggleAuto()">🤖 自動抉擇: 關</div>
             <div class="rock-avatar" id="rock-display" onclick="pokeRock()">🪨</div>
         </div>
@@ -119,16 +119,20 @@
             <button class="btn-act" onclick="doAction('sun')">☀️ 丟在外面 (-0.5)</button>
             <button class="btn-act" id="btn-gather" onclick="doAction('gather')">🌿 陰暗處採集</button>
             <button class="btn-act" onclick="doAction('talk')">🗣️ 瘋狂倒垃圾 (-0.5)</button>
+            <button class="btn-act" onclick="doAction('sing')">🎵 唱情歌 (+心情)</button>
+            <button class="btn-act" onclick="doAction('pat')">💖 溫柔摸摸 (-0.5)</button>
             <button class="btn-act" onclick="doAction('cat')">🐾 丟給貓玩 (-0.5)</button>
             <button class="btn-act" onclick="doAction('hammer')">🔨 拿鐵槌敲 (-0.5)</button>
         </div>
 
+        <!-- 食物按照價格由低到高排序 -->
         <div id="tab-feed" class="tab-content">
             <button class="btn-act" onclick="buy('wind')">🌬️ 微風 (0)</button>
+            <button class="btn-act" onclick="buy('sand')">🏖️ 沙子 (<span class="c-sand">5</span>)</button>
             <button class="btn-act" onclick="buy('boba')">🧋 珍奶 (<span class="c-boba">15</span>)</button>
             <button class="btn-act" onclick="buy('stinky')">🍛 臭豆腐 (<span class="c-stinky">35</span>)</button>
             <button class="btn-act" onclick="buy('protein')">💪 乳清 (<span class="c-protein">60</span>)</button>
-            <button class="btn-act" onclick="buy('truffle')" style="grid-column: span 2;">🍄 迷幻松露 (<span class="c-truffle">120</span>)</button>
+            <button class="btn-act" onclick="buy('truffle')">🍄 松露 (<span class="c-truffle">120</span>)</button>
         </div>
 
         <div id="tab-item" class="tab-content">
@@ -162,6 +166,23 @@ const personalities = [
 ];
 const allEvos = ["普通路邊碎石", "開光水晶球", "天外隕石", "肥厚巨石", "風化薄石片", "永恆璀璨鑽石", "生態塗鴉石", "受詛咒的暗影石", "金繼修補石"];
 
+// 道具資料庫（用於道具查詢面板）
+const itemDatabase = {
+    'wind': { name: "🌬️ 一口微風", cost: 0, desc: "最純天然零負擔，微幅減輕體重 (-2)，微幅改善心情 (+3)。" },
+    'sand': { name: "🏖️ 沙子", cost: 5, desc: "平價粗糙的沙子，稍微增加一點體重與心情。" },
+    'boba': { name: "🧋 黑糖珍珠奶茶", cost: 15, desc: "甜度超標！光滑度下降，體重與心情顯著上升。" },
+    'stinky': { name: "🍛 陳年臭豆腐", cost: 35, desc: "氣味驚人！心情大跌，但礦物硬度意外暴增 (+20)。" },
+    'protein': { name: "💪 頂級分離乳清蛋白", cost: 60, desc: "健身必備！體重穩健上升，硬度微幅增加。" },
+    'truffle': { name: "🍄 迷幻松露", cost: 120, desc: "高階食材！心情直接強制滿點 (100)，瞬間空投 100 EXP。" },
+    'glue': { name: "🧴 強力石器快乾膠", cost: 25, desc: "當石頭分裂成兩塊時使用，將其黏合成【金繼修補石】。" },
+    'skate': { name: "🛹 迷你特技滑板", cost: 50, desc: "消耗型道具，有機會大福提升心情與減輕體重，失敗會扣硬度。" },
+    'fridge': { name: "❄️ 冷凍庫極限特訓券", cost: 80, desc: "急凍特訓，硬度瞬間 +30，退冰後大噴 30 克冷凝青苔。" },
+    'car': { name: "🏎️ 渦輪遙控底盤", cost: 150, desc: "在客廳瘋狂飆車，體重劇降 (-15)，心情極速飆升。" },
+    'banana': { name: "🍌 一根香蕉皮", cost: 10, desc: "惡作劇道具，路過野狗滑倒，心情大好並解鎖成就。" },
+    'incense': { name: "🕯️ 靈魂薰香", cost: 40, desc: "神祕氣息使 EXP 暴增 (+150)，但孤獨感直接飆到最高點。" },
+    'sunglasses': { name: "🕶️ 墨鏡金鍊套組", cost: 200, desc: "永久飾品！裝備後心情下限永遠鎖定在 50，不再憂鬱。" }
+};
+
 let pet = {
     level: 1, exp: 0, moss: 0,
     smooth: 0, hard: 10, lonely: 80, weight: 50, mood: 50,
@@ -169,13 +190,14 @@ let pet = {
     pokedex: ["普通路邊碎石"],
     lastTime: Date.now(),
     isSplit: false, hasShades: false, autoMode: false,
-    gatherCooldown: 0
+    gatherCooldown: 0,
+    inventory: [] // 已購特殊道具紀錄
 };
 
 let eventOptions = null;
 
 function init() {
-    let saved = localStorage.getItem("pet_rock_v5");
+    let saved = localStorage.getItem("pet_rock_v6");
     if (saved) {
         try { pet = { ...pet, ...JSON.parse(saved) }; } catch (e) {}
     } else {
@@ -188,7 +210,7 @@ function init() {
     setInterval(gameTick, 5000);
 }
 
-function save() { localStorage.setItem("pet_rock_v5", JSON.stringify(pet)); updateUI(); }
+function save() { localStorage.setItem("pet_rock_v6", JSON.stringify(pet)); updateUI(); }
 
 function getMaxMoss() { return 50 + (pet.level - 1) * 30; }
 
@@ -271,17 +293,13 @@ function addExp(amount) {
     }
 }
 
-// 超豐富點擊反饋文字庫
 const clickFeedbacks = [
     "你戳了它一下，它發出了一聲沉悶的『咚』，像是在鄙視你的無聊。",
     "石頭表面似乎有一點微溫，不對，那只是你自己的手汗。",
     "你摸了摸它，它沒有躲開，廢話，因為它是一顆石頭。",
     "你深情地對它眨了眨眼，它回以絕對的冷靜與沈默。",
-    "你拍了拍它的頭（如果你找得到頭在哪裡的話），它感覺很結實。",
-    "遠處似乎有路人投來關切的眼神，你趕忙裝作若無其事地收回手。",
-    "你試圖用指甲刮它，結果指甲差點斷掉。",
-    "它靜靜地躺在那裡，彷彿看透了世間的風雨。",
-    "你對它講了一個冷笑話，周遭的溫度彷彿下降了兩度。"
+    "你拍了拍它的頭（如果你找getElementById('txt-lvl')不到頭在哪裡的話），它感覺很結實。",
+    "遠處似乎有路人投來關切的眼神，你趕忙裝作若無其事地收回手。"
 ];
 
 function pokeRock() {
@@ -328,12 +346,14 @@ function buy(type) {
     pet.lastTime = Date.now();
     let m = pet.personality === "頂級老饕型" ? 2 : 1;
 
-    if (pet.mood <= 20 && ['boba', 'stinky', 'protein', 'truffle'].includes(type)) {
+    let isFoodItem = ['wind', 'sand', 'boba', 'stinky', 'protein', 'truffle'].includes(type);
+    if (pet.mood <= 20 && isFoodItem) {
         return log("❌ 石頭處於重度憂鬱狀態，絕食抗議，什麼都不肯吃！", "color-bad");
     }
 
     let dict = {
         'wind': { c: 0, food: true, f: () => { pet.weight=clamp(pet.weight-2); pet.mood=clamp(pet.mood+3*m); log("🌬️ 吃空氣，感覺輕盈。"); } },
+        'sand': { c: 5, food: true, f: () => { pet.weight=clamp(pet.weight+2); pet.mood=clamp(pet.mood+5*m); log("🏖️ 吃了一口沙子，口感奇特，心情微幅上升。"); } },
         'boba': { c: 15, food: true, f: () => { pet.smooth=clamp(pet.smooth-5); pet.weight=clamp(pet.weight+6*m); pet.mood=clamp(pet.mood+15*m); log("🧋 喝珍奶，變胖且黏黏的。"); } },
         'stinky':{ c: 35, food: true, f: () => { pet.hard=clamp(pet.hard+20); pet.mood=clamp(pet.mood-25*m); log("🍛 臭豆腐太毒，硬度暴增心情大跌。"); } },
         'protein':{ c: 60, food: true, f: () => { pet.weight=clamp(pet.weight+12*m); pet.hard=clamp(pet.hard+8); log("💪 灌高蛋白，肌肉結實！"); } },
@@ -365,12 +385,17 @@ function buy(type) {
     if(pet.moss < cost) return log(`❌ 餘額不足 (需 ${cost})`, "color-bad");
     pet.moss -= cost;
     item.f();
+    
+    // 記錄道具到清單中供查詢
+    if (!item.food && !pet.inventory.includes(type)) {
+        pet.inventory.push(type);
+    }
+
     if(pet.hasShades && pet.mood < 50) pet.mood = 50;
     addExp(10); save();
 }
 
 function doAction(type) {
-    // 檢查青苔是否足夠 0.5
     if (pet.moss < 0.5) return log("❌ 青苔不足 0.5 克，無法執行互動！", "color-bad");
     pet.moss -= 0.5;
 
@@ -380,7 +405,7 @@ function doAction(type) {
     else if (type === 'sun') { pet.hard=clamp(pet.hard+applyMod(10)); pet.lonely=clamp(pet.lonely+applyMod(5)); log("☀️ 丟外面風吹 (-0.5青苔)，變硬但有點孤單。"); }
     else if (type === 'gather') { 
         if(pet.gatherCooldown > 0) {
-            pet.moss += 0.5; // 退回剛剛扣的
+            pet.moss += 0.5;
             return log(`⏳ 採集冷卻中！還需等待 ${pet.gatherCooldown} 秒。`, "color-bad");
         }
         let g=Math.floor(3+Math.random()*5); 
@@ -388,7 +413,6 @@ function doAction(type) {
         addExp(10); 
         log(`🌿 陰暗處手動採集了 <b>${g} 青苔</b>！`);
         
-        // 啟動 20 秒冷卻
         pet.gatherCooldown = 20;
         let btnGather = document.getElementById("btn-gather");
         btnGather.disabled = true;
@@ -404,6 +428,8 @@ function doAction(type) {
         }, 1000);
     }
     else if (type === 'talk') { pet.lonely=clamp(pet.lonely-applyMod(15)); pet.mood=clamp(pet.mood-applyMod(10)); log("🗣️ 瘋狂倒垃圾 (-0.5青苔)，孤獨感降了但它有點煩。"); }
+    else if (type === 'sing') { pet.mood=clamp(pet.mood+15); log("🎵 你對石頭深情獻唱一首情歌 (-0.5青苔)，石頭雖然聽不懂，但你覺得心情變好了！"); }
+    else if (type === 'pat') { pet.mood=clamp(pet.mood+8); pet.lonely=clamp(pet.lonely-5); log("💖 溫柔地摸了摸石頭 (-0.5青苔)，孤獨感下降，心情微幅上升。"); }
     else if (type === 'cat') { 
         let scratch = pet.weight < 30 ? 25 : 15;
         pet.smooth=clamp(pet.smooth-scratch); addExp(25); log("🐾 被貓瘋狂巴 (-0.5青苔)，表面花掉但獲得 EXP。"); 
@@ -492,6 +518,26 @@ function showStatusDashboard() {
     showModal(html);
 }
 
+// 道具查詢面板
+function showItemQueryPanel() {
+    let html = `<h3>🔍 已購道具與裝備查詢</h3>`;
+    if (pet.inventory.length === 0 && !pet.hasShades) {
+        html += `<p style="color:#7f8c8d; text-align:center;">目前還沒有購買任何特殊道具或裝備！快去道具商店逛逛吧。</p>`;
+    } else {
+        if (pet.hasShades) {
+            html += `<div class="status-badge-item"><b>🕶️ 墨鏡金鍊套組</b><br>永久飾品：心情下限永久鎖定在 50。</div>`;
+        }
+        pet.inventory.forEach(key => {
+            let item = itemDatabase[key];
+            if (item) {
+                html += `<div class="status-badge-item"><b>${item.name}</b><br>${item.desc}</div>`;
+            }
+        });
+    }
+    html += `<button class="modal-btn" onclick="hideModal()">關閉面板</button>`;
+    showModal(html);
+}
+
 function showModal(html) { document.getElementById("modal-content").innerHTML = html; document.getElementById("modal-overlay").style.display = "flex"; }
 function hideModal() { document.getElementById("modal-overlay").style.display = "none"; }
 
@@ -556,6 +602,8 @@ function updateUI() {
     if (pet.hasShades) emoji = "😎";
     display.innerText = emoji;
 
+    // 食物價格顯示更新
+    document.querySelector('.c-sand').innerText = getCost(5, true);
     document.querySelector('.c-boba').innerText = getCost(15, true);
     document.querySelector('.c-stinky').innerText = getCost(35, true);
     document.querySelector('.c-protein').innerText = getCost(60, true);
@@ -581,7 +629,7 @@ function renderDex() {
 function resetRock() {
     if (confirm("這會將石頭放歸自然重新領養（保留青苔與圖鑑）。確定？")) {
         let keepMoss = pet.moss, keepDex = pet.pokedex;
-        pet = { level: 1, exp: 0, moss: keepMoss, smooth: 0, hard: 10, lonely: 80, weight: 50, mood: 50, personality: personalities[Math.floor(Math.random() * personalities.length)].name, evolution: "普通路邊碎石", pokedex: keepDex, lastTime: Date.now(), isSplit: false, hasShades: false, autoMode: false, gatherCooldown: 0 };
+        pet = { level: 1, exp: 0, moss: keepMoss, smooth: 0, hard: 10, lonely: 80, weight: 50, mood: 50, personality: personalities[Math.floor(Math.random() * personalities.length)].name, evolution: "普通路邊碎石", pokedex: keepDex, lastTime: Date.now(), isSplit: false, hasShades: false, autoMode: false, gatherCooldown: 0, inventory: [] };
         if(pet.personality === "暴躁易怒型") pet.hard = 40;
         document.getElementById("log-box").innerHTML = "";
         log("你重新挑選了一顆小石頭。新個性：" + pet.personality);
