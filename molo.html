@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- 關鍵：防止手機雙擊縮放，優化點擊響應速度 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>歡樂打地鼠 - 手機網頁版</title>
+    <title>打地鼠 - 手機網頁版</title>
     <style>
         body {
             margin: 0;
@@ -56,7 +56,7 @@
 <body>
 
 <div id="game-wrap">
-    <h2 style="margin: 0 0 8px 0; color: #5d4037;">🔨 歡樂打地鼠</h2>
+    <h2 style="margin: 0 0 8px 0; color: #5d4037;">🔨 打地鼠</h2>
     <div style="display: flex; justify-content: space-around; font-size: 16px; font-weight: bold; margin-bottom: 8px;">
         <span>得分：<b id="score-txt" style="color: #e65100; font-size: 20px;">0</b></span>
         <span>倒數：<b id="timer-txt" style="color: #c62828; font-size: 20px;">30s</b></span>
@@ -128,7 +128,7 @@ function startGame() {
 
     document.getElementById('score-txt').innerText = score;
     document.getElementById('timer-txt').innerText = timeLeft + 's';
-    document.getElementById('status-msg').innerHTML = "🔥 打地鼠 🐹 (+1) | 避開炸彈 💣 (-2分/-3秒)！";
+    document.getElementById('status-msg').innerHTML = "🔥 打地鼠 🐹 (+1) | 避開炸彈 💣 (-2)！";
 
     let startBtn = document.getElementById('start-btn');
     startBtn.innerText = "🔄 重新開始";
@@ -172,7 +172,7 @@ function nextSpawn() {
     } while (newPos === currentPos);
 
     currentPos = newPos;
-    currentType = Math.random() < 0.25 ? 'bomb' : 'mole';
+    currentType = Math.random() < 0.2 ? 'bomb' : 'mole';
 
     let btns = document.querySelectorAll('.mole-btn');
     if (currentType === 'mole') {
@@ -205,12 +205,11 @@ function hit(index) {
             document.getElementById('status-msg').innerHTML = "<span style='color: #2e7d32;'>擊中地鼠！+1 分</span>";
         } else if (currentType === 'bomb') {
             score = Math.max(0, score - 2);
-            timeLeft = Math.max(0, timeLeft - 3);
             document.getElementById('score-txt').innerText = score;
             document.getElementById('timer-txt').innerText = timeLeft + 's';
             btns[index].innerText = "🧨";
             btns[index].style.background = "#e53935";
-            document.getElementById('status-msg').innerHTML = "<span style='color: #c62828;'>碰！踩到炸彈！-2 分 & -3 秒！</span>";
+            document.getElementById('status-msg').innerHTML = "<span style='color: #c62828;'>碰！踩到炸彈！-2 分</span>";
             if (timeLeft <= 0) {
                 endGame();
                 return;
