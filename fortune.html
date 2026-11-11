@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>神諭占卜：每日運勢</title>
+    <title>每日神諭占卜</title>
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #fff;
+            background: linear-gradient(135deg, #1f1c2c 0%, #928dab 100%);
+            color: #ffffff;
             margin: 0;
             padding: 16px;
             display: flex;
@@ -16,269 +16,266 @@
             align-items: center;
             min-height: 90vh;
             touch-action: manipulation;
-            overflow-x: hidden;
         }
 
         #game-wrap {
-            background: rgba(15, 52, 96, 0.6);
+            background: rgba(30, 27, 46, 0.9);
             padding: 24px;
             border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            max-width: 380px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            max-width: 360px;
             width: 100%;
             text-align: center;
             margin-top: 40px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(8px);
         }
 
-        h2 { margin: 0 0 8px 0; color: #e94560; font-size: 26px; letter-spacing: 2px; }
-        .subtitle { color: #a5b1c2; font-size: 14px; margin-bottom: 24px; }
+        h2 { margin: 0 0 6px 0; color: #ffd166; font-size: 22px; }
+        .tagline { font-size: 12px; color: #b8b5c9; margin-bottom: 16px; }
 
-        /* 卡片翻轉特效區 */
-        .scene {
-            width: 160px;
-            height: 240px;
-            perspective: 1000px;
-            margin: 0 auto 24px auto;
-            cursor: pointer;
-        }
-        .card {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform-style: preserve-3d;
-        }
-        .card.is-flipped {
-            transform: rotateY(180deg);
-        }
-        .card-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            border-radius: 12px;
+        /* 水晶球展示區 */
+        .crystal-zone {
+            height: 140px;
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            position: relative;
+            margin-bottom: 16px;
         }
-        .card-front {
-            background: linear-gradient(45deg, #0f3460, #e94560);
-            border: 2px solid #ffd700;
-        }
-        .card-front::after {
-            content: '✨\A點擊\A抽牌';
-            white-space: pre-wrap;
-            font-size: 20px;
-            font-weight: bold;
-            color: #ffd700;
-            line-height: 1.5;
-        }
-        .card-back {
-            background: #fff;
-            color: #333;
-            transform: rotateY(180deg);
-            border: 2px solid #ffd700;
-        }
-        
-        .fortune-level {
-            font-size: 48px;
-            font-weight: bold;
-            color: #e94560;
-            margin: 0;
-            line-height: 1;
-        }
-        .fortune-label { font-size: 14px; color: #555; margin-top: 8px; font-weight: bold; }
 
-        /* 詳細運勢結果區 */
-        #result-area {
+        .crystal-ball {
+            font-size: 72px;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            filter: drop-shadow(0 0 16px rgba(255, 209, 102, 0.4));
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+        .crystal-ball.animating {
+            animation: crystalShake 1s infinite alternate ease-in-out;
+            filter: drop-shadow(0 0 28px rgba(239, 71, 111, 0.8));
+        }
+
+        @keyframes crystalShake {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.08) rotate(6deg); }
+            100% { transform: scale(1.08) rotate(-6deg); }
+        }
+
+        /* 籤詩卡片 */
+        #fortune-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
             display: none;
             text-align: left;
-            animation: fadeIn 1s;
+            animation: fadeIn 0.4s ease-out;
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .result-item {
-            background: rgba(0,0,0,0.4);
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border-left: 4px solid #e94560;
-            font-size: 14px;
-            line-height: 1.5;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .result-item span.icon { margin-right: 6px; font-size: 16px; }
-        .result-item strong { color: #ffd700; display: block; margin-bottom: 4px; font-size: 15px; }
 
-        /* 按鈕 */
-        .btn {
-            background: #e94560;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
+        .fortune-rank {
+            font-size: 18px;
             font-weight: bold;
-            border-radius: 8px;
+            color: #ffd166;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .fortune-desc {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #f1f2f6;
+            margin-bottom: 10px;
+        }
+        .fortune-lucky {
+            font-size: 12px;
+            color: #06d6a0;
+            background: rgba(6, 214, 160, 0.1);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border-left: 3px solid #06d6a0;
+        }
+
+        /* 操作按鈕 */
+        .btn-divine {
+            background: linear-gradient(135deg, #ffd166 0%, #f77f00 100%);
+            color: #1f1c2c;
+            border: none;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 10px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
-            transition: all 0.2s;
             width: 100%;
+            box-shadow: 0 4px 12px rgba(247, 127, 0, 0.3);
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .btn-divine:active { transform: scale(0.97); }
+        .btn-divine:disabled {
+            background: #4a455a;
+            color: #8c889b;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .daily-tip {
+            font-size: 11px;
+            color: #a4b0be;
             margin-top: 10px;
         }
-        .btn:active { transform: scale(0.95); }
-        .btn-reset { background: #0f3460; display: none; margin-top: 20px;}
+
+        .test-reset-btn {
+            background: none;
+            border: none;
+            color: #747d8c;
+            font-size: 10px;
+            margin-top: 14px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
 
-    <!-- 像素級統一的懸浮返回大廳按鈕 -->
+    <!-- 返回大廳按鈕 -->
     <button onclick="window.location.href='index.html'" style="all: unset; position: fixed; top: 15px; left: 15px; z-index: 99999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;">
         ⬅️ 返回大廳
     </button>
 
     <div id="game-wrap">
-        <h2>🔮 星象神諭</h2>
-        <div class="subtitle" id="subtitle">憑直覺點擊卡牌，揭曉今日運勢</div>
+        <h2>🔮 每日神諭占卜</h2>
+        <div class="tagline">傾聽星辰低語，洞悉今日運勢</div>
 
-        <!-- 卡片區 -->
-        <div class="scene" id="card-scene" onclick="drawCard()">
-            <div class="card" id="card">
-                <div class="card-face card-front"></div>
-                <div class="card-face card-back">
-                    <p class="fortune-label">今日運勢</p>
-                    <p class="fortune-level" id="level-text">大吉</p>
-                </div>
-            </div>
+        <div class="crystal-zone">
+            <div class="crystal-ball" id="crystal" onclick="tryDraw()">🔮</div>
         </div>
 
-        <button class="btn" id="btn-draw" onclick="drawCard()">✨ 抽取今日神諭</button>
-
-        <!-- 結果詳情區 -->
-        <div id="result-area">
-            <div class="result-item">
-                <strong><span class="icon">🌟</span>整體運勢</strong>
-                <div id="text-overall"></div>
-            </div>
-            <div class="result-item">
-                <strong><span class="icon">💖</span>愛情與人際</strong>
-                <div id="text-love"></div>
-            </div>
-            <div class="result-item">
-                <strong><span class="icon">💼</span>事業與學業</strong>
-                <div id="text-career"></div>
-            </div>
-            <div class="result-item" style="border-left-color: #ffd700;">
-                <strong><span class="icon">🍀</span>今日開運密碼</strong>
-                幸運色：<span id="text-color" style="color:#ffd700;"></span><br>
-                開運物：<span id="text-item" style="color:#ffd700;"></span>
-            </div>
+        <div id="fortune-card">
+            <div class="fortune-rank" id="card-rank">大吉</div>
+            <div class="fortune-desc" id="card-desc">...</div>
+            <div class="fortune-lucky" id="card-lucky">幸運指引：...</div>
         </div>
 
-        <button class="btn btn-reset" id="btn-reset" onclick="resetFortune()">🔄 重新沉澱再抽一次</button>
+        <button class="btn-divine" id="btn-draw" onclick="tryDraw()">✨ 揭示今日命運</button>
+        <div class="daily-tip" id="daily-tip">每日限定占卜一次，每日凌晨重置</div>
+
+        <button class="test-reset-btn" onclick="devReset()">🔄 清除今日紀錄 (測試用)</button>
     </div>
 
 <script>
-// --- 豐富的文本庫 ---
-const levels = [
-    { text: "大吉", color: "#e65100", prob: 15 },
-    { text: "中吉", color: "#e94560", prob: 30 },
-    { text: "小吉", color: "#2e7d32", prob: 30 },
-    { text: "平",   color: "#1565c0", prob: 20 },
-    { text: "驚喜", color: "#9c27b0", prob: 5 }
+const fortunes = [
+    { rank: "🌟 超級大吉", desc: "今日星象罕見共振，你的直覺極其靈敏，適合做出重要決定或嘗試新事物！", lucky: "幸運物：熱美式 / 幸運方位：正南方" },
+    { rank: "☀️ 大吉", desc: "微風拂面，貴人運爆棚。保持笑容，身邊的人會為你帶來意想不到的好消息。", lucky: "幸運物：黃色配件 / 幸運數字：7" },
+    { rank: "🌤️ 中吉", desc: "平靜而充實的一天。按部就班推進手頭的工作，會有踏實的收穫與滿足感。", lucky: "幸運物：薄荷糖 / 幸運顏色：淺藍色" },
+    { rank: "🌱 小吉", desc: "偶有小插曲，但不影響大局。轉角處的小確幸正在等著你發現。", lucky: "幸運物：筆記本 / 幸運時段：下午 3 點" },
+    { rank: "🍵 平安吉", desc: "適合修養身心的一天。放慢腳步，喝杯溫水，給自己留一段安靜思考的時間。", lucky: "幸運物：溫熱花草茶 / 幸運習慣：深呼吸三次" },
+    { rank: "🌧️ 末吉（化險為夷）", desc: "可能遇到一些令人無奈的小麻煩，但切忌急躁，保持幽默感即可迎刃而解。", lucky: "幸運解方：少管閒事，準時下班" },
+    { rank: "⚡ 驚奇狂想籤", desc: "今天你的命運充滿不確定性！可能在路邊撿到奇怪的小石子，或是遇見有趣的人。", lucky: "幸運物：滑板或香蕉皮" }
 ];
 
-const overallTexts = [
-    "直覺非常敏銳的一天！過去糾結的事情今天會突然豁然開朗。",
-    "平平淡淡才是真，適合泡杯茶沉澱心靈，享受寧靜的日常。",
-    "活力充沛！你散發的正能量將會感染身邊的所有人。",
-    "將迎來意想不到的轉機，遇到困難時請嘗試反向思考。",
-    "今天適合大膽嘗試新事物，幸運女神正站在你這邊！",
-    "稍微放慢腳步，欲速則不達，耐心是你今天的最佳武器。"
-];
+function getTodayString() {
+    let d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
-const loveTexts = [
-    "單身者有望在日常交流中擦出火花；有伴者適合安排溫馨的晚餐。",
-    "多一點傾聽與包容，一個溫暖的微笑能化解一切誤會。",
-    "今天是展現魅力的好時機，不要吝嗇讚美身邊的人。",
-    "順其自然即可，不需刻意強求，對的人會在對的時間出現。",
-    "桃花運旺盛，留意那些默默關心你的小細節。"
-];
+function init() {
+    let today = getTodayString();
+    let saved = localStorage.getItem("daily_divination_record");
 
-const careerTexts = [
-    "靈感如泉湧，卡關已久的任務今天有望取得重大突破。",
-    "團隊合作是今天的關鍵，適時尋求幫助會讓事情事半功倍。",
-    "努力終將被看見！主管或老師對你的表現默默給予高度評價。",
-    "適合做規劃與整理的一天，把桌面打掃乾淨能帶來好運。",
-    "可能會遇到些許挑戰，但這正是你展現實力的完美舞台。"
-];
-
-const luckyColors = ["星空藍", "玫瑰金", "薄荷綠", "焦糖棕", "珍珠白", "神秘紫", "珊瑚橘", "奶茶色"];
-const luckyItems = ["熱咖啡", "銀色飾品", "隨身筆記本", "手錶", "薄荷糖", "綠色植物", "一本書", "耳機"];
-
-let isDrawn = false;
-
-function drawCard() {
-    if (isDrawn) return;
-    isDrawn = true;
-
-    document.getElementById("btn-draw").style.display = "none";
-    document.getElementById("subtitle").innerText = "牌意正在解讀中...";
-
-    // 隨機抽取等級 (根據權重)
-    let rand = Math.random() * 100;
-    let sum = 0;
-    let selectedLevel = levels[0];
-    for (let l of levels) {
-        sum += l.prob;
-        if (rand <= sum) {
-            selectedLevel = l;
-            break;
+    if (saved) {
+        try {
+            let record = JSON.parse(saved);
+            if (record.date === today) {
+                // 今天已經占卜過，直接還原籤詩並鎖定
+                showResult(record.fortune);
+                lockButton();
+                return;
+            }
+        } catch (e) {
+            console.error("載入失敗", e);
         }
     }
-
-    // 隨機抽取詳細內容
-    let txtOverall = overallTexts[Math.floor(Math.random() * overallTexts.length)];
-    let txtLove = loveTexts[Math.floor(Math.random() * loveTexts.length)];
-    let txtCareer = careerTexts[Math.floor(Math.random() * careerTexts.length)];
-    let txtColor = luckyColors[Math.floor(Math.random() * luckyColors.length)];
-    let txtItem = luckyItems[Math.floor(Math.random() * luckyItems.length)];
-
-    // 填充資料
-    let levelEl = document.getElementById("level-text");
-    levelEl.innerText = selectedLevel.text;
-    levelEl.style.color = selectedLevel.color;
-    
-    document.getElementById("text-overall").innerText = txtOverall;
-    document.getElementById("text-love").innerText = txtLove;
-    document.getElementById("text-career").innerText = txtCareer;
-    document.getElementById("text-color").innerText = txtColor;
-    document.getElementById("text-item").innerText = txtItem;
-
-    // 觸發翻牌動畫
-    document.getElementById("card").classList.add("is-flipped");
-
-    // 延遲顯示結果區 (配合翻牌動畫)
-    setTimeout(() => {
-        document.getElementById("result-area").style.display = "block";
-        document.getElementById("btn-reset").style.display = "block";
-        document.getElementById("subtitle").innerText = "這是星象給予你的指引 ✨";
-    }, 600);
+    // 今天尚未占卜
+    unlockButton();
 }
 
-function resetFortune() {
-    isDrawn = false;
-    document.getElementById("card").classList.remove("is-flipped");
-    document.getElementById("result-area").style.display = "none";
-    document.getElementById("btn-reset").style.display = "none";
-    
+function tryDraw() {
+    let today = getTodayString();
+    let saved = localStorage.getItem("daily_divination_record");
+
+    if (saved) {
+        try {
+            let record = JSON.parse(saved);
+            if (record.date === today) {
+                alert("今日的神諭已經降臨！請明天再來占卜～");
+                return;
+            }
+        } catch (e) {}
+    }
+
+    // 開始占卜動畫
+    let ball = document.getElementById("crystal");
+    let btn = document.getElementById("btn-draw");
+    btn.disabled = true;
+    btn.innerText = "🌀 命運編織中...";
+    ball.classList.add("animating");
+
     setTimeout(() => {
-        document.getElementById("btn-draw").style.display = "block";
-        document.getElementById("subtitle").innerText = "憑直覺點擊卡牌，揭曉今日運勢";
-    }, 400); // 等卡片翻回來再顯示按鈕
+        ball.classList.remove("animating");
+        let picked = fortunes[Math.floor(Math.random() * fortunes.length)];
+
+        // 儲存今日紀錄
+        let record = {
+            date: today,
+            fortune: picked
+        };
+        localStorage.setItem("daily_divination_record", JSON.stringify(record));
+
+        showResult(picked);
+        lockButton();
+    }, 1200);
 }
+
+function showResult(picked) {
+    let card = document.getElementById("fortune-card");
+    document.getElementById("card-rank").innerText = picked.rank;
+    document.getElementById("card-desc").innerText = picked.desc;
+    document.getElementById("card-lucky").innerText = picked.lucky;
+    card.style.display = "block";
+}
+
+function lockButton() {
+    let btn = document.getElementById("btn-draw");
+    btn.disabled = true;
+    btn.innerText = "🔒 今日已占卜，明日再來！";
+    document.getElementById("daily-tip").innerText = "今日的星辰指引已揭曉，請明日凌晨重整後再來。";
+    document.getElementById("daily-tip").style.color = "#ffd166";
+}
+
+function unlockButton() {
+    let btn = document.getElementById("btn-draw");
+    btn.disabled = false;
+    btn.innerText = "✨ 揭示今日命運";
+    document.getElementById("daily-tip").innerText = "每日限定占卜一次，每日凌晨重置";
+    document.getElementById("daily-tip").style.color = "#a4b0be";
+    document.getElementById("fortune-card").style.display = "none";
+}
+
+// 測試用重設按鈕
+function devReset() {
+    if (confirm("要清除今日占卜紀錄以便重新測試嗎？")) {
+        localStorage.removeItem("daily_divination_record");
+        unlockButton();
+    }
+}
+
+init();
 </script>
 </body>
 </html>
