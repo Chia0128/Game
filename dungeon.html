@@ -90,6 +90,7 @@
         .color-bad { color: #f44336; }
         .color-gold { color: #ffb300; }
         .color-neutral { color: #64b5f6; }
+        .color-banana { color: #ffee58; font-weight: bold; } /* 香蕉人專屬顏色 */
 
         /* 怪物狀態區 (戰鬥時顯示) */
         #enemy-zone {
@@ -252,10 +253,9 @@ function explore() {
     
     let roll = Math.random();
     
-    if (roll < 0.45) {
-        // 遭遇怪物 (45%)
+    if (roll < 0.35) {
+        // 遭遇怪物 (機率降至 35%)
         gameState = "combat";
-        // 怪物能力隨層數增強
         enemyMaxHp = Math.floor(20 + Math.random() * 15 + floor * 4);
         enemyHp = enemyMaxHp;
         enemyAtk = Math.floor(5 + Math.random() * 8 + floor * 2);
@@ -266,25 +266,32 @@ function explore() {
         log(`危險！遭遇了地牢怪獸！`, "color-bad");
         switchControls("combat");
     } 
-    else if (roll < 0.70) {
+    else if (roll < 0.60) {
         // 寶箱 (25%)
         let earned = Math.floor(20 + Math.random() * 30 + floor * 2);
         gold += earned;
         log(`💎 發現古老寶箱！獲得 ${earned} 枚金幣。`, "color-gold");
     } 
-    else if (roll < 0.85) {
+    else if (roll < 0.75) {
         // 泉水 (15%)
         let heal = Math.floor(15 + Math.random() * 15);
         hp = Math.min(maxHp, hp + heal);
         log(`✨ 發現精靈泉水！恢復了 ${heal} 點生命。`, "color-good");
     } 
-    else {
+    else if (roll < 0.90) {
         // 陷阱 (15%)
         let dmg = Math.floor(10 + Math.random() * 10 + floor);
         hp -= dmg;
         log(`⚠️ 踩到毒刺陷阱！受到 ${dmg} 點傷害。`, "color-bad");
         checkDeath();
     }
+    else {
+        // 香蕉人 NPC (10%)
+        maxHp += 20;
+        hp = maxHp;
+        log(`🍌 遇見了神秘的 NPC【香蕉人】！他請你吃魔法香蕉，生命值全滿且上限 +20！`, "color-banana");
+    }
+    
     updateUI();
 }
 
