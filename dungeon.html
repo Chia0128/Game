@@ -91,7 +91,7 @@
         .color-neutral { color: #64b5f6; }
         .color-npc { color: #ab47bc; font-weight: bold; }
         .color-banana { color: #ffee58; font-weight: bold; }
-        .color-princess { color: #ff69b4; font-weight: bold; } /* 地洞公主專屬粉色 */
+        .color-princess { color: #ff69b4; font-weight: bold; }
 
         /* 敵方狀態區 */
         #enemy-zone {
@@ -129,7 +129,7 @@
         .btn-attack { background: #c62828; }
         .btn-defend { background: #1565c0; }
         .btn-rest { background: #2e7d32; }
-        .btn-shop { background: #e65100; }
+        .btn-shop { background: #e65100; font-size: 13px; }
         .btn-bag { background: #6a1b9a; }
         .btn-flee { background: #424242; grid-column: span 2; }
 
@@ -234,10 +234,11 @@
 
         <!-- 商人模式按鈕 -->
         <div class="controls" id="ctrl-shop" style="display: none;">
-            <button class="btn btn-shop" onclick="buyItem('weapon')">🗡️ 購買進階武器 (60金)</button>
+            <button class="btn btn-shop" onclick="buyItem('weapon')">🗡️ 進階武器 (60金)</button>
             <button class="btn btn-shop" onclick="buyItem('armor')">🛡️ 升級防具 (+2防, 50金)</button>
-            <button class="btn btn-shop" onclick="buyItem('potion')">🧪 購買生命藥水 (25金)</button>
-            <button class="btn btn-explore" onclick="leaveShop()">🚪 離開商人</button>
+            <button class="btn btn-shop" onclick="buyItem('potion')">🧪 生命藥水 (25金)</button>
+            <button class="btn btn-shop" onclick="buyItem('maxhp')">❤️ 上限藥水 (+20HP, 80金)</button>
+            <button class="btn btn-explore" onclick="leaveShop()" style="grid-column: span 2;">🚪 離開商人</button>
         </div>
 
         <!-- 結束模式按鈕 -->
@@ -247,16 +248,13 @@
     </div>
 
 <script>
-// 遊戲狀態與裝備庫
 let hp, maxHp, gold, floor, gameState;
 let enemyHp, enemyMaxHp, enemyAtk;
 let defense = 0;
 
-// 地洞公主養成變數
 let princessHelpCount = 0;
 let princessJoined = false;
 
-// 武器庫定義
 let weapons = [
     { name: "木劍", minDmg: 8, maxDmg: 15, unlocked: true },
     { name: "精鋼長劍", minDmg: 14, maxDmg: 24, unlocked: false },
@@ -326,7 +324,6 @@ function switchControls(state) {
     document.getElementById("ctrl-over").style.display = state === "over" ? "grid" : "none";
 }
 
-// 探索事件
 function explore() {
     floor++;
     log(`--- 進入第 ${floor} 層 ---`, "color-neutral");
@@ -334,7 +331,6 @@ function explore() {
     let roll = Math.random();
     
     if (roll < 0.25) {
-        // 遭遇怪物 (25%)
         gameState = "combat";
         enemyMaxHp = Math.floor(22 + Math.random() * 15 + floor * 4);
         enemyHp = enemyMaxHp;
@@ -347,35 +343,30 @@ function explore() {
         switchControls("combat");
     } 
     else if (roll < 0.50) {
-        // 寶箱 (25%)
         let earned = Math.floor(20 + Math.random() * 25 + floor * 2);
         gold += earned;
         log(`💎 發現古老寶箱！獲得 ${earned} 枚金幣。`, "color-gold");
     } 
     else if (roll < 0.65) {
-        // 泉水 (15%)
         let heal = Math.floor(15 + Math.random() * 15);
         hp = Math.min(maxHp, hp + heal);
         log(`✨ 發現精靈泉水！恢復了 ${heal} 點生命。`, "color-good");
     } 
     else if (roll < 0.75) {
-        // 陷阱 (10%)
         let dmg = Math.max(5, Math.floor(12 + Math.random() * 10 + floor - defense));
         hp -= dmg;
         log(`⚠️ 踩到毒刺陷阱！防具減傷後受到 ${dmg} 點傷害。`, "color-bad");
         checkDeath();
     }
     else if (roll < 0.85) {
-        // 地精商人 NPC (10%)
         gameState = "shop";
         log(`💰 遇到了神祕的【地精商人】！快來看看有什麼好貨！`, "color-npc");
         switchControls("shop");
     }
     else if (roll < 0.90) {
-        // 地洞公主 NPC (5%)
         if (!princessJoined) {
             princessHelpCount++;
-            potions += 3; // 每次遇到送 3 個隨機道具(此處以生命藥水補充作為隨機道具實現)
+            potions += 3;
             if (princessHelpCount >= 3) {
                 princessJoined = true;
                 log(`👑 你伸出援手，這是第 3 次幫助【地洞公主】！她深受感動，正式加入隊伍成為夥伴！戰鬥中將自動協助你！`, "color-princess");
@@ -388,7 +379,6 @@ function explore() {
         }
     }
     else {
-        // 香蕉人 NPC (10%)
         maxHp += 20;
         hp = maxHp;
         log(`🍌 遇見了神秘的 NPC【香蕉人】！生命上限 +20 且血量全滿！`, "color-banana");
@@ -397,7 +387,6 @@ function explore() {
     updateUI();
 }
 
-// 戰鬥操作
 function combatAction(action) {
     let w = weapons[currentWeaponIdx];
     let playerDmg = Math.floor(w.minDmg + Math.random() * (w.maxDmg - w.minDmg + 1));
@@ -427,16 +416,13 @@ function combatAction(action) {
         }
     }
 
-    // --- 地洞公主夥伴戰鬥自動支援 ---
     if (princessJoined && enemyHp > 0) {
         let pAction = Math.random();
         if (pAction < 0.5) {
-            // 公主自動攻擊
             let pDmg = Math.floor(12 + floor * 2);
             enemyHp -= pDmg;
             log(`💖 夥伴【地洞公主】扔出王室飛刀，對怪物造成了 ${pDmg} 點支援傷害！`, "color-princess");
         } else {
-            // 公主自動補血
             let pHeal = Math.floor(10 + floor * 2);
             hp = Math.min(maxHp, hp + pHeal);
             log(`💖 夥伴【地洞公主】施展治癒魔法，為你恢復了 ${pHeal} 點生命！`, "color-princess");
@@ -464,7 +450,6 @@ function endCombat() {
     updateUI();
 }
 
-// 買東西
 function buyItem(type) {
     if (type === "weapon") {
         let lockedIdx = weapons.findIndex(w => !w.unlocked);
@@ -496,6 +481,15 @@ function buyItem(type) {
         } else {
             log(`❌ 金幣不足！需要 25 金幣。`, "color-bad");
         }
+    } else if (type === "maxhp") {
+        if (gold >= 80) {
+            gold -= 80;
+            maxHp += 20;
+            hp += 20;
+            log(`❤️ 購買了上限藥水！生命值上限 +20 (目前上限: ${maxHp})`, "color-good");
+        } else {
+            log(`❌ 金幣不足！需要 80 金幣。`, "color-bad");
+        }
     }
     updateUI();
 }
@@ -507,7 +501,6 @@ function leaveShop() {
     updateUI();
 }
 
-// 背包系統
 function openBag() {
     document.getElementById("bag-def").innerText = defense;
     
