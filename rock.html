@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>電子寵物石</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #2b303a 0%, #1a1c22 100%);
+            color: #f1f2f6;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            touch-action: manipulation;
+        }
+
+        #game-wrap {
+            background: #242933;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+            margin-top: 40px;
+            border: 1px solid #3d4452;
+        }
+
+        h2 { margin: 0 0 6px 0; color: #ced6e0; font-size: 24px; }
+        .tagline { font-size: 13px; color: #747d8c; margin-bottom: 18px; }
+
+        /* 石頭展示區 */
+        .stage {
+            height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .rock-avatar {
+            font-size: 72px;
+            cursor: pointer;
+            transition: transform 0.15s ease-out;
+            user-select: none;
+            -webkit-user-select: none;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4));
+        }
+        .rock-avatar:active {
+            transform: scale(0.92) rotate(4deg);
+        }
+
+        .rock-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #ffa502;
+            margin-bottom: 16px;
+        }
+
+        /* 數值儀表條 */
+        .stat-group {
+            background: #1e222a;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #a4b0be;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .bar-wrap {
+            background: #2f3542;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .bar-wrap:last-child { margin-bottom: 0; }
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .fill-smooth { background: #70a1ff; }
+        .fill-hard { background: #ff6348; }
+        .fill-lonely { background: #a4b0be; }
+
+        /* 冒險日誌 */
+        .log-box {
+            background: #14171d;
+            border: 1px solid #2f3542;
+            border-radius: 8px;
+            height: 90px;
+            overflow-y: auto;
+            padding: 8px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #ced6e0;
+            text-align: left;
+            margin-bottom: 16px;
+            scroll-behavior: smooth;
+        }
+        .log-line { margin-bottom: 4px; }
+
+        /* 互動按鈕區 */
+        .grid-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .btn-act {
+            background: #3742fa;
+            color: white;
+            border: none;
+            padding: 10px 8px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn-act:active { transform: scale(0.96); opacity: 0.9; }
+        .btn-reset {
+            background: #57606f;
+            grid-column: span 2;
+            margin-top: 4px;
+            font-size: 12px;
+            padding: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 返回大廳按鈕 -->
+    <button onclick="window.location.href='index.html'" style="all: unset; position: fixed; top: 15px; left: 15px; z-index: 99999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;">
+        ⬅️ 返回大廳
+    </button>
+
+    <div id="game-wrap">
+        <h2>🪨 電子寵物石</h2>
+        <div class="tagline">它不需要被餵食，因為它只是一顆石頭。</div>
+
+        <div class="stage">
+            <div class="rock-avatar" id="rock-display" onclick="pokeRock()">🪨</div>
+        </div>
+        <div class="rock-title" id="rock-rank">普通路邊碎石</div>
+
+        <!-- 屬性條 -->
+        <div class="stat-group">
+            <div class="stat-row"><span>✨ 光滑度</span><span id="txt-smooth">0 / 100</span></div>
+            <div class="bar-wrap"><div class="bar-fill fill-smooth" id="bar-smooth"></div></div>
+
+            <div class="stat-row"><span>🛡️ 硬度</span><span id="txt-hard">10 / 100</span></div>
+            <div class="bar-wrap"><div class="bar-fill fill-hard" id="bar-hard"></div></div>
+
+            <div class="stat-row"><span>🌧️ 孤獨感</span><span id="txt-lonely">80 / 100</span></div>
+            <div class="bar-wrap"><div class="bar-fill fill-lonely" id="bar-lonely"></div></div>
+        </div>
+
+        <div class="log-box" id="log-box"></div>
+
+        <!-- 互動控制 -->
+        <div class="grid-buttons">
+            <button class="btn-act" onclick="rubRock()">🧽 用抹布擦拭</button>
+            <button class="btn-act" onclick="talkRock()">🗣️ 傾訴心事</button>
+            <button class="btn-act" onclick="sunbathRock()">☀️ 帶去曬太陽</button>
+            <button class="btn-act" onclick="stareRock()">👀 深情盯著它</button>
+            <button class="btn-act btn-reset" onclick="resetRock()">🔄 撿一顆新的石頭（重設）</button>
+        </div>
+    </div>
+
+<script>
+let pet = {
+    smooth: 0,
+    hard: 10,
+    lonely: 80,
+    touches: 0
+};
+
+const silentReplies = [
+    "石頭默默地看著你，沒有任何回應。",
+    "一陣微風吹過，石頭依舊佇立在原地。",
+    "它似乎聽進去了，也可能根本不在乎。",
+    "石頭保持了絕對的冷靜與中立。",
+    "你感覺心靈得到了淨化，石頭依舊是一顆石頭。",
+    "四周很安靜，只有空氣流動的聲音。"
+];
+
+function init() {
+    loadData();
+    updateUI();
+    log("你在路邊撿起了一顆不起眼的石頭。");
+}
+
+function saveData() {
+    localStorage.setItem("pet_rock_data", JSON.stringify(pet));
+}
+
+function loadData() {
+    let saved = localStorage.getItem("pet_rock_data");
+    if (saved) {
+        try {
+            pet = JSON.parse(saved);
+        } catch (e) {
+            console.error("載入失敗", e);
+        }
+    }
+}
+
+function log(msg) {
+    let box = document.getElementById("log-box");
+    let line = document.createElement("div");
+    line.className = "log-line";
+    line.innerHTML = `• ${msg}`;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+}
+
+function pokeRock() {
+    pet.touches++;
+    pet.lonely = Math.max(0, pet.lonely - 1);
+    log("你戳了戳石頭。觸感很硬，它沒有任何動靜。");
+    saveData();
+    updateUI();
+}
+
+function rubRock() {
+    pet.smooth = Math.min(100, pet.smooth + 5);
+    pet.lonely = Math.max(0, pet.lonely - 2);
+    log("🧽 你用乾淨的布擦拭石頭表面，它變得稍微光滑發亮了！");
+    saveData();
+    updateUI();
+}
+
+function talkRock() {
+    pet.lonely = Math.max(0, pet.lonely - 8);
+    let reply = silentReplies[Math.floor(Math.random() * silentReplies.length)];
+    log(`🗣️ 你向石頭坦白了生活裡的煩惱。<br><span style="color:#a4b0be;">${reply}</span>`);
+    saveData();
+    updateUI();
+}
+
+function sunbathRock() {
+    pet.hard = Math.min(100, pet.hard + 6);
+    pet.lonely = Math.max(0, pet.lonely - 4);
+    log("☀️ 你把它放到窗邊曬太陽，石身吸飽陽光變得暖洋洋的。");
+    saveData();
+    updateUI();
+}
+
+function stareRock() {
+    log("👀 你和石頭對視了整整 10 秒鐘... 什麼都沒有發生。");
+}
+
+function resetRock() {
+    if (confirm("確定要丟棄這顆石頭，重新在路邊撿一顆嗎？")) {
+        pet = { smooth: 0, hard: 10, lonely: 80, touches: 0 };
+        localStorage.removeItem("pet_rock_data");
+        document.getElementById("log-box").innerHTML = "";
+        log("你把原來的石頭放回了大自然，重新挑選了一顆小石頭。");
+        updateUI();
+    }
+}
+
+function updateUI() {
+    // 更新數值條
+    document.getElementById("txt-smooth").innerText = `${pet.smooth} / 100`;
+    document.getElementById("bar-smooth").style.width = `${pet.smooth}%`;
+
+    document.getElementById("txt-hard").innerText = `${pet.hard} / 100`;
+    document.getElementById("bar-hard").style.width = `${pet.hard}%`;
+
+    document.getElementById("txt-lonely").innerText = `${pet.lonely} / 100`;
+    document.getElementById("bar-lonely").style.width = `${pet.lonely}%`;
+
+    // 形態進化判定
+    let display = document.getElementById("rock-display");
+    let rank = document.getElementById("rock-rank");
+
+    if (pet.smooth >= 90 && pet.hard >= 90) {
+        display.innerText = "💎";
+        rank.innerText = "超究極·永恆璀璨鑽石";
+        rank.style.color = "#70a1ff";
+    } else if (pet.hard >= 70) {
+        display.innerText = "🗿";
+        rank.innerText = "神秘古代莫埃巨石";
+        rank.style.color = "#eccc68";
+    } else if (pet.smooth >= 60) {
+        display.innerText = "🔮";
+        rank.innerText = "圓潤剔透鵝卵魔石";
+        rank.style.color = "#a55eea";
+    } else if (pet.smooth >= 30) {
+        display.innerText = "🪨";
+        rank.innerText = "乾淨有型的小石子";
+        rank.style.color = "#ffa502";
+    } else {
+        display.innerText = "🪨";
+        rank.innerText = "普通路邊碎石";
+        rank.style.color = "#ced6e0";
+    }
+}
+
+init();
+</script>
+</body>
+</html>
