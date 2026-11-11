@@ -1,182 +1,5 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>連線猜拳對戰</title>
-    <style>
-        :root {
-            --primary: #1976d2;
-            --success: #2e7d32;
-            --bg: #f5f5f5;
-        }
-        body {
-            font-family: system-ui, sans-serif;
-            background: var(--bg);
-            margin: 0;
-            padding: 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 90vh;
-        }
-        .container {
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            max-width: 360px;
-            width: 100%;
-            text-align: center;
-        }
-        h2 { margin-top: 0; color: #333; }
-        
-        #login-screen, #lobby-screen, #game-screen { display: none; }
-        #login-screen.active, #lobby-screen.active, #game-screen.active { display: block; }
-        
-        input {
-            width: 90%;
-            padding: 10px;
-            margin: 8px 0 16px 0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 16px;
-        }
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 8px;
-            transition: opacity 0.2s;
-        }
-        button:active { opacity: 0.8; }
-        button:disabled { background: #bdbdbd; cursor: not-allowed; }
-        
-        .score-board {
-            display: flex;
-            justify-content: space-between;
-            background: #e3f2fd;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        
-        .hands-grid {
-            display: flex;
-            justify-content: space-around;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .hand-btn {
-            font-size: 40px;
-            padding: 15px 0;
-            background: #fff;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            width: 30%;
-            color: #333;
-        }
-        .hand-btn.selected {
-            border-color: var(--primary);
-            background: #e3f2fd;
-        }
-        
-        .status-box {
-            min-height: 48px;
-            color: #d32f2f;
-            font-weight: bold;
-            margin: 16px 0;
-        }
-        .result-anim {
-            font-size: 24px;
-            animation: pop 0.4s ease-out;
-        }
-        @keyframes pop {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .end-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 18px;
-        }
-        .end-actions button {
-            flex: 1;
-            margin-bottom: 0;
-            padding: 10px 12px;
-            font-size: 15px;
-        }
-    </style>
-</head>
-<body>
-
-<!-- 固定於左上角的返回大廳按鈕 -->
-<button onclick="window.location.href='index.html'" style="position: fixed; top: 15px; left: 15px; z-index: 9999; background: #ffffff; color: #333; border: 1px solid #ddd; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15); width: auto;">
-    ⬅️ 返回大廳
-</button>
-
-<div class="container">
-    
-    <!-- 1. 登入畫面 -->
-    <div id="login-screen" class="active">
-        <h2>✌️ 連線猜拳對戰 ✊</h2>
-        <input type="text" id="room-input" placeholder="輸入房間代號 (例: room888)" />
-        <input type="text" id="name-input" placeholder="輸入你的名字" />
-        <button onclick="joinRoom()">進入房間</button>
-        <p style="font-size: 13px; color: #777;">與朋友輸入相同代號即可連線</p>
-    </div>
-
-    <!-- 2. 等待大廳 -->
-    <div id="lobby-screen">
-        <h2>🕒 等待連線中...</h2>
-        <p>你的名字：<b id="lobby-my-name" style="color: var(--primary);"></b></p>
-        <p>房間代號：<b id="lobby-room"></b></p>
-        <div class="status-box">請等待對手加入...<br><small>(若朋友已進入，稍等幾秒即會連線)</small></div>
-    </div>
-
-    <!-- 3. 遊戲畫面 -->
-    <div id="game-screen">
-        <h2>第 <span id="round-num">1</span> 回合</h2>
-        
-        <div class="score-board">
-            <div>
-                <div style="color: var(--primary);" id="my-name-display">我</div>
-                <div style="font-size: 24px;" id="my-score">0</div>
-            </div>
-            <div style="align-self: center; font-size: 20px;">VS</div>
-            <div>
-                <div style="color: #d32f2f;" id="opp-name-display">對手</div>
-                <div style="font-size: 24px;" id="opp-score">0</div>
-            </div>
-        </div>
-
-        <div class="status-box" id="game-msg">👉 請選擇要出的拳！</div>
-        
-        <div class="hands-grid" id="hand-buttons">
-            <button class="hand-btn" onclick="makeChoice('✌️')">✌️</button>
-            <button class="hand-btn" onclick="makeChoice('✊')">✊</button>
-            <button class="hand-btn" onclick="makeChoice('✋')">✋</button>
-        </div>
-
-        <!-- 結算按鈕列（並排顯示） -->
-        <div id="end-controls" class="end-actions" style="display: none;">
-            <button id="rematch-btn" onclick="requestRematch()" style="background: var(--success);">🔄 再玩一局</button>
-            <button onclick="location.reload()" style="background: #757575;">🚪 離開房間</button>
-        </div>
-    </div>
-
-</div>
-
 <script>
+// ================= 全域變數 =================
 let roomCode = "";
 let myName = "";
 let oppName = "對手";
@@ -193,13 +16,11 @@ let roundNum = 1;
 let myChoice = null;
 let oppChoice = null;
 let gameStarted = false;
-let rematchRequested = false;
 
 const msgBox = document.getElementById('game-msg');
 const handBtns = document.getElementById('hand-buttons');
-const endControls = document.getElementById('end-controls');
-const rematchBtn = document.getElementById('rematch-btn');
 
+// ================= 1. 連線與進房邏輯 =================
 async function joinRoom() {
     roomCode = document.getElementById('room-input').value.trim();
     myName = document.getElementById('name-input').value.trim() || "玩家";
@@ -211,11 +32,13 @@ async function joinRoom() {
     
     baseUrl = `https://ntfy.sh/${roomCode}`;
     
+    // 切換到大廳
     document.getElementById('login-screen').classList.remove('active');
     document.getElementById('lobby-screen').classList.add('active');
     document.getElementById('lobby-my-name').innerText = myName;
     document.getElementById('lobby-room').innerText = roomCode;
 
+    // 探測房間狀態
     try {
         let res = await fetch(`${baseUrl}/json?poll=1`);
         let text = await res.text();
@@ -251,6 +74,7 @@ async function joinRoom() {
     }
 }
 
+// ================= 2. 訊息發送與接收 =================
 function sendMsg(action, data) {
     fetch(baseUrl, {
         method: 'POST',
@@ -260,6 +84,7 @@ function sendMsg(action, data) {
 }
 
 function startListening() {
+    // 使用 SSE (Server-Sent Events) 保持長連線監聽
     eventSource = new EventSource(`${baseUrl}/sse`);
     
     eventSource.onmessage = (e) => {
@@ -289,18 +114,17 @@ function startListening() {
                     if (data.round === roundNum) {
                         handleGuestResult(data);
                     }
-                } else if (action === 'rematch') {
-                    if (rematchRequested) {
-                        startNewMatch();
-                    } else {
-                        msgBox.innerHTML += `<div style="color:var(--primary); font-size:14px; margin-top:6px;">💡 對手已發起再玩一局！</div>`;
-                    }
+                } else if (action === 'play_again') {
+                    // 接收到對手的「再玩一局」要求，瞬間重置狀態
+                    resetGameState();
+                    startRound();
                 }
             }
         } catch (err) {}
     };
 }
 
+// ================= 3. 遊戲流程 =================
 function startGameUI() {
     gameStarted = true;
     document.getElementById('lobby-screen').classList.remove('active');
@@ -317,6 +141,7 @@ function startRound() {
     oppChoice = null;
     document.getElementById('round-num').innerText = roundNum;
     
+    // 重置按鈕樣式
     Array.from(handBtns.children).forEach(btn => {
         btn.classList.remove('selected');
         btn.disabled = false;
@@ -326,11 +151,13 @@ function startRound() {
     handBtns.style.display = 'flex';
 }
 
+// 玩家點擊按鈕出拳
 window.makeChoice = function(choice) {
-    if (myChoice) return;
+    if (myChoice) return; // 已經出過了
     
     myChoice = choice;
     
+    // 鎖定按鈕與樣式
     Array.from(handBtns.children).forEach(btn => {
         btn.disabled = true;
         if (btn.innerText === choice) btn.classList.add('selected');
@@ -342,6 +169,7 @@ window.makeChoice = function(choice) {
     checkRoundResult();
 }
 
+// 房主負責結算並廣播
 function checkRoundResult() {
     if (myChoice && oppChoice && isHost) {
         let resultMsg = "";
@@ -377,6 +205,7 @@ function checkRoundResult() {
     }
 }
 
+// 房客接收房主結算結果
 function handleGuestResult(data) {
     oppChoice = data.host_choice;
     myScore = data.guest_score;
@@ -402,43 +231,49 @@ function updateScores() {
     document.getElementById('opp-score').innerText = oppScore;
 }
 
+// ================= 4. 遊戲結束與重置邏輯 =================
 function nextRoundCheck() {
     if (myScore >= 2 || oppScore >= 2) {
         let winner = myScore >= 2 ? "你" : oppName;
         let color = myScore >= 2 ? "var(--success)" : "#d32f2f";
-        msgBox.innerHTML = `<div style="font-size:20px; color:${color}">🏁 遊戲結束！<br>🏆 恭喜 <b>${winner}</b> 獲得最終勝利！</div>`;
+        msgBox.innerHTML = `<div style="font-size:20px; color:${color}; margin-bottom: 10px;">🏁 遊戲結束！<br>🏆 恭喜 <b>${winner}</b> 獲得最終勝利！</div>`;
         handBtns.style.display = 'none';
         
-        rematchRequested = false;
-        rematchBtn.disabled = false;
-        rematchBtn.innerText = "🔄 再玩一局";
-        endControls.style.display = 'flex';
+        // 加上並排的「再玩一局」與「離開房間」按鈕
+        setTimeout(() => {
+            msgBox.innerHTML += `
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                <button onclick="playAgain()" style="background: var(--primary); width: auto; padding: 10px 16px;">🔄 再玩一局</button>
+                <button onclick="leaveRoom()" style="background: #9e9e9e; width: auto; padding: 10px 16px;">🚪 離開房間</button>
+            </div>`;
+        }, 1500);
     } else {
         roundNum++;
         startRound();
     }
 }
 
-function requestRematch() {
-    rematchRequested = true;
-    rematchBtn.disabled = true;
-    rematchBtn.innerText = "⏳ 等待對手...";
-    sendMsg('rematch', {});
+// 點擊再玩一局
+window.playAgain = function() {
+    resetGameState();
+    sendMsg('play_again', {}); // 通知對手一起重置
+    startRound();
 }
 
-function startNewMatch() {
+// 點擊離開房間
+window.leaveRoom = function() {
+    window.location.href = 'index.html'; // 導回你的遊戲大廳
+}
+
+// 清空分數與回合狀態
+function resetGameState() {
     myScore = 0;
     oppScore = 0;
     roundNum = 1;
-    rematchRequested = false;
     updateScores();
-    endControls.style.display = 'none';
-    startRound();
 }
 </script>
 
-</body>
-</html>
 <button onclick="window.location.href='index.html'" style="position: fixed; top: 15px; left: 15px; z-index: 9999; background: #ffffff; color: #333; border: 1px solid #ddd; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
     ⬅️ 返回大廳
 </button>
