@@ -15,7 +15,7 @@
             align-items: center;
             min-height: 90vh;
         }
-        
+
         #tictactoe-wrap {
             background: white;
             padding: 24px;
@@ -24,7 +24,7 @@
             max-width: 320px;
             width: 100%;
             text-align: center;
-            margin-top: 40px; 
+            margin-top: 40px;
         }
 
         .cell {
@@ -69,7 +69,7 @@
 
     <div id="tictactoe-wrap">
         <h2 style="margin: 0 0 6px 0; color: #37474f;">🎮 圈圈叉叉</h2>
-        
+
         <div style="font-size: 14px; font-weight: bold; color: #555; margin-bottom: 12px;">
             玩家：<span style="color: #1976d2; font-size: 18px;">X</span> ｜ 電腦：<span style="color: #d32f2f; font-size: 18px;">O</span>
         </div>
@@ -107,10 +107,12 @@
 <script>
 let board = ["", "", "", "", "", "", "", "", ""];
 let gameOver = false;
+let isAiThinking = false;
+
 const winPatterns = [
-    [0, 1, 2], [3, 4, 5], [6, 7, 8], // 橫向
-    [0, 3, 6], [1, 4, 7], [2, 5, 8], // 直向
-    [0, 4, 8], [2, 4, 6]             // 對角線
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
 ];
 
 function checkWin(b, player) {
@@ -122,9 +124,8 @@ function isFull(b) {
 }
 
 function playerMove(index) {
-    if (gameOver || board[index] !== "") return;
+    if (gameOver || isAiThinking || board[index] !== "") return;
 
-    // 玩家落子
     board[index] = "X";
     renderCell(index, "X", "#1976d2");
 
@@ -140,12 +141,16 @@ function playerMove(index) {
         return;
     }
 
+    isAiThinking = true;
     document.getElementById('status-msg').innerHTML = "<span style='color: #757575;'>🤖 電腦正在思考...</span>";
-    setTimeout(aiMove, 300); // 短暫延遲模擬思考
+    setTimeout(aiMove, 300);
 }
 
 function aiMove() {
-    if (gameOver) return;
+    if (gameOver) {
+        isAiThinking = false;
+        return;
+    }
 
     let emptyIndices = [];
     for (let i = 0; i < 9; i++) {
@@ -155,7 +160,6 @@ function aiMove() {
     let move = -1;
     let difficulty = document.getElementById('difficulty').value;
 
-    // 判斷是否要直接亂下 (簡單模式 100%，中等模式 40% 放水)
     let playRandomly = false;
     if (difficulty === 'easy') {
         playRandomly = true;
@@ -166,15 +170,14 @@ function aiMove() {
     if (playRandomly) {
         move = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
     } else {
-        // --- 聰明 AI 邏輯 ---
-        // 1. 電腦能贏就直接下（進攻）
+        // 1. 電腦能贏直接下
         for (let i of emptyIndices) {
             let copy = [...board];
             copy[i] = "O";
             if (checkWin(copy, "O")) { move = i; break; }
         }
 
-        // 2. 玩家下一步會贏就搶先堵住（防守）
+        // 2. 玩家下一步要贏則封堵
         if (move === -1) {
             for (let i of emptyIndices) {
                 let copy = [...board];
@@ -183,12 +186,12 @@ function aiMove() {
             }
         }
 
-        // 3. 搶佔中心格 (索引 4)
+        // 3. 佔中心
         if (move === -1 && emptyIndices.includes(4)) {
             move = 4;
         }
 
-        // 4. 搶佔四個角落
+        // 4. 佔角落
         if (move === -1) {
             let corners = [0, 2, 6, 8].filter(c => emptyIndices.includes(c));
             if (corners.length > 0) {
@@ -202,7 +205,6 @@ function aiMove() {
         }
     }
 
-    // 執行落子
     if (move !== -1) {
         board[move] = "O";
         renderCell(move, "O", "#d32f2f");
@@ -210,17 +212,21 @@ function aiMove() {
         if (checkWin(board, "O")) {
             gameOver = true;
             document.getElementById('status-msg').innerHTML = "<span style='color: #c62828;'>💀 電腦連線獲勝！再挑戰一局吧！</span>";
+            isAiThinking = false;
             return;
         }
 
         if (isFull(board)) {
             gameOver = true;
             document.getElementById('status-msg').innerHTML = "<span style='color: #555;'>🤝 平手！棋盤已滿。</span>";
+            isAiThinking = false;
             return;
         }
 
         document.getElementById('status-msg').innerHTML = "👉 輪到你落子！";
     }
+
+    isAiThinking = false;
 }
 
 function renderCell(idx, symbol, color) {
@@ -232,6 +238,7 @@ function renderCell(idx, symbol, color) {
 function resetGame() {
     board = ["", "", "", "", "", "", "", "", ""];
     gameOver = false;
+    isAiThinking = false;
     for (let i = 0; i < 9; i++) {
         let btn = document.getElementById("c" + i);
         btn.innerText = "";
