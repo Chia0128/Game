@@ -31,7 +31,6 @@
         }
         h2 { margin-top: 0; color: #333; }
         
-        /* 畫面區塊切換 */
         #login-screen, #lobby-screen, #game-screen { display: none; }
         #login-screen.active, #lobby-screen.active, #game-screen.active { display: block; }
         
@@ -104,9 +103,26 @@
             0% { transform: scale(0.5); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
+
+        .end-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .end-actions button {
+            flex: 1;
+            margin-bottom: 0;
+            padding: 10px 12px;
+            font-size: 15px;
+        }
     </style>
 </head>
 <body>
+
+<!-- 固定於左上角的返回大廳按鈕 -->
+<button onclick="window.location.href='index.html'" style="position: fixed; top: 15px; left: 15px; z-index: 9999; background: #ffffff; color: #333; border: 1px solid #ddd; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15); width: auto;">
+    ⬅️ 返回大廳
+</button>
 
 <div class="container">
     
@@ -150,12 +166,17 @@
             <button class="hand-btn" onclick="makeChoice('✊')">✊</button>
             <button class="hand-btn" onclick="makeChoice('✋')">✋</button>
         </div>
+
+        <!-- 結算按鈕列（並排顯示） -->
+        <div id="end-controls" class="end-actions" style="display: none;">
+            <button id="rematch-btn" onclick="requestRematch()" style="background: var(--success);">🔄 再玩一局</button>
+            <button onclick="location.reload()" style="background: #757575;">🚪 離開房間</button>
+        </div>
     </div>
 
 </div>
 
 <script>
-// ================= 全域變數 =================
 let roomCode = "";
 let myName = "";
 let oppName = "對手";
@@ -172,11 +193,13 @@ let roundNum = 1;
 let myChoice = null;
 let oppChoice = null;
 let gameStarted = false;
+let rematchRequested = false;
 
 const msgBox = document.getElementById('game-msg');
 const handBtns = document.getElementById('hand-buttons');
+const endControls = document.getElementById('end-controls');
+const rematchBtn = document.getElementById('rematch-btn');
 
-// ================= 1. 連線與進房邏輯 =================
 async function joinRoom() {
     roomCode = document.getElementById('room-input').value.trim();
     myName = document.getElementById('name-input').value.trim() || "玩家";
@@ -188,13 +211,11 @@ async function joinRoom() {
     
     baseUrl = `https://ntfy.sh/${roomCode}`;
     
-    // 切換到大廳
     document.getElementById('login-screen').classList.remove('active');
     document.getElementById('lobby-screen').classList.add('active');
     document.getElementById('lobby-my-name').innerText = myName;
     document.getElementById('lobby-room').innerText = roomCode;
 
-    // 探測房間狀態
     try {
         let res = await fetch(`${baseUrl}/json?poll=1`);
         let text = await res.text();
@@ -230,7 +251,6 @@ async function joinRoom() {
     }
 }
 
-// ================= 2. 訊息發送與接收 =================
 function sendMsg(action, data) {
     fetch(baseUrl, {
         method: 'POST',
@@ -240,7 +260,6 @@ function sendMsg(action, data) {
 }
 
 function startListening() {
-    // 使用 SSE (Server-Sent Events) 保持長連線監聽
     eventSource = new EventSource(`${baseUrl}/sse`);
     
     eventSource.onmessage = (e) => {
@@ -270,13 +289,18 @@ function startListening() {
                     if (data.round === roundNum) {
                         handleGuestResult(data);
                     }
+                } else if (action === 'rematch') {
+                    if (rematchRequested) {
+                        startNewMatch();
+                    } else {
+                        msgBox.innerHTML += `<div style="color:var(--primary); font-size:14px; margin-top:6px;">💡 對手已發起再玩一局！</div>`;
+                    }
                 }
             }
         } catch (err) {}
     };
 }
 
-// ================= 3. 遊戲流程 =================
 function startGameUI() {
     gameStarted = true;
     document.getElementById('lobby-screen').classList.remove('active');
@@ -293,7 +317,6 @@ function startRound() {
     oppChoice = null;
     document.getElementById('round-num').innerText = roundNum;
     
-    // 重置按鈕樣式
     Array.from(handBtns.children).forEach(btn => {
         btn.classList.remove('selected');
         btn.disabled = false;
@@ -303,13 +326,11 @@ function startRound() {
     handBtns.style.display = 'flex';
 }
 
-// 玩家點擊按鈕出拳
 window.makeChoice = function(choice) {
-    if (myChoice) return; // 已經出過了
+    if (myChoice) return;
     
     myChoice = choice;
     
-    // 鎖定按鈕與樣式
     Array.from(handBtns.children).forEach(btn => {
         btn.disabled = true;
         if (btn.innerText === choice) btn.classList.add('selected');
@@ -321,7 +342,6 @@ window.makeChoice = function(choice) {
     checkRoundResult();
 }
 
-// 房主負責結算並廣播
 function checkRoundResult() {
     if (myChoice && oppChoice && isHost) {
         let resultMsg = "";
@@ -353,12 +373,10 @@ function checkRoundResult() {
         
         setTimeout(nextRoundCheck, 2500);
     } else if (myChoice && oppChoice && !isHost) {
-        // 房客(P2)雖然知道雙方出什麼，但等待房主權威廣播再結算畫面
         msgBox.innerHTML = `⏳ 雙方已出拳，結算中...`;
     }
 }
 
-// 房客接收房主結算結果
 function handleGuestResult(data) {
     oppChoice = data.host_choice;
     myScore = data.guest_score;
@@ -391,16 +409,36 @@ function nextRoundCheck() {
         msgBox.innerHTML = `<div style="font-size:20px; color:${color}">🏁 遊戲結束！<br>🏆 恭喜 <b>${winner}</b> 獲得最終勝利！</div>`;
         handBtns.style.display = 'none';
         
-        // 加上重新整理按鈕
-        setTimeout(() => {
-            msgBox.innerHTML += `<br><button onclick="location.reload()" style="margin-top:15px; width:auto;">🔄 回首頁</button>`;
-        }, 1500);
+        rematchRequested = false;
+        rematchBtn.disabled = false;
+        rematchBtn.innerText = "🔄 再玩一局";
+        endControls.style.display = 'flex';
     } else {
         roundNum++;
         startRound();
     }
 }
+
+function requestRematch() {
+    rematchRequested = true;
+    rematchBtn.disabled = true;
+    rematchBtn.innerText = "⏳ 等待對手...";
+    sendMsg('rematch', {});
+}
+
+function startNewMatch() {
+    myScore = 0;
+    oppScore = 0;
+    roundNum = 1;
+    rematchRequested = false;
+    updateScores();
+    endControls.style.display = 'none';
+    startRound();
+}
 </script>
 
 </body>
 </html>
+<button onclick="window.location.href='index.html'" style="position: fixed; top: 15px; left: 15px; z-index: 9999; background: #ffffff; color: #333; border: 1px solid #ddd; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+    ⬅️ 返回大廳
+</button>
