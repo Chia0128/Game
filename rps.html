@@ -30,21 +30,18 @@
             text-align: center;
             margin-top: 40px; 
         }
-        h2 { margin-top: 0; margin-bottom: 5px; color: #333; }
+        h2 { margin-top: 0; color: #333; margin-bottom: 8px;}
         
-        /* 畫面區塊切換 */
         #login-screen, #lobby-screen, #game-screen { display: none; }
         #login-screen.active, #lobby-screen.active, #game-screen.active { display: block; }
         
-        input, select {
+        input {
             width: 90%;
             padding: 10px;
-            margin: 8px 0;
+            margin: 8px 0 16px 0;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 16px;
-            box-sizing: border-box;
-            font-family: inherit;
         }
         button {
             background: var(--primary);
@@ -56,7 +53,6 @@
             border-radius: 6px;
             cursor: pointer;
             width: 100%;
-            margin-top: 8px;
             margin-bottom: 8px;
             transition: opacity 0.2s;
         }
@@ -112,28 +108,19 @@
 </head>
 <body>
 
-<!-- 懸浮返回大廳按鈕 (維持原樣) -->
-<button onclick="window.location.href='index.html'" style="position: fixed; top: 15px; left: 15px; z-index: 9999; background: #ffffff; color: #333; border: 1px solid #ddd; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15); width: auto; margin: 0;">
+<!-- 懸浮返回大廳按鈕 -->
+<button onclick="exitToLobby()" style="position: fixed; top: 15px; left: 15px; z-index: 9999; background: #ffffff; color: #333; border: 1px solid #ddd; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.15); width: auto;">
     ⬅️ 返回大廳
 </button>
 
 <div class="container">
     <!-- 1. 登入畫面 -->
     <div id="login-screen" class="active">
-        <h2>✌️ 連線猜拳對戰 ✊</h2>
+        <h2 style="margin-bottom: 16px;">✌️ 連線猜拳對戰 ✊</h2>
         <input type="text" id="room-input" placeholder="輸入房間代號 (例: room888)" />
         <input type="text" id="name-input" placeholder="輸入你的名字" />
-        
-        <!-- 新增勝利條件選單 -->
-        <select id="win-condition" style="background: white;">
-            <option value="2">🏆 勝利條件：先拿 2 勝</option>
-            <option value="3">🏆 勝利條件：先拿 3 勝</option>
-            <option value="4">🏆 勝利條件：先拿 4 勝</option>
-            <option value="5">🏆 勝利條件：先拿 5 勝</option>
-        </select>
-
         <button onclick="joinRoom()">進入房間</button>
-        <p style="font-size: 13px; color: #777; margin-top: 10px; line-height: 1.5;">與朋友輸入相同代號即可連線<br>(勝利條件以先開房的房主設定為準)</p>
+        <p style="font-size: 13px; color: #777;">與朋友輸入相同代號即可連線</p>
     </div>
 
     <!-- 2. 等待大廳 -->
@@ -142,13 +129,23 @@
         <p>你的名字：<b id="lobby-my-name" style="color: var(--primary);"></b></p>
         <p>房間代號：<b id="lobby-room"></b></p>
         <div class="status-box">請等待對手加入...<br><small>(若朋友已進入，稍等幾秒即會連線)</small></div>
+        <button onclick="leaveRoom()" style="background: #9e9e9e; width: 60%; margin-top: 10px; padding: 8px;">取消並離開</button>
     </div>
 
     <!-- 3. 遊戲畫面 -->
     <div id="game-screen">
         <h2>第 <span id="round-num">1</span> 回合</h2>
-        <!-- 顯示這局要幾勝 -->
-        <div id="target-display" style="font-size: 13px; color: #777; margin-bottom: 12px; font-weight: bold;"></div>
+        
+        <!-- 動態勝利條件設定 -->
+        <div style="margin-bottom: 12px; font-weight: bold; color: #555; background: #eee; padding: 6px; border-radius: 8px; display: inline-block;">
+            👑 目標：
+            <select id="win-goal" onchange="changeGoal(this.value)" style="border: 1px solid #ccc; background: white; padding: 4px; font-weight: bold; border-radius: 4px;">
+                <option value="2" selected>先拿 2 勝</option>
+                <option value="3">先拿 3 勝</option>
+                <option value="4">先拿 4 勝</option>
+                <option value="5">先拿 5 勝</option>
+            </select>
+        </div>
         
         <div class="score-board">
             <div>
@@ -187,19 +184,23 @@ let oppRole = "";
 let myScore = 0;
 let oppScore = 0;
 let roundNum = 1;
+let winGoal = 2; // 預設 2 勝
 let myChoice = null;
 let oppChoice = null;
 let gameStarted = false;
-let targetScore = 2; // 預設勝利條件
 
 const msgBox = document.getElementById('game-msg');
 const handBtns = document.getElementById('hand-buttons');
+
+// 當關閉網頁或重整時，自動發送離開通知
+window.addEventListener('beforeunload', () => {
+    if (roomCode) sendMsg('leave', {});
+});
 
 // ================= 1. 連線與進房邏輯 =================
 async function joinRoom() {
     roomCode = document.getElementById('room-input').value.trim();
     myName = document.getElementById('name-input').value.trim() || "玩家";
-    targetScore = parseInt(document.getElementById('win-condition').value);
     
     if (!roomCode) {
         alert("請輸入房間代號！");
@@ -208,15 +209,19 @@ async function joinRoom() {
     
     baseUrl = `https://ntfy.sh/${roomCode}`;
     
-    // 切換到大廳
     document.getElementById('login-screen').classList.remove('active');
     document.getElementById('lobby-screen').classList.add('active');
     document.getElementById('lobby-my-name').innerText = myName;
     document.getElementById('lobby-room').innerText = roomCode;
 
-    // 探測房間狀態
     try {
-        let res = await fetch(`${baseUrl}/json?poll=1`);
+        // 優化 1：使用 since=10m 搭配 timeout 防止死等，進房瞬間完成
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        let res = await fetch(`${baseUrl}/json?since=10m`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
         let text = await res.text();
         let lines = text.trim().split('\n').filter(Boolean);
         
@@ -245,8 +250,8 @@ async function joinRoom() {
         startListening();
         
     } catch (e) {
-        alert("連線發生錯誤，請重試！");
-        location.reload();
+        alert("連線逾時，請檢查網路並重試！");
+        window.location.reload();
     }
 }
 
@@ -275,13 +280,10 @@ function startListening() {
             if (sender === oppRole) {
                 if (action === 'join' && isHost) {
                     oppName = data.name;
-                    // 房主發送 start 時，順便把自己的勝利條件傳給對方
-                    sendMsg('start', { name: myName, targetScore: targetScore });
+                    sendMsg('start', { name: myName });
                     startGameUI();
                 } else if (action === 'start' && !isHost) {
                     oppName = data.name;
-                    // 房客接收房主的勝利條件，若無則預設為自己的選擇
-                    targetScore = data.targetScore || targetScore;
                     startGameUI();
                 } else if (action === 'choice') {
                     if (data.round === roundNum) {
@@ -295,6 +297,14 @@ function startListening() {
                 } else if (action === 'play_again') {
                     resetGameState();
                     startRound();
+                } else if (action === 'set_goal') {
+                    // 同步對方設定的勝利條件
+                    winGoal = data.goal;
+                    document.getElementById('win-goal').value = winGoal;
+                } else if (action === 'leave') {
+                    // 偵測到對方離開，自動踢回登入頁
+                    alert("對方已離開房間！");
+                    window.location.reload();
                 }
             }
         } catch (err) {}
@@ -309,9 +319,13 @@ function startGameUI() {
     
     document.getElementById('my-name-display').innerText = myName;
     document.getElementById('opp-name-display').innerText = oppName;
-    document.getElementById('target-display').innerText = `( 規則：先拿 ${targetScore} 勝者獲勝 )`;
     
     startRound();
+}
+
+window.changeGoal = function(val) {
+    winGoal = parseInt(val);
+    sendMsg('set_goal', { goal: winGoal });
 }
 
 function startRound() {
@@ -355,7 +369,7 @@ function checkRoundResult() {
             (myChoice === '✋' && oppChoice === '✊')
         ) {
             myScore++;
-            resultMsg = `<div class="result-anim" style="color:var(--success)">🎉 ${myChoice} 贏 ${oppChoice}，你贏了這回合！</div>`;
+            resultMsg = `<div class="result-anim" style="color:var(--success)">🎉 ${myChoice} 贏 ${oppChoice}，你贏了！</div>`;
         } else {
             oppScore++;
             resultMsg = `<div class="result-anim" style="color:#d32f2f">😭 ${myChoice} 輸 ${oppChoice}，對手得分！</div>`;
@@ -387,7 +401,7 @@ function handleGuestResult(data) {
     if (myChoice === oppChoice) {
         resultMsg = `<div class="result-anim">🤝 雙方都出 ${myChoice}，平手！</div>`;
     } else if (myScore > parseInt(document.getElementById('my-score').innerText)) {
-        resultMsg = `<div class="result-anim" style="color:var(--success)">🎉 ${myChoice} 贏 ${oppChoice}，你贏了這回合！</div>`;
+        resultMsg = `<div class="result-anim" style="color:var(--success)">🎉 ${myChoice} 贏 ${oppChoice}，你贏了！</div>`;
     } else {
         resultMsg = `<div class="result-anim" style="color:#d32f2f">😭 ${myChoice} 輸 ${oppChoice}，對手得分！</div>`;
     }
@@ -403,13 +417,12 @@ function updateScores() {
     document.getElementById('opp-score').innerText = oppScore;
 }
 
-// ================= 4. 遊戲結束與重置邏輯 =================
+// ================= 4. 遊戲結束與重置/離開邏輯 =================
 function nextRoundCheck() {
-    // 檢查是否達到目標勝場數
-    if (myScore >= targetScore || oppScore >= targetScore) {
-        let winner = myScore >= targetScore ? "你" : oppName;
-        let color = myScore >= targetScore ? "var(--success)" : "#d32f2f";
-        msgBox.innerHTML = `<div style="font-size:20px; color:${color}; margin-bottom: 10px;">🏁 遊戲結束！<br>🏆 恭喜 <b>${winner}</b> 獲得最終勝利！</div>`;
+    if (myScore >= winGoal || oppScore >= winGoal) {
+        let winner = myScore >= winGoal ? "你" : oppName;
+        let color = myScore >= winGoal ? "var(--success)" : "#d32f2f";
+        msgBox.innerHTML = `<div style="font-size:20px; color:${color}; margin-bottom: 10px;">🏁 遊戲結束！<br>🏆 恭喜 <b>${winner}</b> 獲得勝利！</div>`;
         handBtns.style.display = 'none';
         
         setTimeout(() => {
@@ -432,8 +445,17 @@ window.playAgain = function() {
 }
 
 window.leaveRoom = function() {
-    // 重新整理網頁，徹底重置連線狀態並回到輸入房號頁面
-    location.reload(); 
+    sendMsg('leave', {});
+    setTimeout(() => {
+        window.location.reload(); // 重新整理退回輸入房號畫面
+    }, 100);
+}
+
+window.exitToLobby = function() {
+    if(roomCode) sendMsg('leave', {});
+    setTimeout(() => {
+        window.location.href = 'index.html'; // 完全離開遊戲，回大廳
+    }, 100);
 }
 
 function resetGameState() {
