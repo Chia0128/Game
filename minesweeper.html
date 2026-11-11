@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>經典踩地雷</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            touch-action: manipulation;
+        }
+
+        #game-wrap {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        h2 { margin: 0 0 10px 0; color: #2e7d32; }
+
+        .info-bar {
+            font-size: 15px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        
+        .status-msg {
+            font-size: 14px;
+            color: #d32f2f;
+            font-weight: bold;
+            min-height: 20px;
+            margin-bottom: 12px;
+        }
+
+        /* 棋盤排版 */
+        #board {
+            display: grid;
+            grid-template-columns: repeat(6, 48px);
+            gap: 4px;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        /* 單一格子樣式 */
+        .cell {
+            width: 48px;
+            height: 48px;
+            font-size: 20px;
+            font-weight: bold;
+            background-color: #bdbdbd;
+            border: 2px solid;
+            border-color: #fff #7a7a7a #7a7a7a #fff; /* 經典立體邊框 */
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 翻開後的樣式 */
+        .cell.revealed {
+            background-color: #e0e0e0;
+            border: 1px solid #999;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* 爆炸樣式 */
+        .cell.exploded {
+            background-color: #e53935;
+            border-color: #e53935;
+        }
+        
+        /* 炸彈翻開樣式 */
+        .cell.mine-reveal {
+            background-color: #ffcdd2;
+        }
+
+        /* 控制按鈕區 */
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-action {
+            border: none;
+            padding: 10px 16px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            transition: transform 0.1s, opacity 0.2s;
+            flex: 1;
+        }
+        .btn-action:active { transform: scale(0.95); }
+        
+        .btn-mode-dig { background-color: #0288d1; color: white; }
+        .btn-mode-flag { background-color: #f57c00; color: white; }
+        .btn-restart { background-color: #388e3c; color: white; }
+
+        /* 數字顏色對應 */
+        .c-1 { color: #1976d2; }
+        .c-2 { color: #388e3c; }
+        .c-3 { color: #d32f2f; }
+        .c-4 { color: #7b1fa2; }
+        .c-5 { color: #ff8f00; }
+        .c-6 { color: #0097a7; }
+        .c-7 { color: #424242; }
+        .c-8 { color: #616161; }
+    </style>
+</head>
+<body>
+
+    <!-- 像素級統一的懸浮返回大廳按鈕 -->
+    <button onclick="window.location.href='index.html'" style="all: unset; position: fixed; top: 15px; left: 15px; z-index: 99999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;">
+        ⬅️ 返回大廳
+    </button>
+
+    <div id="game-wrap">
+        <h2>💣 經典踩地雷</h2>
+        
+        <div class="info-bar">
+            剩餘地雷：<span id="flags-left" style="color: #d32f2f;">5</span> ｜ 
+            當前：<span id="mode-text" style="color: #1976d2;">⛏️ 挖掘</span>
+        </div>
+        
+        <div id="status-msg" class="status-msg">安全點擊任意格子開始！</div>
+
+        <div id="board">
+            <!-- JS 動態生成格子 -->
+        </div>
+
+        <div class="action-bar">
+            <button id="btn-mode" class="btn-action btn-mode-dig" onclick="toggleMode()">切換為 🚩 插旗</button>
+            <button class="btn-action btn-restart" onclick="initGame()">🔄 重新開始</button>
+        </div>
+    </div>
+
+<script>
+const ROWS = 6;
+const COLS = 6;
+const NUM_MINES = 5;
+
+let board = [];
+let revealed = [];
+let flagged = [];
+let gameOver = false;
+let mode = "dig"; // "dig" 或 "flag"
+let flagsLeft = NUM_MINES;
+
+const boardEl = document.getElementById("board");
+const flagsLeftEl = document.getElementById("flags-left");
+const modeTextEl = document.getElementById("mode-text");
+const statusMsgEl = document.getElementById("status-msg");
+const btnModeEl = document.getElementById("btn-mode");
+
+// 初始化棋盤陣列與 DOM
+function initGame() {
+    board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+    revealed = Array.from({length: ROWS}, () => Array(COLS).fill(false));
+    flagged = Array.from({length: ROWS}, () => Array(COLS).fill(false));
+    gameOver = false;
+    flagsLeft = NUM_MINES;
+    
+    // 隨機埋地雷
+    let positions = [];
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) positions.push({r, c});
+    }
+    
+    // 洗牌取前 NUM_MINES 個
+    for (let i = positions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [positions[i], positions[j]] = [positions[j], positions[i]];
+    }
+    
+    for (let i = 0; i < NUM_MINES; i++) {
+        let p = positions[i];
+        board[p.r][p.c] = 'M';
+    }
+
+    // 計算周圍數字
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (board[r][c] === 'M') continue;
+            let count = 0;
+            for (let dr of [-1, 0, 1]) {
+                for (let dc of [-1, 0, 1]) {
+                    let nr = r + dr, nc = c + dc;
+                    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === 'M') {
+                        count++;
+                    }
+                }
+            }
+            board[r][c] = count;
+        }
+    }
+
+    renderBoardDOM();
+    updateUI("安全點擊任意格子開始！");
+}
+
+// 建立 HTML 格子
+function renderBoardDOM() {
+    boardEl.innerHTML = "";
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            let cell = document.createElement("div");
+            cell.className = "cell";
+            cell.id = `cell-${r}-${c}`;
+            
+            // 點擊事件 (挖掘或插旗)
+            cell.addEventListener("click", () => handleCellClick(r, c));
+            
+            // 右鍵直接插旗 (防呆阻擋瀏覽器選單)
+            cell.addEventListener("contextmenu", (e) => {
+                e.preventDefault();
+                if (!gameOver && !revealed[r][c]) {
+                    toggleFlag(r, c);
+                }
+            });
+            
+            boardEl.appendChild(cell);
+        }
+    }
+}
+
+// 切換挖掘/插旗模式
+function toggleMode() {
+    if (mode === "dig") {
+        mode = "flag";
+        modeTextEl.innerText = "🚩 插旗";
+        modeTextEl.style.color = "#f57c00";
+        btnModeEl.innerText = "切換為 ⛏️ 挖掘";
+        btnModeEl.className = "btn-action btn-mode-flag";
+    } else {
+        mode = "dig";
+        modeTextEl.innerText = "⛏️ 挖掘";
+        modeTextEl.style.color = "#1976d2";
+        btnModeEl.innerText = "切換為 🚩 插旗";
+        btnModeEl.className = "btn-action btn-mode-dig";
+    }
+}
+
+function handleCellClick(r, c) {
+    if (gameOver) return;
+
+    if (mode === "flag") {
+        toggleFlag(r, c);
+        return;
+    }
+
+    // 挖掘模式
+    if (flagged[r][c] || revealed[r][c]) return;
+
+    // 踩到地雷
+    if (board[r][c] === 'M') {
+        gameOver = true;
+        let cellEl = document.getElementById(`cell-${r}-${c}`);
+        cellEl.innerText = "💥";
+        cellEl.classList.add("revealed", "exploded");
+        
+        // 翻開其他地雷
+        for (let mr = 0; mr < ROWS; mr++) {
+            for (let mc = 0; mc < COLS; mc++) {
+                if (board[mr][mc] === 'M' && !(mr === r && mc === c)) {
+                    let mCell = document.getElementById(`cell-${mr}-${mc}`);
+                    mCell.innerText = "💣";
+                    mCell.classList.add("revealed", "mine-reveal");
+                }
+            }
+        }
+        updateUI("💀 碰！踩到炸彈 Game Over！");
+        return;
+    }
+
+    // 安全格
+    revealCell(r, c);
+    
+    if (checkWin()) {
+        gameOver = true;
+        updateUI("🏆 太強了！所有地雷皆被避開，勝利！🎉", "#2e7d32");
+    } else {
+        updateUI("");
+    }
+}
+
+function toggleFlag(r, c) {
+    if (revealed[r][c]) return;
+    
+    flagged[r][c] = !flagged[r][c];
+    let cellEl = document.getElementById(`cell-${r}-${c}`);
+    cellEl.innerText = flagged[r][c] ? "🚩" : "";
+    
+    flagsLeft += flagged[r][c] ? -1 : 1;
+    updateUI();
+}
+
+function revealCell(r, c) {
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS || revealed[r][c] || flagged[r][c]) return;
+    
+    revealed[r][c] = true;
+    let val = board[r][c];
+    let cellEl = document.getElementById(`cell-${r}-${c}`);
+    
+    cellEl.classList.add("revealed");
+    
+    if (val > 0) {
+        cellEl.innerText = val;
+        cellEl.classList.add(`c-${val}`);
+    } else {
+        // 若為 0，自動擴散翻開周圍
+        for (let dr of [-1, 0, 1]) {
+            for (let dc of [-1, 0, 1]) {
+                revealCell(r + dr, c + dc);
+            }
+        }
+    }
+}
+
+function checkWin() {
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (board[r][c] !== 'M' && !revealed[r][c]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+function updateUI(msg = null, msgColor = "#d32f2f") {
+    flagsLeftEl.innerText = flagsLeft;
+    if (msg !== null) {
+        statusMsgEl.innerText = msg;
+        statusMsgEl.style.color = msgColor;
+    }
+}
+
+// 啟動遊戲
+initGame();
+</script>
+</body>
+</html>
