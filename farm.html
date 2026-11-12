@@ -443,7 +443,7 @@
     </div>
 
 <script>
-// --- 調整後的天氣系統 (加入強烈颱風) ---
+// --- 天氣系統 (加入颱風) ---
 const WEATHERS = {
     sunny: { name: '晴朗無雲', emoji: '☀️', bgClass: 'weather-sunny', desc: '生長正常', pestChance: 0.01, growthSpeed: 1 },
     rainy: { name: '傾盆大雨', emoji: '🌧️', bgClass: 'weather-rainy', desc: '生長雙倍 / 易長蟲草', pestChance: 0.03, growthSpeed: 2 },
@@ -478,7 +478,6 @@ const DECORS = {
     alienScarecrow: { id: 'alienScarecrow', name: '外星稻草人', emoji: '🛸', cost: 1200, desc: '自動趕走烏鴉，收成 10% 機率雙倍複製' }
 };
 
-// 下修加工與畜牧產品價格
 const PRODUCTS = {
     feed:    { name: '綜合飼料', emoji: '🌽', sell: 6 },
     bread:   { name: '香噴噴麵包', emoji: '🍞', sell: 35 },
@@ -575,7 +574,7 @@ function adjustQty(delta) {
 function updateQtyDisplay() {
     document.getElementById('qty-val').innerText = confirmQtyState.currentQty;
     let total = confirmQtyState.currentQty * confirmQtyState.unitPrice;
-    document.getElementById('qty-total-text').innerText = `購買數量：${confirmQtyState.currentQty} 個 ｜ 總計花費：${total} 金幣`;
+    document.getElementById('qty-total-text').innerText = `交易數量：${confirmQtyState.currentQty} 個 ｜ 總計：${total} 金幣`;
 }
 
 // --- 系統初始化 ---
@@ -613,7 +612,7 @@ function loadGame() {
 
     let offlineSeconds = Math.floor((Date.now() - gameData.lastSaveTime) / 1000);
     if (offlineSeconds > 0) {
-        log(`💤 歡迎回來！離開了 ${offlineSeconds} 秒，農作持續生長 (離線無經驗值)。`);
+        log(`💤 歡迎回來！離開了 ${offlineSeconds} 秒，農牧場持續運作中 (離線無經驗值)。`);
         let speedMult = gameData.player.decors.musicBox ? 1.15 : 1.0;
         
         gameData.plots.forEach(p => {
@@ -791,6 +790,7 @@ function merchantSellProd() {
 // --- 🐾 擺設列與互動 ---
 function renderDecorBar() {
     let bar = document.getElementById('decor-bar');
+    if (!bar) return;
     let d = gameData.player.decors;
     let html = '';
     if (d.dog) html += `<div class="decor-item" onclick="log('🐕 忠實看門狗搖了搖尾巴！')">🐕 看門狗</div>`;
@@ -800,8 +800,9 @@ function renderDecorBar() {
     if (d.weatherStation) html += `<div class="decor-item" style="background:#e1f5fe; border-color:#4fc3f7;" onclick="askSummonRain()">🌦️ 求雨儀</div>`;
 
     if (html) { bar.style.display = 'flex'; bar.innerHTML = html; } 
-    else bar.style.display = 'none';
+    else { bar.style.display = 'none'; }
 }
+
 function askSummonRain() {
     if (gameData.weather.current === 'rainy') return log(`🌧️ 現在已經是傾盆大雨了！`);
     showConfirm("🌦️ 啟動氣象控制儀", "是否花費 <b>50 金幣</b> 手動召喚一場「傾盆大雨 (雙倍生長)」？", () => {
@@ -810,9 +811,17 @@ function askSummonRain() {
             let wInfo = WEATHERS['rainy']; document.body.className = wInfo.bgClass;
             document.getElementById("weather-banner").innerHTML = `${wInfo.emoji} 天氣：${wInfo.name} (${wInfo.desc})`;
             log(`🌦️ <b>氣象儀啟動成功！</b> 降下傾盆大雨，作物生長加速！`);
-            renderAll();
+            renderAll(); saveGame();
         } else log(`❌ 金幣不足 50！`);
     });
+}
+
+function useBugSpray() {
+    if (gameData.player.supplies.bugSpray <= 0) return;
+    gameData.player.supplies.bugSpray--; gameData.player.sprayTimer = 180;
+    gameData.plots.forEach(p => { p.hasWeed = false; p.hasBug = false; });
+    log(`🛡️ <b>全農場噴灑了除蟲噴霧！</b> 現有蟲草全數清除，3 分鐘內免疫侵襲！`);
+    renderAll(); saveGame();
 }
 
 // --- 核心每秒計時器 ---
@@ -1153,7 +1162,7 @@ function renderPasture() {
                     } else log(`❌ 綜合飼料不足！需要 ${a.reqFeed} 包。`);
                 };
             } else if (state.state === 'producing') {
-                div.innerHTML += `<div class="progress-wrap" style="display:block;"><div class="progress-bar" id="pbar-ani-${id}" style="width:${(state.progress/a.time)*100}%"></div></div>`;
+                div.innerHTML += `<div class="progress-wrap" style="display:block;"><div class="progress-bar" id="pbar-ani-${id}" style="width:${Math.min(100,(state.progress/a.time)*100)}%"></div></div>`;
             } else if (state.state === 'ready') {
                 div.innerHTML += `<div class="price-tag" style="background:#4caf50;">收穫</div>`;
                 div.onclick = (e) => {
@@ -1365,14 +1374,6 @@ function openSellQtyModal(id) {
     }, { unitPrice: unitSell, maxQty: current });
 }
 
-function useBugSpray() {
-    if (gameData.player.supplies.bugSpray <= 0) return;
-    gameData.player.supplies.bugSpray--; gameData.player.sprayTimer = 180;
-    gameData.plots.forEach(p => { p.hasWeed = false; p.hasBug = false; });
-    log(`🛡️ <b>全農場噴灑了除蟲噴霧！</b> 現有蟲草全數清除，3 分鐘內免疫侵襲！`);
-    renderAll(); saveGame();
-}
-
 function switchShopTab(subTab, btnEl) {
     currentShopSubTab = subTab;
     btnEl.parentElement.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
@@ -1415,7 +1416,7 @@ function openBuyQtyModal(category, id) {
 }
 function buyDecor(id) {
     let d = DECORS[id]; if (gameData.player.decors[id]) return;
-    showConfirm(`🐾 購買特殊擺設`, `確定花費 <b>${d.cost} 金幣</b> 購買【${d.name}】嗎？<br><span style="font-size:11px; color:#555;">${d.desc}</span>`, () => {
+    showConfirm(`🐾 購買特殊擺設`, `確定花費 <b>${d.cost} 金幣</b> 購買【${d.name}】嗎？<br><span style="font-size:11px; color:#555;">${d.desc}</span>`, (qty) => {
         if (gameData.player.gold >= d.cost) {
             gameData.player.gold -= d.cost; gameData.player.decors[id] = true;
             log(`🎉 成功購買了【${d.name}】！已擺設至你的農場。`); renderAll(); saveGame();
@@ -1431,7 +1432,6 @@ function switchTab(tabId, btnEl) {
     if (tabId === 'farm') renderFarm();
     if (tabId === 'pasture') renderPasture();
     if (tabId === 'factory') renderFactory();
-    if (tabId === 'quest') { renderQuests(); document.getElementById('quest-badge').style.display = 'none'; }
     if (tabId === 'bag') renderBag();
     if (tabId === 'shop') renderShop();
 }
