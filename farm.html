@@ -1561,7 +1561,891 @@ function switchTab(tabId, btnEl) {
 function updateUI() {
     document.getElementById("txt-lvl").innerText = gameData.player.level;
     document.getElementById("txt-exp").innerText = gameData.player.exp;
-    document.getElementById("txt-maxexp").innerText = getMaxExp();
+    document.getElementById("txt-maxex<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>迷你開心農場</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #e8f5e9;
+            color: #333;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            touch-action: manipulation;
+            user-select: none;
+            transition: background-color 1s ease;
+        }
+
+        body.weather-sunny { background-color: #e8f5e9; }
+        body.weather-rainy { background-color: #90caf9; }
+        body.weather-drought { background-color: #ffcc80; }
+        body.weather-storm { background-color: #90a4ae; } 
+
+        .btn-home {
+            position: fixed; top: 15px; left: 15px; z-index: 99999;
+            box-sizing: border-box; height: 36px; padding: 0 14px;
+            font-family: system-ui, -apple-system, sans-serif; font-size: 14px;
+            font-weight: 600; color: #333333; background-color: #ffffff;
+            border: 1px solid #d1d5db; border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+
+        #game-wrap {
+            background: #ffffff; padding: 20px; border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1); max-width: 400px; width: 100%;
+            text-align: center; position: relative; border: 2px solid #81c784;
+            box-sizing: border-box; margin-top: 30px;
+        }
+
+        /* 左右上角按鈕 */
+        .corner-btn {
+            position: absolute; top: 16px; font-size: 19px; cursor: pointer;
+            background: #f1f8e9; border: 1px solid #c5e1a5; border-radius: 50%;
+            width: 36px; height: 36px; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.2s;
+        }
+        .corner-btn:active { transform: scale(0.9); }
+        .btn-quest { left: 16px; } .btn-settings { right: 16px; }
+
+        #quest-badge {
+            display: none; position: absolute; top: -3px; right: -3px;
+            background: #f44336; color: #fff; font-size: 10px; font-weight: bold;
+            width: 16px; height: 16px; border-radius: 50%; justify-content: center; align-items: center;
+            border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        h2 { margin: 0 0 12px 0; color: #2e7d32; font-size: 20px; }
+
+        /* 告示牌與狀態列 */
+        #weather-banner {
+            background: #fff9c4; color: #f57f17; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold;
+            margin-bottom: 8px; border: 1px dashed #fbc02d; display: flex; justify-content: center; align-items: center; gap: 6px;
+        }
+        #buff-banner, #merchant-banner {
+            padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; margin-bottom: 8px;
+        }
+        #buff-banner { display: none; background: #e1f5fe; color: #0277bd; border: 1px solid #81d4fa; }
+        #merchant-banner { display: none; background: linear-gradient(135deg, #7b1fa2, #ab47bc); color: #fff; cursor: pointer; box-shadow: 0 4px 10px rgba(123,31,162,0.3); animation: pulseMerchant 1.5s infinite alternate; }
+        @keyframes pulseMerchant { from { transform: scale(0.98); } to { transform: scale(1.02); } }
+
+        .header-stats {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f1f8e9; padding: 8px 12px; border-radius: 12px; margin-bottom: 10px;
+            font-size: 13px; font-weight: bold; border: 1px solid #c5e1a5;
+        }
+        .stat-gold { color: #f57f17; } .stat-lvl { color: #1565c0; }
+        .wheel-btn {
+            background: linear-gradient(135deg, #ff7043, #ffca28); color: #fff; border: none; padding: 4px 10px; border-radius: 12px;
+            font-size: 11px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(255,112,67,0.4);
+        }
+
+        #decor-bar { display: none; justify-content: center; gap: 8px; flex-wrap: wrap; background: #f9fbe7; border: 1px solid #dce775; border-radius: 10px; padding: 6px; margin-bottom: 10px; }
+        .decor-item { font-size: 12px; background: #fff; border: 1px solid #cddc39; border-radius: 8px; padding: 3px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+        /* 主分頁按鈕 */
+        .tabs { display: flex; gap: 5px; margin-bottom: 12px; }
+        .tab-btn { flex: 1; padding: 9px 0; font-size: 12px; font-weight: bold; background: #f1f8e9; color: #555; border: 1px solid #c5e1a5; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .tab-btn.active { background: #4caf50; color: white; border-color: #388e3c; }
+        .tab-content { display: none; } .tab-content.active { display: block; }
+
+        /* 網格區 (農場/畜牧/工廠) */
+        .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
+        #farm-grid { background: #aed581; } #pasture-grid { background: #fff59d; } #factory-grid { background: #cfd8dc; }
+
+        .plot { height: 80px; border-radius: 8px; position: relative; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 36px; box-shadow: inset 0 4px 8px rgba(0,0,0,0.2); transition: 0.1s; }
+        .plot-farm { background: #8d6e63; border: 3px solid #5d4037; }
+        .plot-animal { background: #dcedc8; border: 3px solid #8bc34a; }
+        .plot-factory { background: #90a4ae; border: 3px solid #546e7a; font-size: 30px; }
+        .plot:active { transform: scale(0.95); }
+        .plot.locked { background: #e0e0e0; border-color: #9e9e9e; cursor: not-allowed; }
+        .plot.locked::after { content: '🔒'; font-size: 24px; position: absolute; }
+        .plot.unowned { opacity: 0.6; filter: grayscale(50%); }
+        .plot.broken { border-color: #d32f2f !important; background: #8d6e63 !important; }
+
+        .factory-working .factory-icon { animation: factoryShake 0.6s infinite ease-in-out; }
+        @keyframes factoryShake { 0%, 100% { transform: translateY(0) rotate(0deg) scale(1); } 25% { transform: translateY(-4px) rotate(-8deg) scale(1.08); } 75% { transform: translateY(-4px) rotate(8deg) scale(1.08); } }
+
+        .price-tag { font-size: 11px; font-weight: bold; color: #fff; background: #e65100; padding: 2px 6px; border-radius: 4px; position: absolute; bottom: -5px; border: 1px solid #fff; }
+        .name-tag { font-size: 10px; font-weight: bold; color: #fff; position: absolute; top: 4px; }
+        .progress-wrap { position: absolute; bottom: 6px; left: 10%; width: 80%; height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; display: none; }
+        .progress-bar { height: 100%; width: 0%; background: #64b5f6; transition: width 1s linear; }
+
+        .weed, .bug { position: absolute; font-size: 16px; cursor: pointer; z-index: 10; animation: bounce 1s infinite alternate; }
+        .weed { top: -5px; right: -5px; } .bug { top: -5px; left: -5px; }
+        .crow { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 24px; cursor: pointer; z-index: 20; background: rgba(0,0,0,0.75); color: #ffeb3b; padding: 2px 6px; border-radius: 10px; border: 1px solid #ffeb3b; animation: crowHop 0.4s infinite alternate; white-space: nowrap; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+        @keyframes crowHop { from { transform: translate(-50%, 0); } to { transform: translate(-50%, -5px); } }
+
+        .log-box { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; height: 85px; overflow-y: auto; padding: 8px; font-size: 11px; line-height: 1.4; text-align: left; margin-bottom: 4px; color: #555; }
+        .log-entry { border-bottom: 1px dashed #eee; padding-bottom: 3px; margin-bottom: 3px; }
+
+        /* 全新：網格化展示區 (Grid View) */
+        .grid-view-box {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+            max-height: 250px; overflow-y: auto; padding: 8px 4px;
+        }
+        .grid-item {
+            background: #fff; border: 2px solid #e0e0e0; border-radius: 10px;
+            aspect-ratio: 1; display: flex; justify-content: center; align-items: center;
+            font-size: 32px; position: relative; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: 0.1s;
+        }
+        .grid-item:active { transform: scale(0.92); }
+        .grid-item.golden { border-color: #fbc02d; background: #fffde7; }
+        .grid-item.disabled { filter: grayscale(1); opacity: 0.6; }
+        .grid-badge {
+            position: absolute; bottom: -4px; right: -4px; background: #f57f17; color: #fff;
+            font-size: 10px; padding: 2px 5px; border-radius: 8px; font-weight: bold; border: 1px solid #fff;
+        }
+        
+        .sub-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+        .sub-tab-btn { flex: 1; padding: 8px 0; font-size: 12px; font-weight: bold; background: #eeeeee; color: #555; border: 1px solid #d0d0d0; border-radius: 6px; cursor: pointer; }
+        .sub-tab-btn.active { background: #0288d1; color: #fff; border-color: #0277bd; }
+
+        /* 彈窗 Modal共用 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-card { background: #fff; padding: 18px; border-radius: 14px; width: 90%; max-width: 320px; max-height: 85%; overflow-y: auto; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.25); border: 2px solid #81c784; }
+        .modal-close { background: #e53935; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 12px; font-weight: bold; font-size: 13px; }
+        
+        /* 數量調整器 */
+        .qty-controls { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 12px 0; }
+        .qty-btn { background: #e0e0e0; border: none; border-radius: 6px; padding: 6px 12px; font-weight: bold; font-size: 14px; cursor: pointer; color: #333; }
+        .qty-btn:active { background: #bdbdbd; }
+        .qty-display { font-size: 18px; font-weight: bold; min-width: 40px; color: #2e7d32; }
+
+        /* 二段式交易詳情面板專屬 */
+        #modal-item-detail { z-index: 2000; }
+        .confirm-btns { display: flex; gap: 8px; margin-top: 14px; }
+        .confirm-btns button { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; color: #fff; }
+        .btn-yes { background: #4caf50; } .btn-no { background: #757575; }
+        .btn-yes:disabled { background: #bdbdbd; cursor: not-allowed; }
+
+        .action-btn { background: #4caf50; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; }
+
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.2); } }
+        .floating-text { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; font-size: 14px; pointer-events: none; z-index: 50; text-shadow: 1px 1px 0 #fff; }
+    </style>
+</head>
+<body class="weather-sunny">
+
+    <button class="btn-home" onclick="window.location.href='index.html'">⬅️ 返回大廳</button>
+
+    <div id="game-wrap">
+        <div class="corner-btn btn-quest" onclick="openQuestModal()" title="村莊佈告欄">📋<span id="quest-badge">!</span></div>
+        <div class="corner-btn btn-settings" onclick="openSettings()" title="遊戲設定">⚙️</div>
+
+        <h2>🌻 迷你開心農場</h2>
+        
+        <div id="weather-banner">☀️ 天氣：晴朗無雲 (生長正常)</div>
+        <div id="buff-banner">🛡️ 防蟲噴霧生效中：剩餘 <span id="txt-spray-cd">0</span> 秒</div>
+        <div id="merchant-banner" onclick="openMerchantModal()">🧳 神祕行商人造訪中！點擊查看特惠</div>
+
+        <div class="header-stats">
+            <div class="stat-lvl">Lv.<span id="txt-lvl">1</span> (<span id="txt-exp">0</span>/<span id="txt-maxexp">50</span>)</div>
+            <button class="wheel-btn" id="btn-wheel" onclick="openWheelModal()">🎡 幸運輪盤</button>
+            <div class="stat-gold">💰 <span id="txt-gold">300</span></div>
+        </div>
+
+        <div id="decor-bar"></div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('farm', this)">🏡 農田</button>
+            <button class="tab-btn" onclick="switchTab('pasture', this)">🐄 畜牧</button>
+            <button class="tab-btn" onclick="switchTab('factory', this)">🏭 工廠</button>
+            <!-- 背包與商店改為觸發大面板 -->
+            <button class="tab-btn" onclick="openBagModal()">🎒 背包</button>
+            <button class="tab-btn" onclick="openShopModal()">🛒 商店</button>
+        </div>
+
+        <!-- 1. 農場 -->
+        <div id="tab-farm" class="tab-content active">
+            <div class="grid-container" id="farm-grid"></div>
+            <button class="action-btn" style="width: 100%; background: #ff9800; font-size: 13px; padding: 8px;" onclick="stealCrop()">
+                🕵️ 去好友家偷菜 (冷卻: <span id="txt-steal-cd">0</span>s)
+            </button>
+        </div>
+
+        <!-- 2. 畜牧場 -->
+        <div id="tab-pasture" class="tab-content">
+            <div class="grid-container" id="pasture-grid"></div>
+        </div>
+
+        <!-- 3. 加工廠 -->
+        <div id="tab-factory" class="tab-content">
+            <div class="grid-container" id="factory-grid"></div>
+        </div>
+
+        <div class="log-box" id="log-box"></div>
+
+        <!-- 🎒 背包大視窗 -->
+        <div id="modal-bag" class="modal-overlay">
+            <div class="modal-card">
+                <h3 style="margin-top:0; color:#2e7d32; font-size:18px;">🎒 我的背包</h3>
+                <div class="sub-tabs">
+                    <button class="sub-tab-btn active" onclick="renderBagGrid('products', this)">🧺 農牧產物</button>
+                    <button class="sub-tab-btn" onclick="renderBagGrid('seeds', this)">🌱 種子區</button>
+                    <button class="sub-tab-btn" onclick="renderBagGrid('supplies', this)">🧪 農用資材</button>
+                </div>
+                <div class="grid-view-box" id="bag-grid-content"></div>
+                <button class="modal-close" style="background:#757575;" onclick="closeModal('modal-bag')">關閉背包</button>
+            </div>
+        </div>
+
+        <!-- 🛒 商店大視窗 -->
+        <div id="modal-shop" class="modal-overlay">
+            <div class="modal-card" style="border-color:#f57f17;">
+                <h3 style="margin-top:0; color:#e65100; font-size:18px;">🛒 村莊雜貨店</h3>
+                <div class="sub-tabs">
+                    <button class="sub-tab-btn active" onclick="renderShopGrid('seeds', this)">🌱 種子</button>
+                    <button class="sub-tab-btn" onclick="renderShopGrid('supplies', this)">🧪 資材</button>
+                    <button class="sub-tab-btn" onclick="renderShopGrid('decor', this)">🐾 擺設</button>
+                </div>
+                <div class="grid-view-box" id="shop-grid-content"></div>
+                <button class="modal-close" style="background:#757575;" onclick="closeModal('modal-shop')">離開商店</button>
+            </div>
+        </div>
+
+        <!-- 💡 二段式：詳情與交易面板 (Item Detail) -->
+        <div id="modal-item-detail" class="modal-overlay">
+            <div class="modal-card" style="border-color:#0288d1; max-width:280px;">
+                <h3 style="margin-top:0; color:#0277bd; font-size:18px;" id="detail-title">物品名稱</h3>
+                <div id="detail-emoji" style="font-size:60px; margin:10px 0;">🍅</div>
+                
+                <div style="background:#f1f8e9; padding:8px; border-radius:8px; margin-bottom:12px; font-size:13px; color:#444; line-height:1.5;">
+                    <span id="detail-desc">物品說明與介紹</span>
+                </div>
+                
+                <div style="font-size:13px; color:#e65100; font-weight:bold; margin-bottom:8px;" id="detail-stock-info">目前擁有：0 個</div>
+                
+                <div id="detail-qty-section" style="display:none; background:#eceff1; padding:10px; border-radius:8px;">
+                    <div class="qty-controls" style="margin-top:0;">
+                        <button class="qty-btn" onclick="adjustDetailQty(-1)">-1</button>
+                        <span class="qty-display" id="detail-qty-val">1</span>
+                        <button class="qty-btn" onclick="adjustDetailQty(1)">+1</button>
+                        <button class="qty-btn" onclick="adjustDetailQty(5)">+5</button>
+                        <button class="qty-btn" style="background:#ffb300; color:#fff;" onclick="adjustDetailQty('max')">MAX</button>
+                    </div>
+                    <div style="font-size:13px; font-weight:bold; color:#d32f2f; margin-top:8px;" id="detail-total-text">總計：0 金幣</div>
+                </div>
+
+                <div class="confirm-btns">
+                    <button class="btn-yes" id="detail-action-btn">確定執行</button>
+                    <button class="btn-no" onclick="closeModal('modal-item-detail')">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 播種與田地道具 Modal (改為小網格) -->
+        <div id="modal-seed" class="modal-overlay">
+            <div class="modal-card">
+                <h3 style="margin-top:0; color:#2e7d32; font-size:16px;" id="seed-modal-title">選擇播種或施肥</h3>
+                <div id="seed-grid-content" class="grid-view-box"></div>
+                <button class="modal-close" onclick="closeModal('modal-seed')">取消</button>
+            </div>
+        </div>
+
+        <!-- 📋 任務彈窗 / 🎡 輪盤 / 🧳 商人 / ⚙️ 設定 (與之前相同，略過部分展示) -->
+        <div id="modal-quest" class="modal-overlay"><div class="modal-card" style="border-color:#ffb300;"><h3 style="margin-top:0; color:#e65100; font-size:18px;">📋 村莊佈告欄</h3><div id="quest-list" style="max-height:280px; overflow-y:auto;"></div><button class="modal-close" style="background:#757575;" onclick="closeModal('modal-quest')">關閉</button></div></div>
+        <div id="modal-wheel" class="modal-overlay"><div class="modal-card" style="border-color:#ff7043;"><h3 style="margin-top:0; color:#e64a19; font-size:18px;">🎡 農夫幸運輪盤</h3><p style="font-size:12px; color:#555;" id="wheel-desc">每天可免費轉動一次！</p><div id="wheel-display" style="font-size:48px; margin:14px 0; background:#fff3e0; padding:16px; border-radius:12px;">🎁</div><button id="wheel-spin-btn" class="action-btn" style="width:100%; font-size:15px; padding:12px; background:#ff7043;" onclick="spinWheel()">立即抽獎！</button><button class="modal-close" style="background:#757575;" onclick="closeModal('modal-wheel')">關閉</button></div></div>
+        <div id="modal-merchant" class="modal-overlay"><div class="modal-card" style="border-color:#9c27b0;"><h3 style="margin-top:0; color:#7b1fa2; font-size:18px;">🧳 神祕行商人</h3><p style="font-size:12px; color:#555; margin-top:-6px;">「噓...這些好貨只有現在才換得到！」</p><div id="merchant-content" style="max-height:220px; overflow-y:auto; text-align:left;"></div><button class="modal-close" style="background:#7b1fa2;" onclick="closeModal('modal-merchant')">離開攤位</button></div></div>
+        <div id="modal-factory" class="modal-overlay"><div class="modal-card"><h3 style="margin-top:0; color:#546e7a; font-size:18px;" id="fac-modal-title">工廠</h3><div id="fac-modal-content" style="font-size:13px; margin-bottom:12px; line-height:1.6;"></div><button id="fac-modal-btn" class="action-btn" style="width:100%; font-size:15px; padding:10px;">開始加工</button><button class="modal-close" onclick="closeModal('modal-factory')">取消</button></div></div>
+        <div id="modal-settings" class="modal-overlay"><div class="modal-card"><h3 style="margin-top:0; color:#333; font-size:18px;">⚙️ 遊戲設定</h3><p style="font-size:13px; color:#666;">系統每秒自動存檔。<br>遇到異常可清除存檔重新開始。</p><button class="action-btn" style="background:#e53935; width:100%; padding:10px; margin-top:10px;" onclick="askResetSave()">⚠️ 清除存檔並重置</button><button class="modal-close" style="background:#757575;" onclick="closeModal('modal-settings')">關閉</button></div></div>
+    </div>
+
+<script>
+// --- 資料庫設定 ---
+const WEATHERS = {
+    sunny: { name: '晴朗無雲', emoji: '☀️', bgClass: 'weather-sunny', desc: '生長正常', pestChance: 0.01, growthSpeed: 1 },
+    rainy: { name: '傾盆大雨', emoji: '🌧️', bgClass: 'weather-rainy', desc: '生長雙倍 / 易長蟲草', pestChance: 0.03, growthSpeed: 2 },
+    drought: { name: '酷熱旱災', emoji: '🔥', bgClass: 'weather-drought', desc: '停止生長 / 無蟲草', pestChance: 0.00, growthSpeed: 0 },
+    storm: { name: '強烈颱風', emoji: '🌪️', bgClass: 'weather-storm', desc: '設施損壞 / 停止生長', pestChance: 0.00, growthSpeed: 0 }
+};
+
+const CROPS = {
+    wheat:     { id: 'wheat', name: '小麥', emoji: '🌾', seed: '🌱', cost: 10, sell: 12, time: 8, exp: 0, desc:'生長極快，做飼料或麵包的基礎作物。' }, 
+    radish:    { id: 'radish', name: '白蘿蔔', emoji: '🥕', seed: '🌱', cost: 15, sell: 18, time: 10, exp: 3, desc:'入門款作物，咕咕雞最愛吃的零食。' }, 
+    cabbage:   { id: 'cabbage', name: '高麗菜', emoji: '🥬', seed: '🌱', cost: 30, sell: 36, time: 30, exp: 10, desc:'爽脆甘甜，餵給乳牛能產出好品質鮮奶。' }, 
+    tomato:    { id: 'tomato', name: '番茄', emoji: '🍅', seed: '🌿', cost: 60, sell: 72, time: 60, exp: 23, desc:'鮮紅多汁，製作果醬的必備原料。' }, 
+    strawberry:{ id: 'strawberry', name: '草莓', emoji: '🍓', seed: '🌿', cost: 80, sell: 96, time: 90, exp: 13, desc:'高經濟價值水果，做成果醬能賣出好價錢。' }, 
+    corn:      { id: 'corn', name: '玉米', emoji: '🌽', seed: '🌿', cost: 120, sell: 144, time: 120, exp: 48, desc:'用途廣泛，可餵牛或是去工坊爆成爆米花。' }, 
+    pineapple: { id: 'pineapple', name: '鳳梨', emoji: '🍍', seed: '🌿', cost: 180, sell: 216, time: 180, exp: 38, desc:'熱帶水果，能大幅提升果醬罐頭的風味與售價。' }, 
+    watermelon:{ id: 'watermelon', name: '大西瓜', emoji: '🍉', seed: '🌿', cost: 250, sell: 300, time: 240, exp: 118, desc:'清涼解渴的大西瓜，粉紅豬最愛的食物。' }, 
+    sunflower: { id: 'sunflower', name: '黃金向日葵', emoji: '🌻', seed: '🌱', cost: 500, sell: 600, time: 360, exp: 98, desc:'極其珍貴的觀賞花卉，利潤極高但生長漫長。' }
+};
+
+const SUPPLIES = {
+    fertilizer: { id: 'fertilizer', name: '神奇化肥', emoji: '🧪', cost: 50, desc: '點擊成長中的農田使用，瞬間縮短 50% 剩餘生長時間。' },
+    superGrow:  { id: 'superGrow', name: '超級生長素', emoji: '✨', cost: 120, desc: '點擊成長中的農田使用，讓作物瞬間完全成熟。' },
+    bugSpray:   { id: 'bugSpray', name: '自動除蟲噴霧', emoji: '🛡️', cost: 150, desc: '點擊使用後，全農場 3 分鐘內免疫雜草與蟲子。' }
+};
+
+const DECORS = {
+    dog:       { id: 'dog', name: '忠實看門狗', emoji: '🐕', cost: 600, desc: '永久有效。偷菜冷卻縮短至45s，偷菜時有機率咬回額外寶物。' },
+    musicBox:  { id: 'musicBox', name: '太陽能音樂盒', emoji: '🎶', cost: 750, desc: '永久有效。所有農田基礎生長速度永久 +15%。' },
+    weatherStation: { id: 'weatherStation', name: '氣象控制儀', emoji: '🌦️', cost: 900, desc: '購買後出現在農田上方，點擊可花費 50 金幣手動求雨。' },
+    luckyCat:  { id: 'luckyCat', name: '招財貓', emoji: '🐱', cost: 1000, desc: '永久有效。在背包賣出任何商品，結算時額外獲得 +10% 獎金。' },
+    alienScarecrow: { id: 'alienScarecrow', name: '外星稻草人', emoji: '🛸', cost: 1200, desc: '永久有效。自動趕走烏鴉，收成時有 10% 機率直接翻倍！' }
+};
+
+const PRODUCTS = {
+    feed:    { name: '綜合飼料', emoji: '🌽', sell: 6, desc:'餵食畜牧動物的必需品。' },
+    bread:   { name: '香噴噴麵包', emoji: '🍞', sell: 35, desc:'烘焙坊剛出爐的麵包。' },
+    jam:     { name: '酸甜綜合果醬', emoji: '🥫', sell: 220, desc:'由草莓與番茄熬煮而成。' },
+    popcorn: { name: '奶油爆米花', emoji: '🍿', sell: 350, desc:'看電影必備的涮嘴零食。' },
+    cheese:  { name: '濃醇起司', emoji: '🧀', sell: 90, desc:'用高品質鮮奶濃縮發酵。' },
+    egg:     { name: '雞蛋', emoji: '🥚', sell: 15, desc:'咕咕雞生下的新鮮雞蛋。' },
+    milk:    { name: '鮮牛奶', emoji: '🥛', sell: 30, desc:'乳牛現擠的鮮甜牛奶。' },
+    truffle: { name: '珍貴松露', emoji: '🍄', sell: 120, desc:'粉紅豬費盡千辛萬苦拱出來的高級食材。' }
+};
+Object.keys(CROPS).forEach(k => { 
+    PRODUCTS[k] = { name: CROPS[k].name, emoji: CROPS[k].emoji, sell: CROPS[k].sell, desc: '農田收成的基礎作物，可直接賣出或加工。' }; 
+    PRODUCTS['gold_' + k] = { name: '黃金' + CROPS[k].name, emoji: '👑', sell: CROPS[k].sell * 3, isGolden: true, desc: '【極度稀有】變異而成的純金作物，價值連城！' };
+});
+
+const FACTORIES = {
+    feedmill:{ id: 'feedmill', name: '飼料廠', emoji: '🚜', req: { wheat: 1 }, out: 'feed', outQty: 3, time: 10, exp: 1 },
+    bakery:  { id: 'bakery', name: '烘焙坊', emoji: '🍞', req: { wheat: 2 }, out: 'bread', outQty: 1, time: 15, exp: 3 },
+    cannery: { id: 'cannery', name: '罐頭廠', emoji: '🥫', req: { strawberry: 1, tomato: 1 }, out: 'jam', outQty: 1, time: 45, exp: 13 },
+    snack:   { id: 'snack', name: '零食工坊', emoji: '🍿', req: { corn: 2 }, out: 'popcorn', outQty: 1, time: 60, exp: 23 },
+    dairy:   { id: 'dairy', name: '乳品廠', emoji: '🧀', req: { milk: 2 }, out: 'cheese', outQty: 1, time: 90, exp: 38 }
+};
+
+const ANIMALS = {
+    chicken: { id: 'chicken', name: '咕咕雞', emoji: '🐔', cost: 300, reqFeed: 1, out: 'egg', time: 30, exp: 8 },
+    cow:     { id: 'cow', name: '乳牛', emoji: '🐄', cost: 800, reqFeed: 2, out: 'milk', time: 60, exp: 18 },
+    pig:     { id: 'pig', name: '粉紅豬', emoji: '🐖', cost: 1500, reqFeed: 3, out: 'truffle', time: 90, exp: 48 }
+};
+
+let gameData;
+let currentTargetPlot = null;
+let currentBagTab = 'products';
+let currentShopTab = 'seeds';
+
+// 交易詳情面板狀態
+let detailState = { id: '', type: '', action: '', unitPrice: 0, maxQty: 1, currentQty: 1, catBonus: 1.0 };
+const logBox = document.getElementById("log-box");
+
+// --- 系統初始化 ---
+function init() {
+    loadGame(); renderAll(); setInterval(gameTick, 1000);
+}
+
+function saveGame() {
+    gameData.lastSaveTime = Date.now();
+    localStorage.setItem('miniFarmSave', JSON.stringify(gameData));
+}
+
+function loadGame() {
+    let saved = localStorage.getItem('miniFarmSave');
+    let defaultSt = {
+        player: { level: 1, exp: 0, gold: 300, stealCooldown: 0, sprayTimer: 0, wheelSpins: 1, dailySpinDate: new Date().toDateString(),
+            supplies: { fertilizer: 1, superGrow: 0, bugSpray: 0 },
+            decors: { dog: false, musicBox: false, weatherStation: false, luckyCat: false, alienScarecrow: false },
+            seeds: { wheat: 5, radish: 3, cabbage: 0, tomato: 0, strawberry: 0, corn: 0, pineapple: 0, watermelon: 0, sunflower: 0 }, inventory: {} },
+        plots: Array(6).fill(null).map((_, i) => ({ state: i >= 4 ? 'locked' : 'empty', cropId: null, progress: 0, hasWeed: false, hasBug: false, crowTimer: 0 })),
+        animals: { chicken: { owned: false, state: 'idle', progress: 0 }, cow: { owned: false, state: 'idle', progress: 0 }, pig: { owned: false, state: 'idle', progress: 0 } },
+        factories: { feedmill: { state: 'idle', progress: 0 }, bakery: { state: 'idle', progress: 0 }, cannery: { state: 'idle', progress: 0 }, snack: { state: 'idle', progress: 0 }, dairy: { state: 'idle', progress: 0 } },
+        quests: { order: { reqId: 'wheat', reqQty: 4, rewardGold: 60, rewardExp: 5 }, pestCleared: 0, pestClaimed: false, maxSingleSale: 0, saleClaimed: false },
+        merchant: { active: false, timer: 180, stayLeft: 0, offerSeed: 'sunflower', offerSeedPrice: 250, buyProd: 'bread', buyProdPrice: 100 },
+        weather: { current: 'sunny', timer: 60 }, lastSaveTime: Date.now()
+    };
+    if (saved) {
+        try {
+            gameData = JSON.parse(saved);
+            if(!gameData.player.inventory) gameData.player.inventory = {};
+            if(!gameData.player.supplies) gameData.player.supplies = { fertilizer: 0, superGrow: 0, bugSpray: 0 };
+            if(!gameData.player.decors) gameData.player.decors = { dog: false, musicBox: false, weatherStation: false, luckyCat: false, alienScarecrow: false };
+            gameData.plots.forEach(p => { if(p.crowTimer === undefined) p.crowTimer = 0; });
+            if(!gameData.factories.feedmill) gameData.factories.feedmill = { state: 'idle', progress: 0 };
+        } catch(e) { gameData = JSON.parse(JSON.stringify(defaultSt)); }
+    } else {
+        gameData = JSON.parse(JSON.stringify(defaultSt)); log("🌞 歡迎來到開心農場！點擊農田開始播種。");
+    }
+
+    let offSec = Math.floor((Date.now() - gameData.lastSaveTime) / 1000);
+    if (offSec > 0) {
+        log(`💤 歡迎回來！離開了 ${offSec} 秒，農作持續生長 (離線無經驗值)。`);
+        let sMult = gameData.player.decors.musicBox ? 1.15 : 1.0;
+        gameData.plots.forEach(p => { if (p.state === 'growing' && !p.hasWeed && !p.hasBug) { p.progress += offSec * sMult; if (p.progress >= CROPS[p.cropId].time) p.state = 'mature'; } });
+        Object.keys(gameData.animals).forEach(k => { let a = gameData.animals[k]; if (a.state === 'producing') { a.progress += offSec; if (a.progress >= ANIMALS[k].time) a.state = 'ready'; } });
+        Object.keys(gameData.factories).forEach(k => { let f = gameData.factories[k]; if (f.state === 'processing') { f.progress += offSec; if (f.progress >= FACTORIES[k].time) f.state = 'ready'; } });
+        gameData.player.stealCooldown = Math.max(0, gameData.player.stealCooldown - offSec);
+        gameData.player.sprayTimer = Math.max(0, gameData.player.sprayTimer - offSec);
+    }
+    document.body.className = WEATHERS[gameData.weather.current].bgClass;
+    document.getElementById("weather-banner").innerHTML = `${WEATHERS[gameData.weather.current].emoji} 天氣：${WEATHERS[gameData.weather.current].name} (${WEATHERS[gameData.weather.current].desc})`;
+}
+
+function openSettings() { document.getElementById('modal-settings').style.display = 'flex'; }
+function askResetSave() {
+    closeModal('modal-settings');
+    if(confirm("確定要刪除所有進度並重新開始嗎？此操作不可復原！")) { localStorage.removeItem('miniFarmSave'); location.reload(); }
+}
+function closeModal(id) { document.getElementById(id).style.display = "none"; }
+
+function log(msg) {
+    let div = document.createElement("div"); div.className = "log-entry"; div.innerHTML = msg;
+    logBox.appendChild(div); logBox.scrollTop = logBox.scrollHeight;
+}
+function getMaxExp() { return gameData.player.level * 50; }
+function addExp(amount) {
+    if (amount <= 0) return; gameData.player.exp += amount;
+    while (gameData.player.exp >= getMaxExp()) {
+        gameData.player.exp -= getMaxExp(); gameData.player.level++; 
+        let bonus = gameData.player.level * 50; gameData.player.gold += bonus; gameData.player.wheelSpins++; 
+        log(`🎉 <b>升級 Lv.${gameData.player.level}！</b> 獲得 ${bonus} 金幣與 1 次幸運輪盤！`);
+        if (gameData.player.level >= 3 && gameData.plots[4].state === 'locked') { gameData.plots[4].state = 'empty'; log(`🔓 第 5 塊田地解鎖！`); }
+        if (gameData.player.level >= 5 && gameData.plots[5].state === 'locked') { gameData.plots[5].state = 'empty'; log(`🔓 第 6 塊田地解鎖！`); }
+    }
+    updateUI(); saveGame();
+}
+function showFloatText(x, y, text, color) {
+    let el = document.createElement("div"); el.className = "floating-text"; el.innerText = text; el.style.color = color; el.style.left = x + "px"; el.style.top = y + "px";
+    document.getElementById("game-wrap").appendChild(el); setTimeout(() => el.remove(), 1000);
+}
+
+// --- 💡 核心：二段式詳情與交易面板 ---
+function openItemDetail(source, category, id) {
+    detailState = { id: id, type: category, action: '', unitPrice: 0, maxQty: 1, currentQty: 1, catBonus: 1.0 };
+    let itemData, emoji, name, desc, ownedStr = '';
+    
+    document.getElementById('detail-qty-section').style.display = 'none';
+    let actionBtn = document.getElementById('detail-action-btn');
+    actionBtn.disabled = false; actionBtn.style.background = '#4caf50';
+
+    if (source === 'bag') {
+        if (category === 'product') {
+            itemData = PRODUCTS[id]; emoji = itemData.emoji; name = itemData.name; desc = itemData.desc;
+            let owned = gameData.player.inventory[id] || 0;
+            detailState.catBonus = gameData.player.decors.luckyCat ? 1.10 : 1.0;
+            detailState.unitPrice = Math.floor(itemData.sell * detailState.catBonus);
+            detailState.maxQty = owned; detailState.action = 'sell';
+            ownedStr = `目前擁有：${owned} 個 (單價: ${detailState.unitPrice}金)`;
+            actionBtn.innerText = '確定賣出'; actionBtn.style.background = '#f57f17';
+            if (owned > 0) { document.getElementById('detail-qty-section').style.display = 'block'; }
+        } else if (category === 'seed') {
+            itemData = CROPS[id]; emoji = itemData.emoji; name = `${itemData.name}種子`; desc = itemData.desc;
+            ownedStr = `目前擁有：${gameData.player.seeds[id]} 顆`;
+            actionBtn.innerText = '請點擊空農田播種'; actionBtn.disabled = true; actionBtn.style.background = '#bdbdbd';
+        } else if (category === 'supply') {
+            itemData = SUPPLIES[id]; emoji = itemData.emoji; name = itemData.name; desc = itemData.desc;
+            ownedStr = `目前擁有：${gameData.player.supplies[id]} 個`;
+            if (id === 'bugSpray') {
+                actionBtn.innerText = '立即噴灑防蟲'; detailState.action = 'useSpray';
+            } else {
+                actionBtn.innerText = '請點擊成長中農田使用'; actionBtn.disabled = true; actionBtn.style.background = '#bdbdbd';
+            }
+        }
+    } else if (source === 'shop') {
+        if (category === 'seed') {
+            itemData = CROPS[id]; emoji = itemData.emoji; name = `${itemData.name}種子`; desc = itemData.desc;
+            detailState.unitPrice = itemData.cost;
+            detailState.maxQty = Math.floor(gameData.player.gold / itemData.cost);
+            detailState.action = 'buySeed';
+        } else if (category === 'supply') {
+            itemData = SUPPLIES[id]; emoji = itemData.emoji; name = itemData.name; desc = itemData.desc;
+            detailState.unitPrice = itemData.cost;
+            detailState.maxQty = Math.floor(gameData.player.gold / itemData.cost);
+            detailState.action = 'buySupply';
+        } else if (category === 'decor') {
+            itemData = DECORS[id]; emoji = itemData.emoji; name = itemData.name; desc = itemData.desc;
+            detailState.unitPrice = itemData.cost; detailState.maxQty = 1; detailState.action = 'buyDecor';
+        }
+        ownedStr = `購買單價：${detailState.unitPrice} 金幣`;
+        if (category === 'decor') {
+            if (gameData.player.decors[id]) { actionBtn.innerText = '已擁有此擺設'; actionBtn.disabled = true; actionBtn.style.background = '#bdbdbd'; }
+            else { actionBtn.innerText = `購買擺設 (${detailState.unitPrice}金)`; }
+        } else {
+            actionBtn.innerText = '確定購買';
+            if (detailState.maxQty > 0) document.getElementById('detail-qty-section').style.display = 'block';
+            else { actionBtn.innerText = '金幣不足'; actionBtn.disabled = true; actionBtn.style.background = '#bdbdbd'; }
+        }
+    }
+
+    document.getElementById('detail-title').innerText = name;
+    document.getElementById('detail-emoji').innerText = emoji;
+    document.getElementById('detail-desc').innerText = desc;
+    document.getElementById('detail-stock-info').innerText = ownedStr;
+    updateDetailQty();
+
+    // 綁定按鈕動作
+    actionBtn.onclick = () => {
+        let qty = detailState.currentQty;
+        if (detailState.action === 'sell') {
+            let profit = detailState.unitPrice * qty;
+            gameData.player.inventory[id] -= qty; gameData.player.gold += profit;
+            if (profit > gameData.quests.maxSingleSale) gameData.quests.maxSingleSale = profit;
+            log(`💰 賣出 ${qty} 個【${name}】，獲得 ${profit} 金幣！`);
+            renderBagGrid(currentBagTab, null); renderAll();
+        } else if (detailState.action === 'buySeed') {
+            let cost = detailState.unitPrice * qty;
+            gameData.player.gold -= cost; gameData.player.seeds[id] += qty;
+            log(`🛒 購買了 ${qty} 顆【${name}】，花費 ${cost} 金幣！`);
+            renderShopGrid(currentShopTab, null); renderAll();
+        } else if (detailState.action === 'buySupply') {
+            let cost = detailState.unitPrice * qty;
+            gameData.player.gold -= cost; gameData.player.supplies[id] += qty;
+            log(`🛒 購買了 ${qty} 個【${name}】，花費 ${cost} 金幣！`);
+            renderShopGrid(currentShopTab, null); renderAll();
+        } else if (detailState.action === 'buyDecor') {
+            gameData.player.gold -= detailState.unitPrice; gameData.player.decors[id] = true;
+            log(`🎉 成功購買了【${name}】！已擺設至你的農場。`);
+            renderShopGrid('decor', null); renderAll();
+        } else if (detailState.action === 'useSpray') {
+            gameData.player.supplies.bugSpray--; gameData.player.sprayTimer = 180;
+            gameData.plots.forEach(p => { p.hasWeed = false; p.hasBug = false; });
+            log(`🛡️ <b>全農場噴灑除蟲噴霧！</b> 3 分鐘內免疫蟲草！`);
+            renderBagGrid('supplies', null); renderAll();
+        }
+        closeModal('modal-item-detail'); saveGame();
+    };
+    document.getElementById('modal-item-detail').style.display = 'flex';
+}
+function adjustDetailQty(delta) {
+    if (delta === 'max') detailState.currentQty = Math.max(1, detailState.maxQty);
+    else detailState.currentQty = Math.min(detailState.maxQty, Math.max(1, detailState.currentQty + delta));
+    updateDetailQty();
+}
+function updateDetailQty() {
+    document.getElementById('detail-qty-val').innerText = detailState.currentQty;
+    document.getElementById('detail-total-text').innerText = `總計金額：${detailState.currentQty * detailState.unitPrice} 金幣`;
+}
+
+// --- 🎒 背包網格 ---
+function openBagModal() { document.getElementById('modal-bag').style.display = 'flex'; renderBagGrid(currentBagTab, null); }
+function renderBagGrid(subTab, btnEl) {
+    currentBagTab = subTab;
+    if (btnEl) { btnEl.parentElement.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active')); btnEl.classList.add('active'); }
+    let box = document.getElementById("bag-grid-content"); box.innerHTML = "";
+    
+    if (subTab === 'products') {
+        Object.keys(gameData.player.inventory).forEach(id => {
+            let count = gameData.player.inventory[id];
+            if (count > 0 && PRODUCTS[id]) {
+                let p = PRODUCTS[id];
+                box.innerHTML += `<div class="grid-item ${p.isGolden ? 'golden' : ''}" onclick="openItemDetail('bag', 'product', '${id}')">${p.emoji}<div class="grid-badge">x${count}</div></div>`;
+            }
+        });
+        if (box.innerHTML === '') box.innerHTML = `<div style="grid-column:1/-1; color:#777; font-size:12px; padding:20px;">產物區空空如也！</div>`;
+    } else if (subTab === 'seeds') {
+        Object.keys(gameData.player.seeds).forEach(id => {
+            if (gameData.player.seeds[id] > 0) {
+                box.innerHTML += `<div class="grid-item" onclick="openItemDetail('bag', 'seed', '${id}')">${CROPS[id].emoji}<div class="grid-badge">x${gameData.player.seeds[id]}</div></div>`;
+            }
+        });
+        if (box.innerHTML === '') box.innerHTML = `<div style="grid-column:1/-1; color:#777; font-size:12px; padding:20px;">沒有種子了！</div>`;
+    } else if (subTab === 'supplies') {
+        let sup = gameData.player.supplies;
+        if (sup.fertilizer > 0) box.innerHTML += `<div class="grid-item" onclick="openItemDetail('bag', 'supply', 'fertilizer')">🧪<div class="grid-badge">x${sup.fertilizer}</div></div>`;
+        if (sup.superGrow > 0) box.innerHTML += `<div class="grid-item" onclick="openItemDetail('bag', 'supply', 'superGrow')">✨<div class="grid-badge">x${sup.superGrow}</div></div>`;
+        if (sup.bugSpray > 0) box.innerHTML += `<div class="grid-item" onclick="openItemDetail('bag', 'supply', 'bugSpray')">🛡️<div class="grid-badge">x${sup.bugSpray}</div></div>`;
+        if (box.innerHTML === '') box.innerHTML = `<div style="grid-column:1/-1; color:#777; font-size:12px; padding:20px;">沒有農用資材！</div>`;
+    }
+}
+
+// --- 🛒 商店網格 ---
+function openShopModal() { document.getElementById('modal-shop').style.display = 'flex'; renderShopGrid(currentShopTab, null); }
+function renderShopGrid(subTab, btnEl) {
+    currentShopTab = subTab;
+    if (btnEl) { btnEl.parentElement.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active')); btnEl.classList.add('active'); }
+    let box = document.getElementById("shop-grid-content"); box.innerHTML = "";
+    let gold = gameData.player.gold;
+
+    if (subTab === 'seeds') {
+        Object.keys(CROPS).forEach(id => {
+            let c = CROPS[id]; let canBuy = gold >= c.cost;
+            box.innerHTML += `<div class="grid-item ${canBuy?'':'disabled'}" onclick="openItemDetail('shop', 'seed', '${id}')">${c.emoji}<div class="grid-badge" style="background:#546e7a;">${c.cost}金</div></div>`;
+        });
+    } else if (subTab === 'supplies') {
+        Object.keys(SUPPLIES).forEach(id => {
+            let s = SUPPLIES[id]; let canBuy = gold >= s.cost;
+            box.innerHTML += `<div class="grid-item ${canBuy?'':'disabled'}" onclick="openItemDetail('shop', 'supply', '${id}')">${s.emoji}<div class="grid-badge" style="background:#546e7a;">${s.cost}金</div></div>`;
+        });
+    } else if (subTab === 'decor') {
+        Object.keys(DECORS).forEach(id => {
+            let d = DECORS[id]; let owned = gameData.player.decors[id]; let canBuy = gold >= d.cost;
+            box.innerHTML += `<div class="grid-item ${(canBuy && !owned)?'':'disabled'}" onclick="openItemDetail('shop', 'decor', '${id}')">${d.emoji}<div class="grid-badge" style="background:${owned?'#4caf50':'#546e7a'};">${owned?'已擁有':d.cost+'金'}</div></div>`;
+        });
+    }
+}
+
+// --- 主分頁切換 ---
+function switchTab(tabId, btnEl) {
+    document.querySelectorAll('.tabs > .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btnEl.classList.add('active'); document.getElementById('tab-' + tabId).classList.add('active');
+    if (tabId === 'farm') renderFarm();
+    if (tabId === 'pasture') renderPasture();
+    if (tabId === 'factory') renderFactory();
+}
+
+// --- 🐾 擺設列與互動 ---
+function renderDecorBar() {
+    let bar = document.getElementById('decor-bar'); if (!bar) return;
+    let d = gameData.player.decors; let html = '';
+    if (d.dog) html += `<div class="decor-item" onclick="log('🐕 忠實看門狗搖了搖尾巴！')">🐕 看門狗</div>`;
+    if (d.luckyCat) html += `<div class="decor-item" onclick="log('🐱 招財貓舉起手招財！賣價+10%')">🐱 招財貓</div>`;
+    if (d.musicBox) html += `<div class="decor-item" onclick="log('🎶 音樂盒播放著輕快旋律！生長+15%')">🎶 音樂盒</div>`;
+    if (d.alienScarecrow) html += `<div class="decor-item" onclick="log('🛸 外星稻草人發出綠光守護農田！')">🛸 稻草人</div>`;
+    if (d.weatherStation) html += `<div class="decor-item" style="background:#e1f5fe; border-color:#4fc3f7;" onclick="askSummonRain()">🌦️ 求雨儀</div>`;
+    if (html) { bar.style.display = 'flex'; bar.innerHTML = html; } else { bar.style.display = 'none'; }
+}
+function askSummonRain() {
+    if (gameData.weather.current === 'rainy') return log(`🌧️ 現在已經是大雨了！`);
+    if (confirm("🌦️ 啟動氣象儀\n是否花費 50 金幣手動召喚大雨？")) {
+        if (gameData.player.gold >= 50) {
+            gameData.player.gold -= 50; gameData.weather.current = 'rainy'; gameData.weather.timer = 60;
+            document.body.className = WEATHERS['rainy'].bgClass;
+            document.getElementById("weather-banner").innerHTML = `${WEATHERS['rainy'].emoji} 天氣：${WEATHERS['rainy'].name} (${WEATHERS['rainy'].desc})`;
+            log(`🌦️ <b>降下傾盆大雨！</b> 作物生長加速！`); renderAll(); saveGame();
+        } else log(`❌ 金幣不足 50！`);
+    }
+}
+
+// --- 農田系統 ---
+function renderFarm() {
+    const grid = document.getElementById("farm-grid"); grid.innerHTML = "";
+    gameData.plots.forEach((plot, idx) => {
+        let div = document.createElement("div"); div.className = `plot plot-farm ${plot.state === 'locked' ? 'locked' : ''} ${plot.state === 'broken' ? 'broken' : ''}`;
+        div.onclick = (e) => handlePlotClick(idx, e);
+
+        if (plot.state === 'broken') { div.innerHTML = `<div class="name-tag" style="background:#d32f2f; padding:2px 4px;">損壞</div>🏚️`; }
+        else if (plot.state === 'growing') {
+            div.innerText = CROPS[plot.cropId].seed;
+            div.innerHTML += `<div class="progress-wrap" style="display:block;"><div class="progress-bar" id="pbar-${idx}" style="width:${Math.min(100,(plot.progress/CROPS[plot.cropId].time)*100)}%"></div></div>`;
+        } else if (plot.state === 'mature') { div.innerText = CROPS[plot.cropId].emoji; }
+        
+        if (plot.hasWeed) { let w = document.createElement("div"); w.className="weed"; w.innerText="🌿"; w.onclick=(e)=>{e.stopPropagation(); clearPest(idx,'weed',e)}; div.appendChild(w); }
+        if (plot.hasBug) { let b = document.createElement("div"); b.className="bug"; b.innerText="🐛"; b.onclick=(e)=>{e.stopPropagation(); clearPest(idx,'bug',e)}; div.appendChild(b); }
+        if (plot.crowTimer > 0) { let c = document.createElement("div"); c.className="crow"; c.innerText=`🐦‍⬛ ${plot.crowTimer}s`; c.onclick=(e)=>{e.stopPropagation(); scareCrow(idx, e)}; div.appendChild(c); }
+        grid.appendChild(div);
+    });
+}
+function scareCrow(idx, event) {
+    let plot = gameData.plots[idx]; if (plot.crowTimer <= 0) return;
+    plot.crowTimer = 0;
+    if (Math.random() < 0.6) { let bonus = Math.floor(30 + Math.random() * 50); gameData.player.gold += bonus; log(`🐦‍⬛ 趕走烏鴉掉出金幣 +${bonus}！`); }
+    else { const rare = ['strawberry', 'corn', 'pineapple']; let sId = rare[Math.floor(Math.random() * rare.length)]; gameData.player.seeds[sId]++; log(`🐦‍⬛ 趕走烏鴉掉出【${CROPS[sId].name}種子】！`); }
+    renderAll(); saveGame();
+}
+function handlePlotClick(idx, event) {
+    let plot = gameData.plots[idx];
+    if (plot.state === 'locked') return log("🔒 田地未解鎖。");
+    if (plot.state === 'broken') {
+        if(confirm('🛠️ 遭遇颱風破壞，花費 30 金幣進行整修？')) {
+            if (gameData.player.gold >= 30) { gameData.player.gold -= 30; plot.state = 'empty'; log(`🛠️ 修復了農田！`); renderAll(); saveGame(); }
+            else log(`❌ 金幣不足！`);
+        } return;
+    }
+    if (plot.crowTimer > 0) return scareCrow(idx, event);
+    if (plot.hasWeed || plot.hasBug) return log("⚠️ 請先點擊清除雜草或蟲子！");
+    
+    if (plot.state === 'empty') { currentTargetPlot = idx; openSeedModal(); }
+    else if (plot.state === 'growing') { currentTargetPlot = idx; openFieldToolModal(idx); }
+    else if (plot.state === 'mature') { harvest(idx, event); }
+}
+
+function openFieldToolModal(idx) {
+    let plot = gameData.plots[idx]; let crop = CROPS[plot.cropId];
+    let remain = Math.max(0, Math.ceil(crop.time - plot.progress));
+    document.getElementById("seed-modal-title").innerText = `${crop.emoji} ${crop.name} (剩 ${remain}s)`;
+    let box = document.getElementById("seed-grid-content"); box.innerHTML = "";
+    
+    let sup = gameData.player.supplies;
+    if (sup.fertilizer > 0) box.innerHTML += `<div class="grid-item" onclick="applyFieldTool(${idx}, 'fertilizer')">🧪<div class="grid-badge">x${sup.fertilizer}</div></div>`;
+    if (sup.superGrow > 0) box.innerHTML += `<div class="grid-item" onclick="applyFieldTool(${idx}, 'superGrow')">✨<div class="grid-badge">x${sup.superGrow}</div></div>`;
+    if (box.innerHTML === '') box.innerHTML = `<div style="grid-column:1/-1; color:#777; font-size:12px; padding:10px;">沒有可用的肥料。去商店買吧！</div>`;
+    document.getElementById("modal-seed").style.display = "flex";
+}
+function applyFieldTool(idx, toolId) {
+    let plot = gameData.plots[idx]; if (plot.state !== 'growing' || gameData.player.supplies[toolId] <= 0) return;
+    gameData.player.supplies[toolId]--; let crop = CROPS[plot.cropId];
+    if (toolId === 'fertilizer') { plot.progress += Math.ceil((crop.time - plot.progress) * 0.5); if (plot.progress >= crop.time) plot.state = 'mature'; log(`🧪 撒下化肥！【${crop.name}】飛速成長！`); }
+    else if (toolId === 'superGrow') { plot.progress = crop.time; plot.state = 'mature'; log(`✨ 注射生長素！【${crop.name}】瞬間成熟！`); }
+    closeModal('modal-seed'); renderAll(); saveGame();
+}
+function clearPest(idx, type, event) {
+    gameData.plots[idx][type === 'weed' ? 'hasWeed' : 'hasBug'] = false; gameData.quests.pestCleared++;
+    log(`${type === 'weed' ? '🌿 除草' : '🐛 抓蟲'}成功！`); renderAll(); saveGame();
+}
+function harvest(idx, event) {
+    let plot = gameData.plots[idx]; let crop = CROPS[plot.cropId];
+    let isGolden = Math.random() < 0.05; let targetId = isGolden ? ('gold_' + plot.cropId) : plot.cropId;
+    let qty = 1; let alienMsg = "";
+    if (gameData.player.decors.alienScarecrow && Math.random() < 0.10) { qty = 2; alienMsg = ` 🛸<b>複製光線翻倍！</b>`; }
+    gameData.player.inventory[targetId] = (gameData.player.inventory[targetId] || 0) + qty; addExp(crop.exp);
+    if (isGolden) log(`👑 <b>奇蹟變異！</b> 收成了【${PRODUCTS[targetId].name}】x${qty} (3倍高價)！${alienMsg}`);
+    else log(`🧺 收成了【${crop.name}】x${qty}！${alienMsg}`);
+    
+    const r = event.target.getBoundingClientRect(); const wr = document.getElementById("game-wrap").getBoundingClientRect();
+    showFloatText(r.left - wr.left + 20, r.top - wr.top, isGolden ? `👑 +${qty}` : `+${qty} 🧺`, isGolden ? "#fbc02d" : "#8d6e63");
+    gameData.plots[idx] = { state: 'empty', cropId: null, progress: 0, hasWeed: false, hasBug: false, crowTimer: 0 };
+    renderAll(); saveGame();
+}
+function openSeedModal() {
+    document.getElementById("seed-modal-title").innerText = "選擇要種下的種子";
+    let box = document.getElementById("seed-grid-content"); box.innerHTML = "";
+    let hasSeeds = false;
+    Object.keys(gameData.player.seeds).forEach(id => {
+        if (gameData.player.seeds[id] > 0) {
+            hasSeeds = true; let c = CROPS[id];
+            box.innerHTML += `<div class="grid-item" onclick="plantSeed('${id}')">${c.emoji}<div class="grid-badge">x${gameData.player.seeds[id]}</div></div>`;
+        }
+    });
+    if (!hasSeeds) box.innerHTML = `<div style="grid-column:1/-1; color:#777; font-size:12px; padding:10px;">沒有種子了，快去商店買！</div>`;
+    document.getElementById("modal-seed").style.display = "flex";
+}
+function plantSeed(id) {
+    if (gameData.player.seeds[id] <= 0 || currentTargetPlot === null) return;
+    gameData.player.seeds[id]--;
+    gameData.plots[currentTargetPlot] = { state: 'growing', cropId: id, progress: 0, hasWeed: false, hasBug: false, crowTimer: 0 };
+    log(`🌱 種下了【${CROPS[id].name}】！`); closeModal('modal-seed'); renderAll(); saveGame();
+}
+function stealCrop() {
+    if (gameData.player.stealCooldown > 0) return log(`⏳ 巡邏犬還醒著，等冷卻！`);
+    let keys = Object.keys(CROPS); let crop = CROPS[keys[Math.floor(Math.random() * keys.length)]];
+    let sGold = Math.floor(crop.sell * 0.5); gameData.player.gold += sGold; addExp(0);
+    gameData.player.stealCooldown = gameData.player.decors.dog ? 45 : 60;
+    let extMsg = "";
+    if (gameData.player.decors.dog && Math.random() < 0.40) {
+        if (Math.random() < 0.5) { gameData.player.gold += 20; extMsg = `<br>🐕 看門狗額外咬回 20 金幣！`; } 
+        else { gameData.player.supplies.fertilizer++; extMsg = `<br>🐕 看門狗咬回 1 包神奇化肥！`; }
+    }
+    log(`🕵️ 偷摘【${crop.name}】賣了 ${sGold} 金幣！${extMsg}`); renderAll(); saveGame();
+}
+
+// --- 畜牧與工廠系統 (簡化事件綁定) ---
+function renderPasture() {
+    let grid = document.getElementById("pasture-grid"); grid.innerHTML = "";
+    Object.keys(ANIMALS).forEach(id => {
+        let a = ANIMALS[id]; let st = gameData.animals[id];
+        let div = document.createElement("div"); div.className = `plot plot-animal ${!st.owned ? 'unowned' : ''}`;
+        if (!st.owned) {
+            div.innerHTML = `<div class="name-tag">${a.name}</div>${a.emoji}<div class="price-tag">${a.cost}金</div>`;
+            div.onclick = () => { if(confirm(`花費 ${a.cost} 金幣購買【${a.name}】？`)) { if (gameData.player.gold >= a.cost) { gameData.player.gold -= a.cost; st.owned = true; log(`🐄 買了【${a.name}】！`); renderAll(); } else log(`❌ 錢不夠`); } };
+        } else {
+            div.innerHTML = `<div class="name-tag">${a.name}</div>${a.emoji}`;
+            if (st.state === 'idle') {
+                div.innerHTML += `<div class="price-tag" style="background:#f57f17;">需${a.reqFeed}飼料</div>`;
+                div.onclick = () => { if ((gameData.player.inventory['feed'] || 0) >= a.reqFeed) { gameData.player.inventory['feed'] -= a.reqFeed; st.state = 'producing'; st.progress = 0; log(`🍽️ 餵了 ${a.reqFeed} 飼料！`); renderAll(); } else log(`❌ 飼料不夠！`); };
+            } else if (st.state === 'producing') {
+                div.innerHTML += `<div class="progress-wrap" style="display:block;"><div class="progress-bar" style="width:${Math.min(100,(st.progress/a.time)*100)}%"></div></div>`;
+            } else if (st.state === 'ready') {
+                div.innerHTML += `<div class="price-tag" style="background:#4caf50;">收穫</div>`;
+                div.onclick = (e) => { gameData.player.inventory[a.out] = (gameData.player.inventory[a.out] || 0) + 1; st.state = 'idle'; addExp(a.exp); log(`🧺 獲取了【${PRODUCTS[a.out].name}】！`); renderAll(); saveGame(); };
+            }
+        }
+        grid.appendChild(div);
+    });
+}
+
+function renderFactory() {
+    let grid = document.getElementById("factory-grid"); grid.innerHTML = "";
+    Object.keys(FACTORIES).forEach(id => {
+        let f = FACTORIES[id]; let st = gameData.factories[id];
+        let div = document.createElement("div"); div.className = `plot plot-factory ${st.state==='processing' ? 'factory-working' : ''} ${st.state==='broken' ? 'broken' : ''}`;
+        if (st.state === 'broken') {
+            div.innerHTML = `<div class="name-tag" style="top:-5px; background:#d32f2f; padding:2px 4px;">損壞</div>🏚️`;
+            div.onclick = () => { if(confirm(`花 80 金幣整修工廠？`)) { if (gameData.player.gold >= 80) { gameData.player.gold -= 80; st.state = 'idle'; log(`🛠️ 修好了工廠！`); renderAll(); } else log(`❌ 錢不夠`); } };
+        } else {
+            div.innerHTML = `<div class="name-tag" style="top:-5px; background:#37474f; padding:2px 4px;">${f.name}</div><span class="factory-icon">${f.emoji}</span>`;
+            if (st.state === 'idle') div.onclick = () => {
+                document.getElementById("fac-modal-title").innerText = `${f.emoji} ${f.name}`;
+                let reqStr = Object.keys(f.req).map(r => `<span style="color:${(gameData.player.inventory[r]||0) >= f.req[r] ? '#2e7d32' : '#c62828'}; font-weight:bold;">${PRODUCTS[r].name} x${f.req[r]} (擁有: ${gameData.player.inventory[r]||0})</span>`).join('<br>');
+                document.getElementById("fac-modal-content").innerHTML = `<div style="background:#f1f8e9; padding:8px; border-radius:8px; margin-bottom:8px;"><b>產出：</b>${PRODUCTS[f.out].name} x${f.outQty||1} <br><b>耗時：</b>${f.time} 秒</div><b>需要原料：</b><br>${reqStr}`;
+                let canCraft = Object.keys(f.req).every(r => (gameData.player.inventory[r]||0) >= f.req[r]);
+                let btn = document.getElementById("fac-modal-btn"); btn.disabled = !canCraft; btn.style.background = canCraft ? '#4caf50' : '#bdbdbd';
+                btn.onclick = () => { Object.keys(f.req).forEach(r => { gameData.player.inventory[r] -= f.req[r]; }); st.state = 'processing'; st.progress = 0; log(`🏭 開始加工...`); closeModal('modal-factory'); renderAll(); };
+                document.getElementById("modal-factory").style.display = "flex";
+            };
+            else if (st.state === 'processing') { div.innerHTML += `<div class="progress-wrap" style="display:block;"><div class="progress-bar" style="width:${Math.min(100,(st.progress/f.time)*100)}%"></div></div>`; }
+            else if (st.state === 'ready') { div.innerHTML += `<div class="price-tag" style="background:#4caf50;">領取</div>`; div.onclick = (e) => { gameData.player.inventory[f.out] = (gameData.player.inventory[f.out]||0) + (f.outQty||1); st.state = 'idle'; addExp(f.exp); log(`📦 獲得了【${PRODUCTS[f.out].name}】！`); renderAll(); saveGame(); }; }
+        }
+        grid.appendChild(div);
+    });
+}
+
+// --- 📋 任務牆系統 ---
+function openQuestModal() { renderQuests(); document.getElementById('modal-quest').style.display = 'flex'; }
+function generateNewOrder() {
+    const p = [{ reqId: 'wheat', reqQty: 4, rewardGold: 60, rewardExp: 5 }, { reqId: 'radish', reqQty: 3, rewardGold: 70, rewardExp: 6 }, { reqId: 'bread', reqQty: 2, rewardGold: 80, rewardExp: 8 }, { reqId: 'egg', reqQty: 2, rewardGold: 45, rewardExp: 8 }, { reqId: 'milk', reqQty: 2, rewardGold: 70, rewardExp: 12 }, { reqId: 'jam', reqQty: 1, rewardGold: 250, rewardExp: 20 }, { reqId: 'popcorn', reqQty: 1, rewardGold: 400, rewardExp: 30 }];
+    gameData.quests.order = p[Math.floor(Math.random() * p.length)];
+}
+function renderQuests() {
+    let list = document.getElementById("quest-list"); list.innerHTML = ""; let q = gameData.quests; let claimCount = 0;
+    let ord = q.order; let hasOrdQty = gameData.player.inventory[ord.reqId] || 0; let canDeliver = hasOrdQty >= ord.reqQty; if (canDeliver) claimCount++;
+    list.innerHTML += `<div class="item-row" style="border-left: 4px solid #ff9800;"><div class="item-info"><b>🌽 村莊訂單</b><p>${PRODUCTS[ord.reqId].name} (${hasOrdQty}/${ord.reqQty})</p><p style="color:#f57f17;">獎勵：${ord.rewardGold}金 + ${ord.rewardExp}經驗</p></div><button class="action-btn" onclick="if((gameData.player.inventory['${ord.reqId}']||0)>=${ord.reqQty}){ gameData.player.inventory['${ord.reqId}']-=${ord.reqQty}; gameData.player.gold+=${ord.rewardGold}; addExp(${ord.rewardExp}); log('📋 完成訂單！'); generateNewOrder(); renderAll(); saveGame(); }" ${canDeliver?'':'disabled'}>交付</button></div>`;
+    let pDone = q.pestCleared >= 10; if (pDone && !q.pestClaimed) claimCount++;
+    list.innerHTML += `<div class="item-row" style="border-left: 4px solid #4caf50;"><div class="item-info"><b>🧹 勤勞農夫 ${q.pestClaimed?'(完成)':''}</b><p>除蟲除草 (${Math.min(10, q.pestCleared)}/10)</p><p style="color:#f57f17;">獎勵：50金 + 1化肥</p></div><button class="action-btn" onclick="if(!gameData.quests.pestClaimed){ gameData.quests.pestClaimed=true; gameData.player.gold+=50; gameData.player.supplies.fertilizer+=1; renderAll(); saveGame(); }" ${(!pDone||q.pestClaimed)?'disabled':''}>${q.pestClaimed?'已領':'領取'}</button></div>`;
+    let sDone = q.maxSingleSale >= 300; if (sDone && !q.saleClaimed) claimCount++;
+    list.innerHTML += `<div class="item-row" style="border-left: 4px solid #2196f3;"><div class="item-info"><b>💰 貿易大亨 ${q.saleClaimed?'(完成)':''}</b><p>單次賣貨超過 300 金幣</p><p style="color:#f57f17;">獎勵：150金 + 15經驗</p></div><button class="action-btn" onclick="if(!gameData.quests.saleClaimed){ gameData.quests.saleClaimed=true; gameData.player.gold+=150; addExp(15); renderAll(); saveGame(); }" ${(!sDone||q.saleClaimed)?'disabled':''}>${q.saleClaimed?'已領':'領取'}</button></div>`;
+    let badge = document.getElementById('quest-badge'); if (claimCount > 0) { badge.style.display = 'flex'; badge.innerText = claimCount; } else badge.style.display = 'none';
+}
+
+function updateUI() {
+    document.getElementById("txt-lvl").innerText = gameData.player.level; document.getElementById("txt-exp").innerText = gameData.player.exp;
+    document.getElementById("txt-maxexp").innerText = getMaxExp(); document.getElementById("txt-gold").innerText = gameData.player.gold;
+    let wheelBtn = document.getElementById("btn-wheel"); if (gameData.player.wheelSpins > 0) { wheelBtn.innerText = `🎡 輪盤(${gameData.player.wheelSpins})`; wheelBtn.style.opacity = "1"; } else { wheelBtn.innerText = `🎡 等待換日`; wheelBtn.style.opacity = "0.65"; }
+}
+
+// 核心時間與天氣
+function gameTick() {
+    let needsRend = false;
+    gameData.weather.timer--;
+    if (gameData.weather.timer <= 0) {
+        let r = Math.random(); 
+        if (r < 0.50) gameData.weather.current = 'sunny'; else if (r < 0.75) gameData.weather.current = 'rainy'; else if (r < 0.90) gameData.weather.current = 'drought';
+        else {
+            gameData.weather.current = 'storm'; let brk = false;
+            gameData.plots.forEach(p => { if (p.state !== 'locked' && Math.random() < 0.25) { p.state = 'broken'; p.cropId = null; p.progress = 0; p.hasWeed = false; p.hasBug = false; p.crowTimer = 0; brk = true; } });
+            Object.keys(gameData.factories).forEach(k => { if (Math.random() < 0.20) { gameData.factories[k].state = 'broken'; gameData.factories[k].progress = 0; brk = true; } });
+            if (brk) log(`🌪️ <b>強烈颱風侵襲！</b> 設施受損，請花錢整修！`);
+        }
+        gameData.weather.timer = 60; document.body.className = WEATHERS[gameData.weather.current].bgClass;
+        document.getElementById("weather-banner").innerHTML = `${WEATHERS[gameData.weather.current].emoji} 天氣：${WEATHERS[gameData.weather.current].name} (${WEATHERS[gameData.weather.current].desc})`; needsRend = true;
+    }
+    if (gameData.player.sprayTimer > 0) { gameData.player.sprayTimer--; document.getElementById('buff-banner').style.display = 'block'; document.getElementById('txt-spray-cd').innerText = gameData.player.sprayTimer; } else document.getElementById('buff-banner').style.display = 'none';
+
+    let tdy = new Date().toDateString();
+    if (gameData.player.dailySpinDate !== tdy) { gameData.player.dailySpinDate = tdy; gameData.player.wheelSpins++; log(`🎡 <b>新的一天！</b> 獲得免費幸運輪盤！`); updateUI(); }
+    
+    let m = gameData.merchant;
+    if (m.active) { m.stayLeft--; if (m.stayLeft <= 0) { m.active = false; m.timer = 240; closeModal('modal-merchant'); log(`🧳 商人離開了。`); } if(m.active) { document.getElementById('merchant-banner').style.display = 'block'; } else { document.getElementById('merchant-banner').style.display = 'none'; } } else { m.timer--; if (m.timer <= 0) { m.active = true; m.stayLeft = 60; m.offerSeed = 'sunflower'; m.offerSeedPrice = 300; m.buyProd = 'bread'; m.buyProdPrice = 52; log(`🧳 <b>行商人造訪！</b>`); document.getElementById('merchant-banner').style.display = 'block'; } }
+
+    let wInfo = WEATHERS[gameData.weather.current]; let mMult = gameData.player.decors.musicBox ? 1.15 : 1.0;
+    gameData.plots.forEach((p, idx) => {
+        if (p.state === 'growing') {
+            if (p.crowTimer > 0) { p.crowTimer--; needsRend = true; if (p.crowTimer <= 0) { let c = CROPS[p.cropId]; p.progress = Math.max(0, p.progress - Math.floor(c.time * 0.3)); log(`🐦‍⬛ 烏鴉偷吃了！進度倒退！`); } return; }
+            if (p.hasWeed || p.hasBug) return;
+            p.progress += wInfo.growthSpeed * mMult; let c = CROPS[p.cropId];
+            let pb = document.getElementById(`pbar-${idx}`); if (pb) pb.style.width = Math.min(100, (p.progress / c.time) * 100) + "%";
+            if (p.progress >= c.time) { p.state = 'mature'; needsRend = true; log(`✨ ${c.name}成熟了！`); } else {
+                if (gameData.player.sprayTimer <= 0 && Math.random() < wInfo.pestChance && !p.hasWeed && !p.hasBug) { if (Math.random() < 0.5) p.hasWeed = true; else p.hasBug = true; needsRend = true; }
+                if (Math.random() < 0.005 && p.crowTimer === 0) { if (gameData.player.decors.alienScarecrow) log(`🛸 稻草人嚇跑烏鴉！`); else { p.crowTimer = 15; needsRend = true; log(`🐦‍⬛ 警告！烏鴉停在田上了！`); } }
+            }
+        }
+    });
+    Object.keys(gameData.animals).forEach(k => { let a = gameData.animals[k]; if (a.state === 'producing') { a.progress++; let pb = document.getElementById(`pbar-ani-${k}`); if (pb) pb.style.width = Math.min(100, (a.progress / ANIMALS[k].time) * 100) + "%"; if (a.progress >= ANIMALS[k].time) { a.state = 'ready'; needsRend = true; } } });
+    Object.keys(gameData.factories).forEach(k => { let f = gameData.factories[k]; if (f.state === 'processing') { f.progress += mMult; let pb = document.getElementById(`pbar-fac-${k}`); if (pb) pb.style.width = Math.min(100, (f.progress / FACTORIES[k].time) * 100) + "%"; if (f.progress >= FACTORIES[k].time) { f.state = 'ready'; needsRend = true; } } });
+    if (gameData.player.stealCooldown > 0) { gameData.player.stealCooldown--; }
+
+    if (needsRend) { renderFarm(); renderPasture(); renderFactory(); }
+    saveGame();
+}
+
+init();
+</script>
+</body>
+</html>p").innerText = getMaxExp();
     document.getElementById("txt-gold").innerText = gameData.player.gold;
     
     let wheelBtn = document.getElementById("btn-wheel");
