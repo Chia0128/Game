@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>迷你開心農場</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #e8f5e9;
+            color: #333;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        #game-wrap {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            border: 2px solid #81c784;
+        }
+
+        h2 { margin: 0 0 12px 0; color: #2e7d32; }
+
+        /* 頂部狀態列 */
+        .header-stats {
+            display: flex;
+            justify-content: space-between;
+            background: #f1f8e9;
+            padding: 10px 15px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: bold;
+            border: 1px solid #c5e1a5;
+        }
+        .stat-gold { color: #f57f17; }
+        .stat-lvl { color: #1565c0; }
+
+        /* 農場網格 */
+        .farm-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: #aed581;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        /* 單塊田地 */
+        .plot {
+            background: #8d6e63;
+            height: 90px;
+            border-radius: 8px;
+            border: 3px solid #5d4037;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        .plot:active { transform: scale(0.95); }
+        
+        .plot.locked { background: #e0e0e0; border-color: #9e9e9e; cursor: not-allowed; }
+        .plot.locked::after { content: '🔒'; font-size: 24px; }
+
+        /* 田地狀態列 (進度條) */
+        .progress-wrap {
+            position: absolute;
+            bottom: 4px;
+            left: 10%;
+            width: 80%;
+            height: 6px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 3px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #64b5f6;
+            transition: width 1s linear;
+        }
+
+        /* 雜草與蟲子 */
+        .weed, .bug {
+            position: absolute;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 10;
+            animation: bounce 1s infinite alternate;
+        }
+        .weed { top: -5px; right: -5px; }
+        .bug { top: -5px; left: -5px; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+
+        /* 日誌區 */
+        .log-box {
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            height: 100px;
+            overflow-y: auto;
+            padding: 8px;
+            font-size: 12px;
+            line-height: 1.5;
+            text-align: left;
+            margin-bottom: 12px;
+            color: #555;
+        }
+        .log-entry { border-bottom: 1px dashed #eee; padding-bottom: 3px; margin-bottom: 3px; }
+
+        /* 分頁按鈕 */
+        .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+        .tab-btn {
+            flex: 1; padding: 10px 0; font-size: 13px; font-weight: bold;
+            background: #f1f8e9; color: #555; border: 1px solid #c5e1a5;
+            border-radius: 8px; cursor: pointer; transition: 0.2s;
+        }
+        .tab-btn.active { background: #4caf50; color: white; border-color: #388e3c; }
+
+        /* 內容區切換 */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* 商店與背包列表 */
+        .item-row {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #fff; border: 1px solid #e0e0e0; padding: 8px 12px;
+            border-radius: 8px; margin-bottom: 6px; text-align: left;
+        }
+        .item-info b { font-size: 14px; color: #333; }
+        .item-info p { margin: 2px 0 0 0; font-size: 11px; color: #777; }
+        .action-btn {
+            background: #4caf50; color: white; border: none; padding: 6px 12px;
+            border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;
+        }
+        .action-btn:disabled { background: #bdbdbd; cursor: not-allowed; }
+
+        /* 彈窗 Modal (播種用) */
+        #modal-overlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); justify-content: center; align-items: center;
+            z-index: 100; border-radius: 16px;
+        }
+        .modal-card {
+            background: #fff; padding: 16px; border-radius: 12px; width: 80%;
+            max-height: 80%; overflow-y: auto; text-align: center;
+        }
+        .modal-close {
+            background: #e53935; color: white; border: none; padding: 8px;
+            border-radius: 6px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold;
+        }
+
+        /* 飄字動畫 */
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.2); } }
+        .floating-text { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; font-size: 14px; pointer-events: none; z-index: 50; text-shadow: 1px 1px 0 #fff; }
+    </style>
+</head>
+<body>
+
+    <button onclick="window.location.href='index.html'" style="all: unset; position: fixed; top: 15px; left: 15px; z-index: 99999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;">
+        ⬅️ 返回大廳
+  
+    <div id="game-wrap">
+        <h2>🌻 迷你開心農場</h2>
+        
+        <div class="header-stats">
+            <div class="stat-lvl">Lv.<span id="txt-lvl">1</span> (<span id="txt-exp">0</span>/<span id="txt-maxexp">50</span>)</div>
+            <div class="stat-gold">💰 <span id="txt-gold">200</span></div>
+        </div>
+
+        <div id="tab-farm" class="tab-content active">
+            <div class="farm-grid" id="farm-grid">
+                <!-- 6 塊田地將由 JS 動態生成 -->
+            </div>
+            
+            <button class="action-btn" style="width: 100%; background: #ff9800; font-size: 14px; padding: 10px;" onclick="stealCrop()">
+                🕵️ 隨機去好友家偷菜 (冷卻: <span id="txt-steal-cd">0</span>s)
+            </button>
+        </div>
+
+        <div id="tab-shop" class="tab-content">
+            <!-- 商店列表由 JS 渲染 -->
+            <div id="shop-list"></div>
+        </div>
+
+        <div id="tab-bag" class="tab-content">
+            <!-- 背包列表由 JS 渲染 -->
+            <div id="bag-list"></div>
+        </div>
+
+        <div class="tabs" style="margin-top: 16px; margin-bottom: 0;">
+            <button class="tab-btn active" onclick="switchTab('farm')">🏡 農場</button>
+            <button class="tab-btn" onclick="switchTab('bag')">🎒 背包</button>
+            <button class="tab-btn" onclick="switchTab('shop')">🛒 商店</button>
+        </div>
+
+        <div class="log-box" id="log-box" style="margin-top: 12px;"></div>
+
+        <!-- 播種選擇視窗 -->
+        <div id="modal-overlay">
+            <div class="modal-card">
+                <h3 style="margin-top:0; color:#2e7d32;">選擇要播種的種子</h3>
+                <div id="seed-select-list"></div>
+                <button class="modal-close" onclick="closeModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// 遊戲資料
+let player = {
+    level: 1,
+    exp: 0,
+    gold: 200,
+    seeds: { radish: 3, cabbage: 0, tomato: 0, watermelon: 0, corn: 0 },
+    stealCooldown: 0
+};
+
+// 作物圖鑑設定
+const CROPS = {
+    radish: { id: 'radish', name: '白蘿蔔', emoji: '🥕', seed: '🌱', cost: 15, sell: 25, time: 10, exp: 5 },
+    cabbage:{ id: 'cabbage', name: '高麗菜', emoji: '🥬', seed: '🌱', cost: 30, sell: 55, time: 30, exp: 12 },
+    tomato: { id: 'tomato', name: '番茄', emoji: '🍅', seed: '🌿', cost: 60, sell: 120, time: 60, exp: 25 },
+    corn:   { id: 'corn', name: '玉米', emoji: '🌽', seed: '🌿', cost: 120, sell: 250, time: 120, exp: 50 },
+    watermelon:{ id: 'watermelon', name: '大西瓜', emoji: '🍉', seed: '🌿', cost: 250, sell: 550, time: 240, exp: 120 }
+};
+
+// 6 塊田地狀態
+let plots = Array(6).fill(null).map(() => ({
+    state: 'empty', // empty, growing, mature, locked
+    cropId: null,
+    plantTime: 0,
+    hasWeed: false,
+    hasBug: false
+}));
+
+// 初始化鎖定機制 (一開始解鎖 4 塊，5、6 塊需等級解鎖)
+plots[4].state = 'locked';
+plots[5].state = 'locked';
+
+let currentTargetPlot = null;
+const logBox = document.getElementById("log-box");
+
+// 系統初始化
+function init() {
+    renderFarm();
+    renderShop();
+    renderBag();
+    updateUI();
+    setInterval(gameTick, 1000);
+    log("🌞 歡迎來到開心農場！點擊空地可以播種。");
+}
+
+function log(msg) {
+    let div = document.createElement("div");
+    div.className = "log-entry";
+    div.innerHTML = msg;
+    logBox.appendChild(div);
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+function getMaxExp() {
+    return player.level * 50;
+}
+
+function addExp(amount) {
+    player.exp += amount;
+    let threshold = getMaxExp();
+    while (player.exp >= threshold) {
+        player.level++;
+        player.exp -= threshold;
+        threshold = getMaxExp();
+        
+        let bonus = player.level * 50;
+        player.gold += bonus;
+        log(`🎉 <b>升級了！達到 Lv.${player.level}！</b> 獲得獎金 ${bonus} 金幣！`);
+        
+        // 檢查解鎖田地
+        if (player.level === 3 && plots[4].state === 'locked') {
+            plots[4].state = 'empty';
+            log(`🔓 <b>新田地解鎖！</b>`);
+            renderFarm();
+        }
+        if (player.level === 5 && plots[5].state === 'locked') {
+            plots[5].state = 'empty';
+            log(`🔓 <b>新田地解鎖！</b>`);
+            renderFarm();
+        }
+    }
+    updateUI();
+}
+
+function showFloatText(x, y, text, color) {
+    let el = document.createElement("div");
+    el.className = "floating-text";
+    el.innerText = text;
+    el.style.color = color;
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    document.getElementById("game-wrap").appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+}
+
+// 渲染農場
+function renderFarm() {
+    const grid = document.getElementById("farm-grid");
+    grid.innerHTML = "";
+    
+    plots.forEach((plot, idx) => {
+        let div = document.createElement("div");
+        div.className = `plot ${plot.state === 'locked' ? 'locked' : ''}`;
+        div.onclick = (e) => handlePlotClick(idx, e);
+
+        if (plot.state === 'locked') {
+            // CSS handles the lock icon
+        } else if (plot.state === 'growing') {
+            div.innerText = CROPS[plot.cropId].seed;
+            let pWrap = document.createElement("div");
+            pWrap.className = "progress-wrap";
+            pWrap.style.display = "block";
+            let pBar = document.createElement("div");
+            pBar.className = "progress-bar";
+            pBar.id = `pbar-${idx}`;
+            pWrap.appendChild(pBar);
+            div.appendChild(pWrap);
+        } else if (plot.state === 'mature') {
+            div.innerText = CROPS[plot.cropId].emoji;
+        }
+
+        // 雜草與蟲子
+        if (plot.hasWeed) {
+            let weed = document.createElement("div");
+            weed.className = "weed";
+            weed.innerText = "🌿";
+            weed.onclick = (e) => { e.stopPropagation(); clearPest(idx, 'weed', e); };
+            div.appendChild(weed);
+        }
+        if (plot.hasBug) {
+            let bug = document.createElement("div");
+            bug.className = "bug";
+            bug.innerText = "🐛";
+            bug.onclick = (e) => { e.stopPropagation(); clearPest(idx, 'bug', e); };
+            div.appendChild(bug);
+        }
+
+        grid.appendChild(div);
+    });
+}
+
+function handlePlotClick(idx, event) {
+    let plot = plots[idx];
+    if (plot.state === 'locked') return log("🔒 這塊田地尚未解鎖 (Lv.3 與 Lv.5 依序解鎖)。");
+    
+    if (plot.hasWeed || plot.hasBug) {
+        return log("⚠️ 請先清除田地裡的雜草或蟲子！");
+    }
+
+    if (plot.state === 'empty') {
+        currentTargetPlot = idx;
+        openSeedModal();
+    } else if (plot.state === 'growing') {
+        let crop = CROPS[plot.cropId];
+        let passed = Math.floor((Date.now() - plot.plantTime) / 1000);
+        let remain = Math.max(0, crop.time - passed);
+        log(`⏳ 【${crop.name}】成長中，還需 ${remain} 秒。`);
+    } else if (plot.state === 'mature') {
+        harvest(idx, event);
+    }
+}
+
+function clearPest(idx, type, event) {
+    let plot = plots[idx];
+    if (type === 'weed') {
+        plot.hasWeed = false;
+        log("🌿 除草成功！獲得 2 經驗。");
+    } else {
+        plot.hasBug = false;
+        log("🐛 抓蟲成功！獲得 2 經驗。");
+    }
+    
+    // 獲取點擊位置顯示飄字
+    const rect = event.target.getBoundingClientRect();
+    const wrapRect = document.getElementById("game-wrap").getBoundingClientRect();
+    const x = rect.left - wrapRect.left;
+    const y = rect.top - wrapRect.top;
+    
+    addExp(2);
+    showFloatText(x, y, "+2 EXP", "#1565c0");
+    renderFarm();
+}
+
+function harvest(idx, event) {
+    let plot = plots[idx];
+    let crop = CROPS[plot.cropId];
+    
+    player.gold += crop.sell;
+    addExp(crop.exp);
+    
+    log(`🧺 收成了【${crop.name}】！獲得 ${crop.sell} 金幣與 ${crop.exp} 經驗。`);
+    
+    const rect = event.target.getBoundingClientRect();
+    const wrapRect = document.getElementById("game-wrap").getBoundingClientRect();
+    const x = rect.left - wrapRect.left + 20;
+    const y = rect.top - wrapRect.top;
+    
+    showFloatText(x, y, `+${crop.sell}💰`, "#f57f17");
+
+    // 重置田地
+    plots[idx] = { state: 'empty', cropId: null, plantTime: 0, hasWeed: false, hasBug: false };
+    renderFarm();
+    updateUI();
+}
+
+function openSeedModal() {
+    let list = document.getElementById("seed-select-list");
+    list.innerHTML = "";
+    
+    let hasSeeds = false;
+    Object.keys(CROPS).forEach(id => {
+        if (player.seeds[id] > 0) {
+            hasSeeds = true;
+            let crop = CROPS[id];
+            let div = document.createElement("div");
+            div.className = "item-row";
+            div.innerHTML = `
+                <div class="item-info">
+                    <b>${crop.emoji} ${crop.name}種子 (擁有: ${player.seeds[id]})</b>
+                    <p>成熟: ${crop.time}秒 | 賣價: ${crop.sell}金幣</p>
+                </div>
+                <button class="action-btn" onclick="plantSeed('${id}')">播種</button>
+            `;
+            list.appendChild(div);
+        }
+    });
+
+    if (!hasSeeds) {
+        list.innerHTML = `<p style="color:#777; font-size:13px; margin:20px 0;">🎒 背包裡沒有種子了，請去商店購買！</p>`;
+    }
+    
+    document.getElementById("modal-overlay").style.display = "flex";
+}
+
+function closeModal() {
+    document.getElementById("modal-overlay").style.display = "none";
+    currentTargetPlot = null;
+}
+
+function plantSeed(id) {
+    if (player.seeds[id] <= 0 || currentTargetPlot === null) return;
+    
+    player.seeds[id]--;
+    plots[currentTargetPlot] = {
+        state: 'growing',
+        cropId: id,
+        plantTime: Date.now(),
+        hasWeed: false,
+        hasBug: false
+    };
+    
+    log(`🌱 在田地播種了【${CROPS[id].name}】！`);
+    closeModal();
+    renderFarm();
+    renderBag();
+}
+
+// 核心計時器
+function gameTick() {
+    let needsRender = false;
+
+    plots.forEach((plot, idx) => {
+        if (plot.state === 'growing') {
+            // 如果有雜草或蟲子，暫停生長 (時間往後推移)
+            if (plot.hasWeed || plot.hasBug) {
+                plot.plantTime += 1000; 
+                return;
+            }
+
+            let crop = CROPS[plot.cropId];
+            let passed = Math.floor((Date.now() - plot.plantTime) / 1000);
+            
+            // 更新進度條
+            let pBar = document.getElementById(`pbar-${idx}`);
+            if (pBar) {
+                let pct = Math.min(100, (passed / crop.time) * 100);
+                pBar.style.width = pct + "%";
+            }
+
+            // 成熟判定
+            if (passed >= crop.time) {
+                plot.state = 'mature';
+                needsRender = true;
+                log(`✨ 【${crop.name}】成熟了！快收成吧！`);
+            } else {
+                // 隨機產生雜草或蟲子 (每秒 1% 機率)
+                if (Math.random() < 0.01 && !plot.hasWeed && !plot.hasBug) {
+                    if (Math.random() < 0.5) plot.hasWeed = true;
+                    else plot.hasBug = true;
+                    needsRender = true;
+                    log(`⚠️ 田地長出了${plot.hasWeed ? '雜草' : '蟲子'}！作物停止生長了。`);
+                }
+            }
+        }
+    });
+
+    if (player.stealCooldown > 0) {
+        player.stealCooldown--;
+        document.getElementById("txt-steal-cd").innerText = player.stealCooldown;
+    }
+
+    if (needsRender) renderFarm();
+}
+
+// 商店與背包
+function renderShop() {
+    let list = document.getElementById("shop-list");
+    list.innerHTML = "";
+    Object.keys(CROPS).forEach(id => {
+        let crop = CROPS[id];
+        let div = document.createElement("div");
+        div.className = "item-row";
+        div.innerHTML = `
+            <div class="item-info">
+                <b>${crop.emoji} ${crop.name}種子</b>
+                <p>成本: ${crop.cost}金 | 收成: ${crop.sell}金 | 需時: ${crop.time}s</p>
+            </div>
+            <button class="action-btn" onclick="buySeed('${id}')">購買</button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function renderBag() {
+    let list = document.getElementById("bag-list");
+    list.innerHTML = "";
+    let hasItems = false;
+    Object.keys(player.seeds).forEach(id => {
+        if (player.seeds[id] > 0) {
+            hasItems = true;
+            let crop = CROPS[id];
+            let div = document.createElement("div");
+            div.className = "item-row";
+            div.innerHTML = `
+                <div class="item-info">
+                    <b>${crop.emoji} ${crop.name}種子</b>
+                    <p>數量: ${player.seeds[id]}</p>
+                </div>
+            `;
+            list.appendChild(div);
+        }
+    });
+    if (!hasItems) {
+        list.innerHTML = `<div style="text-align:center; padding: 20px; color: #777; font-size:13px;">背包空空如也，去商店逛逛吧！</div>`;
+    }
+}
+
+function buySeed(id) {
+    let cost = CROPS[id].cost;
+    if (player.gold >= cost) {
+        player.gold -= cost;
+        player.seeds[id]++;
+        log(`🛒 購買了 1 顆【${CROPS[id].name}】種子。`);
+        updateUI();
+        renderBag();
+    } else {
+        log(`❌ 金幣不足，無法購買【${CROPS[id].name}】。`);
+    }
+}
+
+function stealCrop() {
+    if (player.stealCooldown > 0) {
+        return log(`⏳ 巡邏犬還醒著，再等 ${player.stealCooldown} 秒才能去偷菜！`);
+    }
+
+    let keys = Object.keys(CROPS);
+    let randomCropId = keys[Math.floor(Math.random() * keys.length)];
+    let crop = CROPS[randomCropId];
+    
+    // 偷取收益為市價的 50%
+    let stealGold = Math.floor(crop.sell * 0.5);
+    player.gold += stealGold;
+    addExp(Math.floor(crop.exp * 0.5));
+    
+    player.stealCooldown = 60; // 60秒冷卻
+    document.getElementById("txt-steal-cd").innerText = player.stealCooldown;
+    
+    log(`🕵️ <b>偷菜成功！</b> 從隔壁老王農場偷摘了一顆【${crop.name}】，轉賣獲得 ${stealGold} 金幣！`);
+    updateUI();
+}
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tabId).classList.add('active');
+}
+
+function updateUI() {
+    document.getElementById("txt-lvl").innerText = player.level;
+    document.getElementById("txt-exp").innerText = player.exp;
+    document.getElementById("txt-maxexp").innerText = getMaxExp();
+    document.getElementById("txt-gold").innerText = player.gold;
+}
+
+// 啟動遊戲
+init();
+</script>
+</body>
+</html>
