@@ -222,7 +222,7 @@
             <div style="font-size: 13px; text-align: left; margin-bottom: 4px; color:#aaa;">持有武器（點擊切換裝備）：</div>
             <div class="modal-list" id="weapon-list"></div>
             <div style="font-size: 13px; text-align: left; margin-top: 8px; color:#aaa;">持有道具：</div>
-            <div class="modal-list" id="item-list" style="max-height: 100px;"></div>
+            <div class="modal-list" id="item-list" style="max-height: 80px;"></div>
             <button class="btn" onclick="closeBag()" style="width:100%; background:#c62828; margin-top:10px;">關閉背包</button>
         </div>
     </div>
@@ -270,10 +270,10 @@
         <div class="controls" id="ctrl-shop" style="display: none;">
             <button class="btn btn-shop" id="shop-btn-weapon" onclick="buyItem('weapon')">🗡️ 進階武器</button>
             <button class="btn btn-shop" id="shop-btn-armor" onclick="buyItem('armor')">🛡️ 升級防具</button>
-            <button class="btn btn-shop" id="shop-btn-potion" onclick="buyItem('potion')">🧪 生命藥水(50HP)</button>
-            <button class="btn btn-shop" id="shop-btn-potion2" onclick="buyItem('potion2')">🧪 強力藥水(100HP)</button>
-            <button class="btn btn-shop" id="shop-btn-stone" onclick="buyItem('stone')">⚔️ 狂戰士磨刀石</button>
+            <button class="btn btn-shop" id="shop-btn-potion" onclick="buyItem('potion')">🧪 50HP藥水</button>
+            <button class="btn btn-shop" id="shop-btn-potion2" onclick="buyItem('potion2')">🧪 100HP藥水</button>
             <button class="btn btn-shop" id="shop-btn-maxhp" onclick="buyItem('maxhp')">❤️ 上限藥水 (+20HP)</button>
+            <button class="btn btn-shop" id="shop-btn-stone" onclick="buyItem('stone')">⚔️ 狂戰士磨刀石</button>
             <button class="btn btn-explore" onclick="leaveShop()" style="grid-column: span 2;">🚪 離開商人</button>
         </div>
 
@@ -288,10 +288,9 @@
 let hp, maxHp, gold, floor, gameState;
 let enemyHp, enemyMaxHp, enemyAtk;
 let defense = 0;
-let potions = 1;       // Level 1 (50HP) 藥水數量
-let potions2 = 0;      // Level 2 (100HP) 藥水數量
-let sharpenStones = 0; // 狂戰士磨刀石數量
-let isStoneActive = false; // 當前戰鬥是否已消耗磨刀石加攻
+let potions = 1;     // 50HP 藥水
+let potions2 = 0;    // 100HP 藥水
+let whetstones = 0;  // 狂戰士磨刀石數量
 let currentWeaponIdx = 0;
 let isEnemyFrozen = false;
 let princessHelpCount = 0;
@@ -340,12 +339,15 @@ function getRestPrice() {
     return 30 + Math.floor((floor - 1) / 5) * 10;
 }
 
-// Level 1 基礎生命藥水固定 25 金幣
 function getPotionPrice() {
-    return 25;
+    if (floor <= 50) return 25;
+    if (floor <= 100) return 35;
+    if (floor <= 200) return 50;
+    if (floor <= 300) return 100;
+    return 150;
 }
 
-// Level 2 強力生命藥水（100HP）階梯定價
+// Level 2 強力生命藥水（100HP）價格
 function getPotion2Price() {
     if (floor <= 50) return 45;
     if (floor <= 100) return 65;
@@ -354,8 +356,8 @@ function getPotion2Price() {
     return 285;
 }
 
-// 狂戰士磨刀石價格：比 Level 2 藥水貴 5 金幣
-function getSharpenStonePrice() {
+// 狂戰士磨刀石價格（比 Level 2 貴 5 金）
+function getWhetstonePrice() {
     return getPotion2Price() + 5;
 }
 
@@ -413,8 +415,8 @@ const hpBar = document.getElementById("hp-bar");
 const hpText = document.getElementById("hp-text");
 
 function initGame() {
-    hp = 100; maxHp = 100; gold = 0; floor = 1; defense = 0; potions = 1; potions2 = 0; sharpenStones = 0;
-    princessHelpCount = 0; isEnemyFrozen = false; isStoneActive = false;
+    hp = 100; maxHp = 100; gold = 0; floor = 1; defense = 0; potions = 1; potions2 = 0; whetstones = 0;
+    princessHelpCount = 0; isEnemyFrozen = false;
     stats = { 
         totalSpent: 0, consecutiveTraps: 0, bananaMet: false, princessMet: false, achieved: new Set(),
         curseFloorsLeft: 0, curseExtraAtk: 0,
@@ -452,16 +454,16 @@ function updateShopButtons() {
     }
 
     let potCost = getPotionPrice();
-    document.getElementById("shop-btn-potion").innerText = `🧪 生命藥水(50HP, ${potCost}金)`;
+    document.getElementById("shop-btn-potion").innerText = `🧪 50HP藥水 (${potCost}金)`;
 
     let pot2Cost = getPotion2Price();
-    document.getElementById("shop-btn-potion2").innerText = `🧪 強力藥水(100HP, ${pot2Cost}金)`;
-
-    let stoneCost = getSharpenStonePrice();
-    document.getElementById("shop-btn-stone").innerText = `⚔️ 磨刀石(+10%攻, ${stoneCost}金)`;
+    document.getElementById("shop-btn-potion2").innerText = `🧪 100HP藥水 (${pot2Cost}金)`;
 
     let maxHpCost = getMaxHpPrice();
     document.getElementById("shop-btn-maxhp").innerText = `❤️ 上限藥水 (+20HP, ${maxHpCost}金)`;
+
+    let stoneCost = getWhetstonePrice();
+    document.getElementById("shop-btn-stone").innerText = `⚔️ 磨刀石 (+10%傷, ${stoneCost}金)`;
 }
 
 function updateUI() {
@@ -591,7 +593,6 @@ function explore() {
     else if (roll < thiefChance + 0.25) {
         gameState = "combat";
         isEnemyFrozen = false;
-        isStoneActive = false; // 每場新戰鬥重置磨刀石
         
         let hpRoll = Math.floor(Math.random() * 8);
         if (floor <= 5) {
@@ -1011,14 +1012,14 @@ function combatAction(action) {
     let w = weapons[currentWeaponIdx];
     let playerDmg = Math.floor(w.minDmg + Math.random() * (w.maxDmg - w.minDmg + 1));
     
+    // 如果有使用狂戰士磨刀石，本場戰鬥攻擊力提升 10%
+    if (currentFight.hasWhetstone) {
+        playerDmg = Math.floor(playerDmg * 1.10);
+    }
+    
     if (action === "attack") {
         let isPlayerCrit = false;
         
-        // 狂戰士磨刀石加成（單次戰鬥 +10%）
-        if (isStoneActive) {
-            playerDmg = Math.floor(playerDmg * 1.10);
-        }
-
         if (stats.shadowJoined && Math.random() < 0.20) {
             playerDmg *= 2;
             log(`🌀 【殘影雙重打擊】普攻傷害瞬間翻倍！`, "color-team");
@@ -1040,9 +1041,9 @@ function combatAction(action) {
         }
 
         enemyHp -= playerDmg;
-        let stoneText = isStoneActive ? `<span class="color-weap-effect">【⚔️ 磨刀石加攻】</span>` : "";
         let critInfo = isPlayerCrit ? `<span class="color-crit">【💥 暴擊 1.8倍！】</span>` : "";
-        log(`⚔️ 你使用【${w.name}】${stoneText}${critInfo}造成了 ${playerDmg} 點傷害！`);
+        let stoneInfo = currentFight.hasWhetstone ? `<span style="color:#ff9800;">【⚔️ 磨刀石加成】</span>` : "";
+        log(`⚔️ 你使用【${w.name}】${critInfo}${stoneInfo}造成了 ${playerDmg} 點傷害！`);
 
         if (w.name === "吸血鬼匕首") {
             let lifesteal = Math.floor(playerDmg * 0.3);
@@ -1074,11 +1075,6 @@ function combatAction(action) {
             let penalty = Math.floor(enemyHp * 0.25);
             enemyHp -= penalty;
             log(`👔 勞檢稽查員開出停工處分！強制扣除怪物 ${penalty} HP！`, "color-team");
-        }
-
-        // 砍完一刀後若使用了磨刀石，消耗掉狀態
-        if (isStoneActive) {
-            isStoneActive = false;
         }
 
     } else if (action === "defend") {
@@ -1198,7 +1194,7 @@ function combatAction(action) {
 function endCombat() {
     gameState = "explore";
     isEnemyFrozen = false;
-    isStoneActive = false;
+    currentFight.hasWhetstone = false; // 戰鬥結束，磨刀石效果消耗
     switchControls("explore");
     updateUI();
 }
@@ -1213,7 +1209,7 @@ function buyItem(type) {
                 stats.totalSpent += cost;
                 weapons[lockedIdx].unlocked = true;
                 currentWeaponIdx = lockedIdx;
-                log(`🗡️ 購買並裝配新武器【{weapons[lockedIdx].name}】！消耗 ${cost} 金幣。<br><span style="color:#00e676; font-size:11px;">特性：${weapons[lockedIdx].trait}</span>`, "color-gold");
+                log(`🗡️ 購買並裝配新武器【${weapons[lockedIdx].name}】！消耗 ${cost} 金幣。<br><span style="color:#00e676; font-size:11px;">特性：${weapons[lockedIdx].trait}</span>`, "color-gold");
             } else {
                 log(`❌ 金幣不足！購買【${weapons[lockedIdx].name}】需要 ${cost} 金幣。`, "color-bad");
             }
@@ -1236,25 +1232,25 @@ function buyItem(type) {
         let cost = getPotionPrice();
         if (gold >= cost) {
             gold -= cost; stats.totalSpent += cost; potions++;
-            log(`🧪 購買生命藥水(50HP)！消耗 ${cost} 金幣。(擁有: ${potions})`, "color-good");
+            log(`🧪 購買 50HP 生命藥水！消耗 ${cost} 金幣。(目前擁有: ${potions})`, "color-good");
         } else log(`❌ 金幣不足！需要 ${cost} 金幣。`, "color-bad");
     } else if (type === "potion2") {
         let cost = getPotion2Price();
         if (gold >= cost) {
             gold -= cost; stats.totalSpent += cost; potions2++;
-            log(`🧪 購買強力生命藥水(100HP)！消耗 ${cost} 金幣。(擁有: ${potions2})`, "color-good");
-        } else log(`❌ 金幣不足！需要 ${cost} 金幣。`, "color-bad");
-    } else if (type === "stone") {
-        let cost = getSharpenStonePrice();
-        if (gold >= cost) {
-            gold -= cost; stats.totalSpent += cost; sharpenStones++;
-            log(`⚔️ 購買狂戰士磨刀石！消耗 ${cost} 金幣。(擁有: ${sharpenStones})`, "color-good");
+            log(`🧪 購買 100HP強力藥水！消耗 ${cost} 金幣。(目前擁有: ${potions2})`, "color-good");
         } else log(`❌ 金幣不足！需要 ${cost} 金幣。`, "color-bad");
     } else if (type === "maxhp") {
         let cost = getMaxHpPrice();
         if (gold >= cost) {
             gold -= cost; stats.totalSpent += cost; maxHp += 20; hp += 20;
             log(`❤️ 購買上限藥水！消耗 ${cost} 金幣。(上限 +20)`, "color-good");
+        } else log(`❌ 金幣不足！需要 ${cost} 金幣。`, "color-bad");
+    } else if (type === "stone") {
+        let cost = getWhetstonePrice();
+        if (gold >= cost) {
+            gold -= cost; stats.totalSpent += cost; whetstones++;
+            log(`⚔️ 購買狂戰士磨刀石！消耗 ${cost} 金幣。(目前擁有: ${whetstones})`, "color-gold");
         } else log(`❌ 金幣不足！需要 ${cost} 金幣。`, "color-bad");
     }
     
@@ -1290,18 +1286,23 @@ function openBag() {
         wList.appendChild(div);
     });
 
+    let stoneActionHtml = whetstones > 0 
+        ? `<button class="btn" style="padding:4px 8px; font-size:12px; background:#d35400;" onclick="useWhetstone()">使用(+10%傷)</button>` 
+        : `<span style="color:#777; font-size:11px;">(個)</span>`;
+    let stoneStatusText = currentFight.hasWhetstone ? `<span style="color:#00e676;">【已啟用 (+10%傷)】</span>` : `x${whetstones}`;
+
     document.getElementById("item-list").innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span>🧪 基礎藥水(50HP) x${potions}</span>
-            <button class="btn" style="padding:2px 6px; font-size:11px; background:#2e7d32;" onclick="usePotion(1)">使用</button>
+            <span>🧪 50HP藥水 x${potions}</span>
+            <button class="btn" style="padding:4px 8px; font-size:12px; background:#2e7d32;" onclick="usePotion(1)">使用</button>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span>🧪 強力藥水(100HP) x${potions2}</span>
-            <button class="btn" style="padding:2px 6px; font-size:11px; background:#1b5e20;" onclick="usePotion(2)">使用</button>
+            <span>🧪 100HP強力藥水 x${potions2}</span>
+            <button class="btn" style="padding:4px 8px; font-size:12px; background:#1b5e20;" onclick="usePotion(2)">使用</button>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span>⚔️ 磨刀石(+10%攻) x${sharpenStones}</span>
-            <button class="btn" style="padding:2px 6px; font-size:11px; background:#e65100;" onclick="useStone()">使用</button>
+            <span>⚔️ 磨刀石 ${stoneStatusText}</span>
+            ${stoneActionHtml}
         </div>`;
     document.getElementById("modal-overlay").style.display = "flex";
 }
@@ -1312,33 +1313,31 @@ function usePotion(level) {
         if (potions > 0) {
             if (hp >= maxHp) { log(`生命已滿！`); return; }
             potions--; hp = Math.min(maxHp, hp + 50);
-            log(`🧪 使用基礎生命藥水，恢復 50 生命！`, "color-good");
+            log(`🧪 使用 50HP 生命藥水，恢復 50 生命！`, "color-good");
             openBag(); updateUI();
-        } else log(`❌ 沒有基礎生命藥水了！`, "color-bad");
+        } else log(`❌ 沒有 50HP 生命藥水了！`, "color-bad");
     } else if (level === 2) {
         if (potions2 > 0) {
             if (hp >= maxHp) { log(`生命已滿！`); return; }
             potions2--; hp = Math.min(maxHp, hp + 100);
-            log(`🧪 使用強力生命藥水，恢復 100 生命！`, "color-good");
+            log(`🧪 使用 100HP 強力藥水，恢復 100 生命！`, "color-good");
             openBag(); updateUI();
-        } else log(`❌ 沒有強力生命藥水了！`, "color-bad");
+        } else log(`❌ 沒有 100HP 強力藥水了！`, "color-bad");
     }
 }
 
-function useStone() {
-    if (sharpenStones > 0) {
-        if (gameState !== "combat") {
-            log(`❌ 磨刀石只能在戰鬥中（面對怪獸時）使用！`, "color-bad");
-            return;
-        }
-        if (isStoneActive) {
-            log(`⚠️ 已經使用過磨刀石了，本場戰鬥效果生效中！`, "color-neutral");
-            return;
-        }
-        sharpenStones--;
-        isStoneActive = true;
-        log(`⚔️ 你使用了【狂戰士磨刀石】！本場戰鬥武器攻擊力瞬間提升 10%！`, "color-weap-effect");
-        openBag();
+function useWhetstone() {
+    if (gameState !== "combat") {
+        return log(`❌ 狂戰士磨刀石只能在戰鬥中使用！`, "color-bad");
+    }
+    if (currentFight.hasWhetstone) {
+        return log(`❌ 本場戰鬥已經使用過磨刀石了！`, "color-bad");
+    }
+    if (whetstones > 0) {
+        whetstones--;
+        currentFight.hasWhetstone = true;
+        log(`⚔️ 你擦拭了武器！本場戰鬥攻擊力永久提升 10%！`, "color-gold");
+        openBag(); updateUI();
     } else {
         log(`❌ 沒有狂戰士磨刀石了！`, "color-bad");
     }
