@@ -512,7 +512,7 @@ function unlockAchievement(title, desc) {
 
 function tryRecruit(id, icon, name, msg) {
     if (!stats[id]) {
-        if (Math.random() < 0.01) { // 1%
+        if (Math.random() < 0.05) { // 5%
             stats[id] = true;
             log(`🤝 ${icon} <b>【${name}】</b> ${msg}，正式加入隊伍！`, "color-team");
         }
