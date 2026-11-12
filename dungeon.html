@@ -270,8 +270,8 @@
         <div class="controls" id="ctrl-shop" style="display: none;">
             <button class="btn btn-shop" id="shop-btn-weapon" onclick="buyItem('weapon')">🗡️ 進階武器</button>
             <button class="btn btn-shop" id="shop-btn-armor" onclick="buyItem('armor')">🛡️ 升級防具</button>
-            <button class="btn btn-shop" id="shop-btn-potion" onclick="buyItem('potion')">🧪 50HP藥水</button>
-            <button class="btn btn-shop" id="shop-btn-potion2" onclick="buyItem('potion2')">🧪 100HP藥水</button>
+            <button class="btn btn-shop" id="shop-btn-potion" onclick="buyItem('potion')">🧪 普普通通生命藥水</button>
+            <button class="btn btn-shop" id="shop-btn-potion2" onclick="buyItem('potion2')">🧪 一看就有點牆生命藥水</button>
             <button class="btn btn-shop" id="shop-btn-maxhp" onclick="buyItem('maxhp')">❤️ 上限藥水 (+20HP)</button>
             <button class="btn btn-shop" id="shop-btn-stone" onclick="buyItem('stone')">⚔️ 狂戰士磨刀石</button>
             <button class="btn btn-explore" onclick="leaveShop()" style="grid-column: span 2;">🚪 離開商人</button>
@@ -288,8 +288,8 @@
 let hp, maxHp, gold, floor, gameState;
 let enemyHp, enemyMaxHp, enemyAtk;
 let defense = 0;
-let potions = 1;     // 50HP 藥水
-let potions2 = 0;    // 100HP 藥水
+let potions = 1;     // 普普通通生命藥水
+let potions2 = 0;    // 一看就有點牆生命藥水
 let whetstones = 0;  // 狂戰士磨刀石數量
 let currentWeaponIdx = 0;
 let isEnemyFrozen = false;
@@ -347,7 +347,7 @@ function getPotionPrice() {
     return 150;
 }
 
-// Level 2 強力生命藥水（100HP）價格
+// 一看就有點牆生命藥水（100HP）價格
 function getPotion2Price() {
     if (floor <= 50) return 45;
     if (floor <= 100) return 65;
@@ -454,10 +454,10 @@ function updateShopButtons() {
     }
 
     let potCost = getPotionPrice();
-    document.getElementById("shop-btn-potion").innerText = `🧪 50HP藥水 (${potCost}金)`;
+    document.getElementById("shop-btn-potion").innerText = `🧪 普普通通生命藥水 (${potCost}金)`;
 
     let pot2Cost = getPotion2Price();
-    document.getElementById("shop-btn-potion2").innerText = `🧪 100HP藥水 (${pot2Cost}金)`;
+    document.getElementById("shop-btn-potion2").innerText = `🧪 一看就有點牆生命藥水 (${pot2Cost}金)`;
 
     let maxHpCost = getMaxHpPrice();
     document.getElementById("shop-btn-maxhp").innerText = `❤️ 上限藥水 (+20HP, ${maxHpCost}金)`;
@@ -560,7 +560,7 @@ function explore() {
         let bonusPot = 2;
         gold += bonusGold;
         potions += bonusPot;
-        log(`🚩 <span class="color-milestone">【里程碑達成】</span> 成功挺進第 ${floor} 層！獲得王國嘉獎：<span class="color-gold">+${bonusGold} 金幣</span> 與 <span class="color-good">+${bonusPot} 罐生命藥水</span>！`, "color-milestone");
+        log(`🚩 <span class="color-milestone">【里程碑達成】</span> 成功挺進第 ${floor} 層！獲得王國嘉獎：<span class="color-gold">+${bonusGold} 金幣</span> 與 <span class="color-good">+${bonusPot} 罐普普通通生命藥水</span>！`, "color-milestone");
     }
     
     if (stats.curseFloorsLeft > 0) {
@@ -681,10 +681,10 @@ function explore() {
                 stats.princessJoined = true;
                 log(`👑 你幫助了【地洞公主】第 3 次！她深受感動，正式成為夥伴加入隊伍！`, "color-team");
             } else {
-                log(`👸 遇到了落難的【地洞公主】給予她幫助！公主贈送了 3 罐生命藥水！`, "color-princess");
+                log(`👸 遇到了落難的【地洞公主】給予她幫助！公主贈送了 3 罐普普通通生命藥水！`, "color-princess");
             }
         } else {
-            log(`👑 夥伴【地洞公主】給你一個擁抱，並塞了 3 罐生命藥水給你！`, "color-princess");
+            log(`👑 夥伴【地洞公主】給你一個擁抱，並塞了 3 罐普普通通生命藥水給你！`, "color-princess");
             potions += 3;
         }
     }
@@ -751,7 +751,7 @@ function triggerSpecialEvent() {
     } else if (eventType === 'altar') {
         log(`🗿 <b>【遠古神祕祭壇】</b> 石碑上寫著：「等價交換，庇護降臨。」`, "color-event");
         eventPanel.innerHTML = `
-            <button class="btn btn-event" onclick="resolveEvent('altar', 'potion')">🧪 獻祭 1 罐藥水</button>
+            <button class="btn btn-event" onclick="resolveEvent('altar', 'potion')">🧪 獻祭 1 罐普普通通生命藥水</button>
             <button class="btn btn-event" onclick="resolveEvent('altar', 'gold')">💰 獻祭 40 金幣</button>
             <button class="btn btn-event-safe" onclick="resolveEvent('altar', 'leave')" style="grid-column: span 2;">🚶 什麼都不做</button>
         `;
@@ -821,7 +821,7 @@ function resolveEvent(event, choice) {
                 log(`🎰 <b>不賺不賠！</b> 拿回原本的 ${bet} 金幣賭本！`, "color-neutral");
             } else if (r < 0.30) {
                 potions++;
-                log(`🎰 <b>安慰獎！</b> 猜中附屬格子，獲得 1 罐生命藥水！`, "color-good");
+                log(`🎰 <b>安慰獎！</b> 猜中附屬格子，獲得 1 罐普普通通生命藥水！`, "color-good");
             } else {
                 log(`😭 <b>血本無歸！</b> 猜錯了，哥布林嘲笑你並帶著 ${bet} 金幣溜走。`, "color-bad");
             }
@@ -866,7 +866,7 @@ function resolveEvent(event, choice) {
         } else {
             hp -= 25;
             if (potions > 0) potions--;
-            log(`🤢 肚子劇痛中毒！失去 25 HP，且吐掉了一罐藥水...`, "color-bad");
+            log(`🤢 肚子劇痛中毒！失去 25 HP，且吐掉了一罐普普通通生命藥水...`, "color-bad");
             checkDeath();
         }
     }
@@ -924,7 +924,7 @@ function resolveEvent(event, choice) {
         if (choice === 'help') {
             if (Math.random() < 0.50) {
                 potions += 2; gold += 600;
-                log(`🐜 得到工資！獲得 2 罐藥水與 600 金幣！`, "color-gold");
+                log(`🐜 得到工資！獲得 2 罐普普通通生命藥水與 600 金幣！`, "color-gold");
             } else {
                 let dmg = Math.floor(45 + Math.random() * (131 - 45 + 1));
                 hp -= dmg;
@@ -955,7 +955,7 @@ function resolveEvent(event, choice) {
         } else if (choice === 'call') {
             if (Math.random() < 0.50) {
                 gold += 870; potions += 19;
-                log(`👔 成功起訴！主管心虛掏錢，獲得 870 金幣與 19 罐藥水！`, "color-good");
+                log(`👔 成功起訴！主管心虛掏錢，獲得 870 金幣與 19 罐普普通通生命藥水！`, "color-good");
             } else {
                 hp -= 150;
                 log(`👔 被保全圍毆丟出辦公室！扣除 150 生命！`, "color-bad");
@@ -1232,13 +1232,13 @@ function buyItem(type) {
         let cost = getPotionPrice();
         if (gold >= cost) {
             gold -= cost; stats.totalSpent += cost; potions++;
-            log(`🧪 購買 50HP 生命藥水！消耗 ${cost} 金幣。(目前擁有: ${potions})`, "color-good");
+            log(`🧪 購買 普普通通生命藥水！消耗 ${cost} 金幣。(目前擁有: ${potions})`, "color-good");
         } else log(`❌ 金幣不足！需要 ${cost} 金幣。`, "color-bad");
     } else if (type === "potion2") {
         let cost = getPotion2Price();
         if (gold >= cost) {
             gold -= cost; stats.totalSpent += cost; potions2++;
-            log(`🧪 購買 100HP強力藥水！消耗 ${cost} 金幣。(目前擁有: ${potions2})`, "color-good");
+            log(`🧪 購買 一看就有點牆生命藥水！消耗 ${cost} 金幣。(目前擁有: ${potions2})`, "color-good");
         } else log(`❌ 金幣不足！需要 ${cost} 金幣。`, "color-bad");
     } else if (type === "maxhp") {
         let cost = getMaxHpPrice();
@@ -1293,11 +1293,11 @@ function openBag() {
 
     document.getElementById("item-list").innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span>🧪 50HP藥水 x${potions}</span>
+            <span>🧪 普普通通生命藥水 x${potions}</span>
             <button class="btn" style="padding:4px 8px; font-size:12px; background:#2e7d32;" onclick="usePotion(1)">使用</button>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span>🧪 100HP強力藥水 x${potions2}</span>
+            <span>🧪 一看就有點牆生命藥水 x${potions2}</span>
             <button class="btn" style="padding:4px 8px; font-size:12px; background:#1b5e20;" onclick="usePotion(2)">使用</button>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1313,16 +1313,16 @@ function usePotion(level) {
         if (potions > 0) {
             if (hp >= maxHp) { log(`生命已滿！`); return; }
             potions--; hp = Math.min(maxHp, hp + 50);
-            log(`🧪 使用 50HP 生命藥水，恢復 50 生命！`, "color-good");
+            log(`🧪 使用 普普通通生命藥水，恢復 50 生命！`, "color-good");
             openBag(); updateUI();
-        } else log(`❌ 沒有 50HP 生命藥水了！`, "color-bad");
+        } else log(`❌ 沒有 普普通通生命藥水了！`, "color-bad");
     } else if (level === 2) {
         if (potions2 > 0) {
             if (hp >= maxHp) { log(`生命已滿！`); return; }
             potions2--; hp = Math.min(maxHp, hp + 100);
-            log(`🧪 使用 100HP 強力藥水，恢復 100 生命！`, "color-good");
+            log(`🧪 使用 一看就有點牆生命藥水，恢復 100 生命！`, "color-good");
             openBag(); updateUI();
-        } else log(`❌ 沒有 100HP 強力藥水了！`, "color-bad");
+        } else log(`❌ 沒有 一看就有點牆生命藥水了！`, "color-bad");
     }
 }
 
