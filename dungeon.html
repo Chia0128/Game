@@ -599,13 +599,13 @@ function explore() {
             enemyMaxHp = 18 + hpRoll;
         } else if (floor <= 10) {
             enemyMaxHp = Math.floor(18 + hpRoll + floor * 0.5);
-        } else if (floor <= 15) {
-            enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.0);
         } else if (floor <= 20) {
-            enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.5);
-        } else if (floor <= 25) {
-            enemyMaxHp = Math.floor(18 + hpRoll + floor * 2.0);
+            enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.0);
         } else if (floor <= 30) {
+            enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.5);
+        } else if (floor <= 40) {
+            enemyMaxHp = Math.floor(18 + hpRoll + floor * 2.0);
+        } else if (floor <= 50) {
             enemyMaxHp = Math.floor(18 + hpRoll + floor * 2.5);
         } else {
             enemyMaxHp = Math.floor(18 + hpRoll + floor * 3.0);
