@@ -304,6 +304,7 @@ let stats = {
     curseFloorsLeft: 0,
     curseExtraAtk: 0,
     princessJoined: false,
+    railWorkerJoined: false, // 阿榮
     climberJoined: false,
     chefJoined: false,
     antJoined: false,
@@ -323,6 +324,7 @@ let weapons = [
     { name: "滅世弒神之槍", minDmg: 60, maxDmg: 110, unlocked: false, price: 750, trait: "神級：吸血 20% 且無視怪獸防禦" }
 ];
 
+// 防禦力上限調整為 60
 function addDefense(amount) {
     if (defense >= 60) return false;
     defense += amount;
@@ -347,7 +349,6 @@ function getPotionPrice() {
     return 150;
 }
 
-// 一看就有點牆生命藥水（100HP）價格
 function getPotion2Price() {
     if (floor <= 50) return 45;
     if (floor <= 100) return 65;
@@ -356,7 +357,6 @@ function getPotion2Price() {
     return 285;
 }
 
-// 狂戰士磨刀石價格（比 Level 2 貴 5 金）
 function getWhetstonePrice() {
     return getPotion2Price() + 5;
 }
@@ -378,9 +378,9 @@ function getGamblerBet() {
 }
 
 function getTeamSize() {
-    return (stats.princessJoined?1:0) + (stats.climberJoined?1:0) + 
-           (stats.chefJoined?1:0) + (stats.antJoined?1:0) + 
-           (stats.inspectorJoined?1:0) + (stats.shadowJoined?1:0);
+    return (stats.princessJoined?1:0) + (stats.railWorkerJoined?1:0) + 
+           (stats.climberJoined?1:0) + (stats.chefJoined?1:0) + 
+           (stats.antJoined?1:0) + (stats.inspectorJoined?1:0) + (stats.shadowJoined?1:0);
 }
 
 const allMonsterAttacks = [
@@ -420,7 +420,7 @@ function initGame() {
     stats = { 
         totalSpent: 0, consecutiveTraps: 0, bananaMet: false, princessMet: false, achieved: new Set(),
         curseFloorsLeft: 0, curseExtraAtk: 0,
-        princessJoined: false, climberJoined: false, chefJoined: false, antJoined: false, inspectorJoined: false, shadowJoined: false
+        princessJoined: false, railWorkerJoined: false, climberJoined: false, chefJoined: false, antJoined: false, inspectorJoined: false, shadowJoined: false
     };
     gameState = "explore";
     weapons.forEach((w, idx) => w.unlocked = (idx === 0));
@@ -488,6 +488,7 @@ function updateUI() {
         tZone.style.display = "block";
         let emj = [];
         if (stats.princessJoined) emj.push("👸");
+        if (stats.railWorkerJoined) emj.push("🚂");
         if (stats.climberJoined) emj.push("🧗");
         if (stats.chefJoined) emj.push("🍳");
         if (stats.antJoined) emj.push("🐜");
@@ -706,7 +707,7 @@ function triggerSpecialEvent() {
     
     let pool = ['gambler', 'blacksmith', 'mimic', 'siren', 'altar'];
     if (floor >= 301) {
-        pool.push('101', 'nightmarket', 'ant', 'jail', 'time', 'roulette');
+        pool.push('railworker', '101', 'nightmarket', 'ant', 'jail', 'time', 'roulette');
     } else if (floor >= 251) {
         pool.push('time');
     } else if (floor >= 201) {
@@ -717,6 +718,8 @@ function triggerSpecialEvent() {
         pool.push('nightmarket');
     } else if (floor >= 51) {
         pool.push('101');
+    } else if (floor >= 21) {
+        pool.push('railworker');
     }
 
     let eventType = pool[Math.floor(Math.random() * pool.length)];
@@ -754,6 +757,12 @@ function triggerSpecialEvent() {
             <button class="btn btn-event" onclick="resolveEvent('altar', 'potion')">🧪 獻祭 1 罐普普通通生命藥水</button>
             <button class="btn btn-event" onclick="resolveEvent('altar', 'gold')">💰 獻祭 40 金幣</button>
             <button class="btn btn-event-safe" onclick="resolveEvent('altar', 'leave')" style="grid-column: span 2;">🚶 什麼都不做</button>
+        `;
+    } else if (eventType === 'railworker') {
+        log(`🛤️ <b>【地城流浪鐵道工：阿榮】</b>：「哎呀，年輕人！這段路不好走吧？來，跟叔叔聊聊天，或者幫把手，叔叔不會虧待你的！」`, "color-event");
+        eventPanel.innerHTML = `
+            <button class="btn btn-event" onclick="resolveEvent('railworker', 'help')">💪 幫忙推沉重的鐵軌</button>
+            <button class="btn btn-event" onclick="resolveEvent('railworker', 'listen')">👂 聽阿榮吹牛挖礦傳奇</button>
         `;
     } else if (eventType === '101') {
         log(`🧗 <b>【徒手攀岩挑戰】</b>：你來到深層大裂谷，中央倒插著一座「地下 101 大樓」。`, "color-event");
@@ -882,6 +891,30 @@ function resolveEvent(event, choice) {
         } else {
             log(`❌ 祭品不足，祭壇毫無反應。`, "color-bad");
         }
+    }
+    else if (event === 'railworker') {
+        if (choice === 'help') {
+            if (addDefense(2)) {
+                log(`🚂 阿榮：「好力氣！不愧是年輕人！」獲得阿榮手作護甲片，防禦力永久 +2！`, "color-good");
+            } else {
+                potions += 2;
+                log(`🚂 阿榮：「好力氣！不愧是年輕人！」(防禦已達 60 極限)，阿榮改送你 2 罐普普通通生命藥水！`, "color-good");
+            }
+        } else if (choice === 'listen') {
+            if (hp >= maxHp) {
+                maxHp += 10;
+                log(`🚂 阿榮：「哈哈！你這小子挺會聽人說話的！」吃下發光地瓜，(血量已滿) 生命上限暫時 +10！`, "color-good");
+            } else {
+                hp = Math.min(maxHp, hp + 50);
+                log(`🚂 阿榮：「哈哈！你這小子挺會聽人說話的！」吃下熱騰騰地瓜，當前生命值恢復 50 點！`, "color-good");
+            }
+        }
+        tryRecruit('railWorkerJoined', '🚂', '阿榮', '覺得你太可靠了');
+        
+        gameState = "explore";
+        switchControls("explore");
+        updateUI();
+        return;
     }
     else if (event === '101') {
         if (choice === 'climb') {
@@ -1012,7 +1045,6 @@ function combatAction(action) {
     let w = weapons[currentWeaponIdx];
     let playerDmg = Math.floor(w.minDmg + Math.random() * (w.maxDmg - w.minDmg + 1));
     
-    // 如果有使用狂戰士磨刀石，本場戰鬥攻擊力提升 10%
     if (currentFight.hasWhetstone) {
         playerDmg = Math.floor(playerDmg * 1.10);
     }
@@ -1101,6 +1133,26 @@ function combatAction(action) {
             let pHeal = Math.floor(10 + floor * 2);
             hp = Math.min(maxHp, hp + pHeal);
             log(`💖 【地洞公主】為你恢復 ${pHeal} 點生命！`, "color-team");
+        }
+    }
+
+    // 🚂 阿榮戰鬥支援 (在公主支援之後觸發)
+    if (stats.railWorkerJoined && enemyHp > 0) {
+        let arongRoll = Math.random();
+        if (arongRoll < 0.40) {
+            // 40% 礦車瘋狂衝撞
+            let cartDmg = Math.floor(floor * 1.8);
+            enemyHp -= cartDmg;
+            log(`🚂 阿榮大喊「借過啦！」推礦車猛撞怪物，造成 ${cartDmg} 傷害！`, "color-team");
+        } else if (arongRoll < 0.75) {
+            // 35% 落石陷阱 (35% = 0.40 + 0.35 = 0.75)
+            enemyHp -= 10;
+            log(`🚂 阿榮丟出石頭：「這顆石頭手感不錯，送它了！」砸傷怪物並絆倒它！`, "color-team");
+        } else {
+            // 25% 碳烤地瓜補血
+            let sweetHeal = 15 + Math.floor(floor * 1);
+            hp = Math.min(maxHp, hp + sweetHeal);
+            log(`🚂 阿榮趁空檔塞給你熱騰騰地瓜，恢復了 ${sweetHeal} 生命值！`, "color-team");
         }
     }
 
@@ -1194,7 +1246,7 @@ function combatAction(action) {
 function endCombat() {
     gameState = "explore";
     isEnemyFrozen = false;
-    currentFight.hasWhetstone = false; // 戰鬥結束，磨刀石效果消耗
+    currentFight.hasWhetstone = false;
     switchControls("explore");
     updateUI();
 }
