@@ -1128,11 +1128,11 @@ function combatAction(action) {
         if (Math.random() < 0.5) {
             let pDmg = Math.floor(12 + floor * 2);
             enemyHp -= pDmg;
-            log(`💖 【地洞公主】扔出飛刀支援 ${pDmg} 點傷害！`, "color-team");
+            log(`💖 【地洞公主】扔出飛刀支援 ${pDmg} 點傷害！`, "color-princess");
         } else {
             let pHeal = Math.floor(10 + floor * 2);
             hp = Math.min(maxHp, hp + pHeal);
-            log(`💖 【地洞公主】為你恢復 ${pHeal} 點生命！`, "color-team");
+            log(`💖 【地洞公主】為你恢復 ${pHeal} 點生命！`, "color-princess");
         }
     }
 
