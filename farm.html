@@ -12,11 +12,27 @@
             margin: 0;
             padding: 16px;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 90vh;
             touch-action: manipulation;
             user-select: none;
+            transition: background-color 1s ease;
+        }
+
+        /* 天氣背景變化 */
+        body.weather-sunny { background-color: #e8f5e9; }
+        body.weather-rainy { background-color: #90caf9; }
+        body.weather-drought { background-color: #ffcc80; }
+
+        /* 返回大廳按鈕的獨立容器，避免吃到 game-wrap 的排版 */
+        #top-nav {
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+            position: relative;
+            height: 36px;
         }
 
         #game-wrap {
@@ -29,9 +45,26 @@
             text-align: center;
             position: relative;
             border: 2px solid #81c784;
+            box-sizing: border-box;
         }
 
         h2 { margin: 0 0 12px 0; color: #2e7d32; }
+
+        /* 天氣告示牌 */
+        #weather-banner {
+            background: #fff9c4;
+            color: #f57f17;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            border: 1px dashed #fbc02d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
 
         /* 頂部狀態列 */
         .header-stats {
@@ -155,9 +188,9 @@
 
         /* 彈窗 Modal (播種用) */
         #modal-overlay {
-            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); justify-content: center; align-items: center;
-            z-index: 100; border-radius: 16px;
+            z-index: 1000;
         }
         .modal-card {
             background: #fff; padding: 16px; border-radius: 12px; width: 80%;
@@ -173,14 +206,19 @@
         .floating-text { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; font-size: 14px; pointer-events: none; z-index: 50; text-shadow: 1px 1px 0 #fff; }
     </style>
 </head>
-<body>
+<body class="weather-sunny">
 
-    <button onclick="window.location.href='index.html'" style="all: unset; position: fixed; top: 15px; left: 15px; z-index: 99999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;">
-        ⬅️ 返回大廳
-  
+    <div id="top-nav">
+        <button onclick="window.location.href='index.html'" style="all: unset; position: absolute; top: 0; left: 0; z-index: 999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+            ⬅️ 返回大廳
+        </button>
+    </div>
+
     <div id="game-wrap">
         <h2>🌻 迷你開心農場</h2>
         
+        <div id="weather-banner">☀️ 天氣：晴朗無雲 (生長正常)</div>
+
         <div class="header-stats">
             <div class="stat-lvl">Lv.<span id="txt-lvl">1</span> (<span id="txt-exp">0</span>/<span id="txt-maxexp">50</span>)</div>
             <div class="stat-gold">💰 <span id="txt-gold">200</span></div>
@@ -234,7 +272,17 @@ let player = {
     stealCooldown: 0
 };
 
-// 作物圖鑑設定
+// 天氣系統設定 (sunny, rainy, drought)
+let currentWeather = 'sunny';
+let weatherTimer = 60; // 60秒切換一次天氣
+
+const WEATHERS = {
+    sunny: { name: '晴朗無雲', emoji: '☀️', bgClass: 'weather-sunny', desc: '生長正常', pestChance: 0.01, growthSpeed: 1 },
+    rainy: { name: '傾盆大雨', emoji: '🌧️', bgClass: 'weather-rainy', desc: '生長雙倍 / 害蟲機率增加', pestChance: 0.03, growthSpeed: 2 },
+    drought: { name: '酷熱旱災', emoji: '🔥', bgClass: 'weather-drought', desc: '停止生長 / 無害蟲', pestChance: 0.00, growthSpeed: 0 }
+};
+
+// 作物圖鑑設定 (增加 duration_ms 用於進度計算)
 const CROPS = {
     radish: { id: 'radish', name: '白蘿蔔', emoji: '🥕', seed: '🌱', cost: 15, sell: 25, time: 10, exp: 5 },
     cabbage:{ id: 'cabbage', name: '高麗菜', emoji: '🥬', seed: '🌱', cost: 30, sell: 55, time: 30, exp: 12 },
@@ -243,11 +291,11 @@ const CROPS = {
     watermelon:{ id: 'watermelon', name: '大西瓜', emoji: '🍉', seed: '🌿', cost: 250, sell: 550, time: 240, exp: 120 }
 };
 
-// 6 塊田地狀態
+// 6 塊田地狀態 (將 plantTime 改為 progress 累積生長秒數)
 let plots = Array(6).fill(null).map(() => ({
     state: 'empty', // empty, growing, mature, locked
     cropId: null,
-    plantTime: 0,
+    progress: 0, // 已累積生長的秒數
     hasWeed: false,
     hasBug: false
 }));
@@ -319,6 +367,26 @@ function showFloatText(x, y, text, color) {
     setTimeout(() => el.remove(), 1000);
 }
 
+// 變更天氣邏輯
+function changeWeather() {
+    let roll = Math.random();
+    if (roll < 0.60) {
+        currentWeather = 'sunny';
+    } else if (roll < 0.85) {
+        currentWeather = 'rainy';
+    } else {
+        currentWeather = 'drought';
+    }
+
+    let wInfo = WEATHERS[currentWeather];
+    document.body.className = wInfo.bgClass;
+    document.getElementById("weather-banner").innerHTML = `${wInfo.emoji} 天氣：${wInfo.name} (${wInfo.desc})`;
+    
+    if (currentWeather === 'rainy') log(`🌧️ 開始下大雨了！作物生長加速，但要注意雜草。`);
+    if (currentWeather === 'drought') log(`🔥 進入旱災！天氣太熱，作物停止生長了。`);
+    if (currentWeather === 'sunny') log(`☀️ 天氣轉晴，恢復正常的農作時光。`);
+}
+
 // 渲染農場
 function renderFarm() {
     const grid = document.getElementById("farm-grid");
@@ -378,9 +446,14 @@ function handlePlotClick(idx, event) {
         openSeedModal();
     } else if (plot.state === 'growing') {
         let crop = CROPS[plot.cropId];
-        let passed = Math.floor((Date.now() - plot.plantTime) / 1000);
-        let remain = Math.max(0, crop.time - passed);
-        log(`⏳ 【${crop.name}】成長中，還需 ${remain} 秒。`);
+        let remain = Math.max(0, crop.time - Math.floor(plot.progress));
+        
+        let wSpeed = WEATHERS[currentWeather].growthSpeed;
+        let speedText = "";
+        if (wSpeed === 0) speedText = "(旱災停滯中)";
+        else if (wSpeed === 2) speedText = "(雨天加速中)";
+
+        log(`⏳ 【${crop.name}】成長中，還需 ${remain} 秒 ${speedText}`);
     } else if (plot.state === 'mature') {
         harvest(idx, event);
     }
@@ -396,7 +469,6 @@ function clearPest(idx, type, event) {
         log("🐛 抓蟲成功！獲得 2 經驗。");
     }
     
-    // 獲取點擊位置顯示飄字
     const rect = event.target.getBoundingClientRect();
     const wrapRect = document.getElementById("game-wrap").getBoundingClientRect();
     const x = rect.left - wrapRect.left;
@@ -423,8 +495,7 @@ function harvest(idx, event) {
     
     showFloatText(x, y, `+${crop.sell}💰`, "#f57f17");
 
-    // 重置田地
-    plots[idx] = { state: 'empty', cropId: null, plantTime: 0, hasWeed: false, hasBug: false };
+    plots[idx] = { state: 'empty', cropId: null, progress: 0, hasWeed: false, hasBug: false };
     renderFarm();
     updateUI();
 }
@@ -470,7 +541,7 @@ function plantSeed(id) {
     plots[currentTargetPlot] = {
         state: 'growing',
         cropId: id,
-        plantTime: Date.now(),
+        progress: 0,
         hasWeed: false,
         hasBug: false
     };
@@ -485,32 +556,42 @@ function plantSeed(id) {
 function gameTick() {
     let needsRender = false;
 
+    // 天氣倒數計時與切換
+    weatherTimer--;
+    if (weatherTimer <= 0) {
+        changeWeather();
+        weatherTimer = 60; // 重置計時器
+    }
+
+    let wInfo = WEATHERS[currentWeather];
+
     plots.forEach((plot, idx) => {
         if (plot.state === 'growing') {
-            // 如果有雜草或蟲子，暫停生長 (時間往後推移)
+            // 有雜草或蟲子時暫停生長
             if (plot.hasWeed || plot.hasBug) {
-                plot.plantTime += 1000; 
                 return;
             }
 
             let crop = CROPS[plot.cropId];
-            let passed = Math.floor((Date.now() - plot.plantTime) / 1000);
             
+            // 加上受天氣影響的生長進度
+            plot.progress += wInfo.growthSpeed;
+
             // 更新進度條
             let pBar = document.getElementById(`pbar-${idx}`);
             if (pBar) {
-                let pct = Math.min(100, (passed / crop.time) * 100);
+                let pct = Math.min(100, (plot.progress / crop.time) * 100);
                 pBar.style.width = pct + "%";
             }
 
             // 成熟判定
-            if (passed >= crop.time) {
+            if (plot.progress >= crop.time) {
                 plot.state = 'mature';
                 needsRender = true;
                 log(`✨ 【${crop.name}】成熟了！快收成吧！`);
             } else {
-                // 隨機產生雜草或蟲子 (每秒 1% 機率)
-                if (Math.random() < 0.01 && !plot.hasWeed && !plot.hasBug) {
+                // 根據天氣機率產生雜草或蟲子
+                if (Math.random() < wInfo.pestChance && !plot.hasWeed && !plot.hasBug) {
                     if (Math.random() < 0.5) plot.hasWeed = true;
                     else plot.hasBug = true;
                     needsRender = true;
