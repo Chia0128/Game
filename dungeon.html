@@ -282,8 +282,7 @@
             <div style="font-size: 13px; text-align: left; margin-top: 8px; color:#aaa;">持有道具：</div>
             <div class="modal-list" id="item-list" style="max-height: 80px;"></div>
             
-            <button class="btn" onclick="askAbandon()" style="width:100%; background:#795548; margin-top:10px;">🔄 放棄本局進度重來</button>
-            <button class="btn" onclick="closeBag()" style="width:100%; background:#c62828; margin-top:8px;">關閉背包</button>
+            <button class="btn" onclick="closeBag()" style="width:100%; background:#c62828; margin-top:10px;">關閉背包</button>
         </div>
     </div>
 
@@ -569,14 +568,6 @@ function loadGame() {
         }
     }
     return false;
-}
-
-function askAbandon() {
-    if (confirm("確定要放棄目前的冒險進度並重新開始嗎？\n(這將不會列入排行榜紀錄，所有進度都會歸零)")) {
-        localStorage.removeItem("dungeonSave");
-        closeBag();
-        initGame(true);
-    }
 }
 // --------------------------
 
