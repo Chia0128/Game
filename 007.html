@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>007 特務對決</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #1a1a2e; /* 特務暗色風格 */
+            color: #e0e0e0;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .btn-home {
+            position: fixed; top: 15px; left: 15px; z-index: 99999;
+            box-sizing: border-box; height: 36px; padding: 0 14px;
+            font-family: system-ui, -apple-system, sans-serif; font-size: 14px;
+            font-weight: 600; color: #333333; background-color: #ffffff;
+            border: 1px solid #d1d5db; border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+
+        #game-wrap {
+            background: #16213e;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            border: 2px solid #0f3460;
+        }
+
+        h2 { margin: 0 0 8px 0; color: #e94560; font-size: 22px; letter-spacing: 2px; }
+        .subtitle { font-size: 12px; color: #a9a9a9; margin-bottom: 20px; }
+
+        /* 戰鬥舞台區 */
+        .battle-stage {
+            display: flex; flex-direction: column; gap: 20px;
+            background: #0f3460; padding: 20px; border-radius: 12px;
+            margin-bottom: 20px; position: relative;
+        }
+
+        /* 探員卡片 */
+        .agent-card {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+        }
+        .agent-name { font-size: 14px; font-weight: bold; color: #fff; }
+        .bullet-belt {
+            display: flex; gap: 4px; height: 24px; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.3); padding: 4px 12px; border-radius: 20px; min-width: 60px;
+        }
+        .bullet-icon { font-size: 16px; transition: transform 0.2s; }
+        .bullet-icon.loaded { color: #f39c12; }
+        .bullet-icon.empty { opacity: 0.2; filter: grayscale(100%); }
+
+        /* 動作揭曉區 (中央) */
+        .action-reveal {
+            height: 60px; display: flex; justify-content: space-between; align-items: center;
+            font-size: 32px; font-weight: bold; background: rgba(0,0,0,0.2);
+            border-radius: 8px; padding: 0 20px; position: relative; overflow: hidden;
+        }
+        .action-icon {
+            opacity: 0; transform: scale(0.5); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .action-icon.show { opacity: 1; transform: scale(1); }
+        .vs-text { font-size: 16px; color: #e94560; font-style: italic; }
+
+        /* 操作面板 */
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .btn-action {
+            background: #2a3b5c; color: white; border: 2px solid #3d5a80;
+            padding: 12px; font-size: 15px; font-weight: bold; border-radius: 8px;
+            cursor: pointer; transition: 0.1s; box-shadow: 0 4px 0 #1a2539;
+        }
+        .btn-action:active { transform: translateY(4px); box-shadow: none; }
+        .btn-action:disabled { background: #1a2539; border-color: #1a2539; color: #555; cursor: not-allowed; box-shadow: none; transform: none; }
+        
+        .btn-charge { border-color: #2e7d32; color: #81c784; }
+        .btn-defend { border-color: #1565c0; color: #64b5f6; }
+        .btn-shoot { border-color: #c62828; color: #e57373; }
+        .btn-sniper { grid-column: span 2; border-color: #fbc02d; color: #fff59d; background: #5a4b16; }
+
+        /* 對戰日誌與難度選擇 */
+        .log-box {
+            background: #111a2e; border: 1px solid #2a3b5c; border-radius: 8px;
+            height: 70px; overflow-y: auto; padding: 8px; font-size: 12px;
+            line-height: 1.5; text-align: center; margin-bottom: 12px; color: #9ab;
+        }
+        .log-important { color: #fff; font-weight: bold; font-size: 13px; }
+        .log-win { color: #4caf50; } .log-lose { color: #f44336; }
+
+        .settings-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; background: #0f3460; padding: 8px 12px; border-radius: 8px;
+        }
+        select { background: #1a1a2e; color: #fff; border: 1px solid #3d5a80; padding: 4px; border-radius: 4px; }
+        
+        /* 結算重置按鈕 */
+        #btn-restart {
+            display: none; width: 100%; padding: 12px; font-size: 16px; font-weight: bold;
+            background: #e94560; color: #fff; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <button class="btn-home" onclick="window.location.href='index.html'">⬅️ 返回大廳</button>
+
+    <div id="game-wrap">
+        <h2>🕵️ 007 特務對決</h2>
+        <div class="subtitle">心理博弈生死戰：誰能看穿對手？</div>
+
+        <!-- 戰鬥舞台 -->
+        <div class="battle-stage">
+            <!-- AI -->
+            <div class="agent-card">
+                <div class="agent-name">敵方 AI (<span id="txt-difficulty">新手</span>)</div>
+                <div class="bullet-belt" id="ai-bullets"></div>
+            </div>
+
+            <!-- 動作揭曉 -->
+            <div class="action-reveal">
+                <div class="action-icon" id="ai-action-icon">❓</div>
+                <div class="vs-text">VS</div>
+                <div class="action-icon" id="player-action-icon">❓</div>
+            </div>
+
+            <!-- Player -->
+            <div class="agent-card">
+                <div class="agent-name" style="color: #64b5f6;">🕶️ 玩家特務</div>
+                <div class="bullet-belt" id="player-bullets"></div>
+            </div>
+        </div>
+
+        <div class="log-box" id="log-box">等待開局... 第一回合雙方必為 0 子彈！</div>
+
+        <!-- 操作面板 -->
+        <div class="controls" id="control-panel">
+            <button class="btn-action btn-charge" onclick="playRound('charge')">🔋 集氣 (+1)</button>
+            <button class="btn-action btn-defend" onclick="playRound('defend')">🛡️ 防禦 (0)</button>
+            <button class="btn-action btn-shoot" id="btn-shoot" onclick="playRound('shoot')" disabled>🔫 射擊 (-1)</button>
+            <button class="btn-action btn-sniper" id="btn-sniper" onclick="playRound('snipe')" disabled>💥 狙擊大招 (-3) (貫穿防禦)</button>
+        </div>
+
+        <button id="btn-restart" onclick="initGame()">🔄 重新開始下一局</button>
+
+        <div class="settings-bar">
+            <div>🏆 連勝：<span id="txt-streak" style="color:#fbc02d; font-weight:bold;">0</span></div>
+            <select id="sel-difficulty" onchange="changeDifficulty()">
+                <option value="easy">新手 AI (亂出招)</option>
+                <option value="normal" selected>特務 AI (會看子彈)</option>
+                <option value="hard">007 傳奇 (極度心機)</option>
+            </select>
+        </div>
+    </div>
+
+<script>
+let playerBullets = 0;
+let aiBullets = 0;
+let winStreak = 0;
+let isGameOver = false;
+let currentDifficulty = 'normal';
+
+const logBox = document.getElementById('log-box');
+const pIcon = document.getElementById('player-action-icon');
+const aIcon = document.getElementById('ai-action-icon');
+
+// 動作圖示對照
+const ACT_ICONS = {
+    'charge': '🔋',
+    'defend': '🛡️',
+    'shoot': '🔫',
+    'snipe': '💥'
+};
+
+function log(msg, className = '') {
+    logBox.innerHTML = `<span class="${className}">${msg}</span>`;
+}
+
+function initGame() {
+    playerBullets = 0;
+    aiBullets = 0;
+    isGameOver = false;
+    
+    document.getElementById('control-panel').style.display = 'grid';
+    document.getElementById('btn-restart').style.display = 'none';
+    
+    pIcon.classList.remove('show');
+    aIcon.classList.remove('show');
+    setTimeout(() => { pIcon.innerText = '❓'; aIcon.innerText = '❓'; }, 300);
+
+    updateUI();
+    log("對局開始！第一回合必須集氣。");
+}
+
+function changeDifficulty() {
+    currentDifficulty = document.getElementById('sel-difficulty').value;
+    let names = { 'easy': '新手', 'normal': '特務', 'hard': '傳奇' };
+    document.getElementById('txt-difficulty').innerText = names[currentDifficulty];
+    winStreak = 0; // 換難度重置連勝
+    document.getElementById('txt-streak').innerText = winStreak;
+    initGame();
+}
+
+function updateUI() {
+    // 更新玩家子彈圖示
+    let pBelt = document.getElementById('player-bullets');
+    pBelt.innerHTML = '';
+    for(let i=0; i<Math.max(3, playerBullets); i++) {
+        pBelt.innerHTML += `<span class="bullet-icon ${i < playerBullets ? 'loaded' : 'empty'}">🟡</span>`;
+    }
+    
+    // 更新 AI 子彈圖示
+    let aBelt = document.getElementById('ai-bullets');
+    aBelt.innerHTML = '';
+    for(let i=0; i<Math.max(3, aiBullets); i++) {
+        aBelt.innerHTML += `<span class="bullet-icon ${i < aiBullets ? 'loaded' : 'empty'}">🟡</span>`;
+    }
+
+    // 按鈕防呆狀態
+    document.getElementById('btn-shoot').disabled = playerBullets < 1;
+    document.getElementById('btn-sniper').disabled = playerBullets < 3;
+}
+
+// AI 核心出招邏輯
+function getAiAction() {
+    // 防呆：沒子彈絕對不能射擊
+    let canShoot = aiBullets >= 1;
+    let canSnipe = aiBullets >= 3;
+    let pCanShoot = playerBullets >= 1;
+    let pCanSnipe = playerBullets >= 3;
+
+    // 第一回合強迫集氣
+    if (aiBullets === 0 && playerBullets === 0) return 'charge';
+
+    if (currentDifficulty === 'easy') {
+        // 新手：完全隨機亂出
+        let pool = ['charge', 'defend'];
+        if (canShoot) pool.push('shoot', 'shoot');
+        if (canSnipe) pool.push('snipe');
+        return pool[Math.floor(Math.random() * pool.length)];
+    } 
+    else if (currentDifficulty === 'normal') {
+        // 特務：會根據雙方子彈基本判斷
+        if (aiBullets === 0) {
+            // 自己沒子彈：若玩家有子彈就高機率防禦，否則集氣
+            return (pCanShoot && Math.random() < 0.6) ? 'defend' : 'charge';
+        }
+        if (canSnipe) {
+            // 有大招高機率直接放
+            return Math.random() < 0.7 ? 'snipe' : 'shoot';
+        }
+        // 自己有普通子彈
+        if (pCanShoot) {
+            // 雙方都有子彈，33%防禦，33%攻擊，34%貪心集氣
+            let r = Math.random();
+            if (r < 0.33) return 'defend';
+            if (r < 0.66) return 'shoot';
+            return 'charge';
+        } else {
+            // 玩家沒子彈，高機率開槍壓制
+            return Math.random() < 0.6 ? 'shoot' : 'charge';
+        }
+    } 
+    else if (currentDifficulty === 'hard') {
+        // 傳奇：極度心機，針對玩家的大招防禦
+        if (aiBullets === 0) {
+            // 若玩家有大招，防禦無效，不如直接集氣拚了或期待玩家省子彈
+            if (pCanSnipe) return 'charge'; 
+            // 玩家有普攻，高達 80% 防禦
+            return (pCanShoot && Math.random() < 0.8) ? 'defend' : 'charge';
+        }
+        if (canSnipe) {
+            // 若玩家也有大招，有機率防禦騙掉玩家大招
+            if (pCanSnipe && Math.random() < 0.3) return 'defend';
+            return 'snipe';
+        }
+        // 自己有普通子彈
+        if (pCanSnipe) {
+            // 玩家有大招，普通防禦沒用，只能直接開槍拚同歸於盡或打斷集氣
+            return 'shoot';
+        }
+        if (pCanShoot) {
+            // 預判玩家可能會防禦，高機率繼續集氣（貪心策略）
+            return Math.random() < 0.5 ? 'charge' : (Math.random() < 0.5 ? 'defend' : 'shoot');
+        } else {
+            // 玩家沒子彈，100% 機率直接開槍擊殺
+            return 'shoot';
+        }
+    }
+}
+
+function playRound(playerAction) {
+    if (isGameOver) return;
+
+    let aiAction = getAiAction();
+
+    // 扣除子彈
+    if (playerAction === 'shoot') playerBullets--;
+    if (playerAction === 'snipe') playerBullets -= 3;
+    if (aiAction === 'shoot') aiBullets--;
+    if (aiAction === 'snipe') aiBullets -= 3;
+
+    // 增加子彈 (延後結算避免這回合先加了才判定)
+    let pAdded = (playerAction === 'charge');
+    let aAdded = (aiAction === 'charge');
+
+    // 動畫展示
+    pIcon.classList.remove('show'); aIcon.classList.remove('show');
+    setTimeout(() => {
+        pIcon.innerText = ACT_ICONS[playerAction];
+        aIcon.innerText = ACT_ICONS[aiAction];
+        pIcon.classList.add('show');
+        aIcon.classList.add('show');
+        
+        // 判定勝負邏輯
+        resolveRound(playerAction, aiAction, pAdded, aAdded);
+    }, 150);
+}
+
+function resolveRound(pAct, aAct, pAdded, aAdded) {
+    let pDead = false;
+    let aDead = false;
+    let resultMsg = "";
+
+    // 判斷玩家被擊中
+    if (aAct === 'shoot') {
+        if (pAct === 'charge') { pDead = true; resultMsg += "敵方趁你集氣時開槍！<br>"; }
+        else if (pAct === 'shoot' || pAct === 'snipe') { /* 抵銷或被狙擊壓制 */ }
+        else if (pAct === 'defend') { /* 擋下 */ }
+    } else if (aAct === 'snipe') {
+        if (pAct === 'charge' || pAct === 'defend' || pAct === 'shoot') {
+            pDead = true; resultMsg += "敵方狙擊大招貫穿了你！<br>";
+        }
+    }
+
+    // 判斷 AI 被擊中
+    if (pAct === 'shoot') {
+        if (aAct === 'charge') { aDead = true; resultMsg += "你趁敵方集氣時精準射擊！<br>"; }
+        else if (aAct === 'shoot' || aAct === 'snipe') { /* 抵銷 */ }
+        else if (aAct === 'defend') { /* 擋下 */ }
+    } else if (pAct === 'snipe') {
+        if (aAct === 'charge' || aAct === 'defend' || aAct === 'shoot') {
+            aDead = true; resultMsg += "你的狙擊大招完美貫穿防線！<br>";
+        }
+    }
+
+    // 同步開槍的抵銷判斷
+    if (pAct === 'shoot' && aAct === 'shoot') resultMsg += "雙方同時開槍，子彈互相抵銷！";
+    if (pAct === 'snipe' && aAct === 'snipe') resultMsg += "雙方同時開啟大招，引發劇烈爆炸抵銷！";
+    if (pAct === 'defend' && aAct === 'defend') resultMsg += "雙方都在防禦，氣氛十分尷尬...";
+    if (pAct === 'charge' && aAct === 'charge') resultMsg += "雙方都在默默集氣儲備子彈。";
+    if (pAct === 'defend' && aAct === 'charge') resultMsg += "你防禦了個寂寞，敵方趁機集氣。";
+    if (pAct === 'charge' && aAct === 'defend') resultMsg += "敵方防禦了個寂寞，你趁機集氣。";
+    if (pAct === 'defend' && aAct === 'shoot') resultMsg += "你成功防禦了敵方的射擊！";
+    if (pAct === 'shoot' && aAct === 'defend') resultMsg += "敵方成功防禦了你的射擊！";
+
+    // 結算子彈
+    if (pAdded && !pDead) playerBullets++;
+    if (aAdded && !aDead) aiBullets++;
+
+    updateUI();
+
+    // 結算勝負狀態
+    if (pDead && aDead) {
+        log("<span class='log-important'>雙方同歸於盡！平手結束！</span>");
+        endGame(false);
+    } else if (pDead) {
+        log(resultMsg + "<span class='log-important log-lose'><br>💀 任務失敗，你被擊殺了。</span>");
+        endGame(false);
+    } else if (aDead) {
+        log(resultMsg + "<span class='log-important log-win'><br>🏆 任務成功！你擊殺了敵方特務！</span>");
+        endGame(true);
+    } else {
+        log(resultMsg);
+    }
+}
+
+function endGame(playerWon) {
+    isGameOver = true;
+    document.getElementById('control-panel').style.display = 'none';
+    document.getElementById('btn-restart').style.display = 'block';
+
+    if (playerWon) {
+        winStreak++;
+        document.getElementById('txt-streak').innerText = winStreak;
+    } else {
+        winStreak = 0;
+        document.getElementById('txt-streak').innerText = winStreak;
+    }
+}
+
+// 遊戲啟動
+initGame();
+
+</script>
+</body>
+</html>
