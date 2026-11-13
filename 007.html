@@ -238,8 +238,8 @@
         <!-- 操作面板 -->
         <div class="controls" id="control-panel">
             <button class="btn-action btn-charge" id="btn-c" onclick="triggerRound('charge')">🔋 裝子彈 (+1)</button>
-            <button class="btn-action btn-defend" id="btn-d" onclick="triggerRound('defend')">🛡️ 保護我呀保護我 (0)</button>
-            <button class="btn-action btn-shoot" id="btn-s" onclick="triggerRound('shoot')" disabled>🔫 砰砰砰！ (-1)</button>
+            <button class="btn-action btn-defend" id="btn-d" onclick="triggerRound('defend')">🛡️ 保護我 (0)</button>
+            <button class="btn-action btn-shoot" id="btn-s" onclick="triggerRound('shoot')" disabled>🔫 射死你 (-1)</button>
             <button class="btn-action btn-sniper" id="btn-sn" onclick="triggerRound('snipe')" disabled>💥 狙擊大招 (-3)</button>
         </div>
 
@@ -286,8 +286,8 @@ const ACT_ICONS = {
 const ACTION_CHANTS = {
     'charge': ['裝子彈', '呀', '裝子彈'],
     'defend': ['保護我', '呀', '保護我'],
-    'shoot':  ['碰!', '碰!!', '碰!!!'],
-    'snipe':  ['碰!', '碰!!', '碰!!!']
+    'shoot':  ['射死你', '呀', '射死你'],
+    'snipe':  ['射死你', '呀', '射死你']
 };
 
 // --- Web Audio API 音效合成器 ---
@@ -525,10 +525,10 @@ function resolveRound(pAct, aAct) {
     }
 
     if (pAct === 'shoot') {
-        if (aAct === 'charge') { aDead = true; resultMsg += "你趁敵方裝子彈時精準砰砰砰！！<br>"; }
+        if (aAct === 'charge') { aDead = true; resultMsg += "你趁敵方裝子彈時精準射擊！！<br>"; }
         else if (aAct === 'defend') { 
             aIcon.classList.add('glow-shield'); 
-            resultMsg += "敵方開啟防護網擋下了你的砰砰砰！";
+            resultMsg += "敵方開啟防護網擋下了你的射擊！";
             showEnemySpeech("哈哈，早看穿你了！", 2000); 
         }
     } else if (pAct === 'snipe') {
@@ -539,9 +539,9 @@ function resolveRound(pAct, aAct) {
 
     if (pAct === 'shoot' && aAct === 'shoot') resultMsg += "雙方同時開槍，子彈抵銷！";
     if (pAct === 'snipe' && aAct === 'snipe') resultMsg += "雙方同時開啟大招，引發劇烈爆炸抵銷！";
-    if (pAct === 'defend' && aAct === 'defend') resultMsg += "雙方都在保護我呀保護我，氣氛十分尷尬...";
-    if (pAct === 'charge' && aAct === 'charge') resultMsg += "雙方都在默默裝子彈儲備子彈。";
-    if (pAct === 'defend' && aAct === 'shoot') resultMsg += "你成功保護我呀保護我了敵方的砰砰砰！！";
+    if (pAct === 'defend' && aAct === 'defend') resultMsg += "雙方都在防禦，氣氛十分尷尬.......";
+    if (pAct === 'charge' && aAct === 'charge') resultMsg += "雙方都在默默儲備子彈。";
+    if (pAct === 'defend' && aAct === 'shoot') resultMsg += "你成功阻擋了敵方的射擊！！";
     if (pAct === 'defend' && aAct === 'charge') resultMsg += "你開了保護網，敵方趁機裝子彈。";
     if (pAct === 'charge' && aAct === 'defend') resultMsg += "敵方開了保護網，你趁機裝了子彈！";
 
