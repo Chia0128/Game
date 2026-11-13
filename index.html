@@ -59,8 +59,8 @@
             transform: scale(0.95);
         }
 
-        /* 安裝教學彈窗 */
-        #install-modal {
+        /* 通用彈窗遮罩與卡片 */
+        .modal-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -126,6 +126,46 @@
             transform: scale(0.98);
         }
 
+        /* 跳棋模式選擇按鈕 */
+        .mode-choice-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 10px;
+            border-radius: 14px;
+            border: 1.5px solid #e2e8f0;
+            background: #f8fafc;
+            text-decoration: none;
+            color: #1e293b;
+            transition: all 0.18s;
+            cursor: pointer;
+        }
+        .mode-choice-btn:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            transform: translateY(-2px);
+        }
+        .mode-choice-btn:active {
+            transform: scale(0.98);
+        }
+        .mode-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+        .mode-text-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 2px;
+        }
+        .mode-text-desc {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+
         /* 頂部質感標頭 */
         .header {
             background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
@@ -177,6 +217,7 @@
             transition: all 0.22s cubic-bezier(0.25, 0.8, 0.25, 1);
             position: relative;
             overflow: hidden;
+            cursor: pointer;
         }
         .game-card:hover {
             transform: translateY(-4px);
@@ -255,7 +296,7 @@
     <button class="btn-install-app" id="btn-install-app" onclick="openInstallModal()">📱 安裝為手機 App</button>
 
     <!-- 安裝教學彈窗 -->
-    <div id="install-modal" onclick="if(event.target === this) closeInstallModal()">
+    <div id="install-modal" class="modal-overlay" onclick="if(event.target === this) closeInstallModal()">
         <div class="install-card">
             <h3>📱 安裝為手機 App</h3>
             
@@ -281,9 +322,34 @@
         </div>
     </div>
 
+    <!-- 經典跳棋模式選擇彈窗 -->
+    <div id="checkers-modal" class="modal-overlay" onclick="if(event.target === this) closeCheckersModal()">
+        <div class="install-card">
+            <h3>🌟 選擇跳棋模式</h3>
+            
+            <a href="checkers.html" class="mode-choice-btn">
+                <div class="mode-icon">🤖</div>
+                <div>
+                    <div class="mode-text-title">單機挑戰機器人</div>
+                    <div class="mode-text-desc">支援 1v1 雙人對決或 1v2 三人混戰，自動保存對局進度！</div>
+                </div>
+            </a>
+
+            <a href="checkers_online.html" class="mode-choice-btn">
+                <div class="mode-icon">🌐</div>
+                <div>
+                    <div class="mode-text-title">遠端連線對戰</div>
+                    <div class="mode-text-desc">輸入房號與朋友即時連線對決（建置中）</div>
+                </div>
+            </a>
+
+            <button class="btn-close-modal" style="background: #94a3b8;" onclick="closeCheckersModal()">取消返回</button>
+        </div>
+    </div>
+
     <div class="header">
         <div class="header-title">🎮 迷你遊樂場大廳</div>
-        <p class="header-sub">收錄 12 款精選單機與連線小遊戲 · 隨開即玩</p>
+        <p class="header-sub">收錄 14 款精選單機與連線小遊戲 · 隨開即玩</p>
     </div>
 
     <div class="menu-grid">
@@ -334,6 +400,18 @@
                 <div class="desc">挑戰聰明電腦，看看你能率先連線!</div>
             </div>
         </a>
+
+        <!-- 經典跳棋（點擊開啟模式選擇彈窗） -->
+        <div class="game-card" onclick="openCheckersModal()">
+            <div class="icon bg-orange">🌟</div>
+            <div class="card-content">
+                <div class="title-row">
+                    <div class="title">經典跳棋</div>
+                    <span class="tag">單機 / 連線</span>
+                </div>
+                <div class="desc">六角星形玻璃彈珠棋盤，施展超長連環跳躍率先佔領陣地！</div>
+            </div>
+        </div>
         
         <!-- 連結到2048 -->
         <a href="2048.html" class="game-card">
@@ -451,6 +529,12 @@
         }
         function closeInstallModal() {
             document.getElementById('install-modal').style.display = 'none';
+        }
+        function openCheckersModal() {
+            document.getElementById('checkers-modal').style.display = 'flex';
+        }
+        function closeCheckersModal() {
+            document.getElementById('checkers-modal').style.display = 'none';
         }
 
         // 若已從手機桌面 App (standalone 模式) 開啟，自動隱藏安裝按鈕
