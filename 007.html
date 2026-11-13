@@ -434,15 +434,15 @@ function getAiAction() {
     }
 }
 
-// 觸發回合 (四拍完整口號：0-0-7-呀 [兩拍] + 0-0-7-出招 [兩拍])
+// 觸發回合 (精準口號節奏：0-0-7 [1.5拍] + 呀 [0.5拍] + 0-0 [1拍] + 7出招 [1拍])
 async function triggerRound(playerAction) {
     if (isGameOver || isProcessing) return;
     isProcessing = true; 
     toggleButtons(true); 
     initAudio();
 
-    const beat = 500;          // 每一大拍的時間（毫秒），建議設 500~600 之間會比較好念
-    const halfBeat = beat / 2; // 半拍時間（每個字跳出的間隔）
+    const beat = 520;          // 每一大拍的時間（毫秒），520ms 念起來最接近真實語速
+    const halfBeat = beat / 2; // 半拍時間（260ms）
     let aiAction = getAiAction();
 
     pIcon.classList.remove('show', 'glow-shield');
@@ -451,38 +451,44 @@ async function triggerRound(playerAction) {
     
     vsText.classList.add('countdown');
 
-    // 輔助小函式：讓連續相同的字（如 0 -> 0）也能有重新閃動跳出的感覺
-    const showWord = async (text, sound = 'tick') => {
+    // 輔助函式：讓連續相同的字也能有明顯的跳動切換感
+    const showWord = async (text, duration, sound = 'tick') => {
         vsText.innerText = "";
         await delay(30);
         vsText.innerText = text;
         if (sound) playSound(sound);
-        await delay(halfBeat - 30);
+        await delay(duration - 30);
     };
 
-    // === 前兩拍：0 - 0 - 7 - 呀 ===
-    await showWord("0");         // 第 1 拍前半
-    await showWord("0");         // 第 1 拍後半
-    await showWord("7");         // 第 2 拍前半
-    await showWord("呀", "seven"); // 第 2 拍後半（加上重音區隔）
+    // === 前 1.5 拍：0 - 0 - 7 ===
+    await showWord("0", halfBeat);           // 第 1 拍前半 (0.5拍)
+    await showWord("0", halfBeat);           // 第 1 拍後半 (1.0拍)
+    await showWord("7", halfBeat);           // 第 2 拍前半 (1.5拍完成)
 
-    // === 後兩拍：0 - 0 - 7 - 出招 ===
-    await showWord("0");         // 第 3 拍前半
-    await showWord("0");         // 第 3 拍後半
-    await showWord("7");         // 第 4 拍前半
+    // === 第 2 拍後半：呀 ===
+    await showWord("呀", halfBeat, "seven"); // 第 2 拍後半 (2.0拍完成，帶重音)
 
-    // 第 4 拍後半：雙方動作同時揭曉！
-    vsText.innerText = "！"; 
+    // === 第 3 拍：0 - 0 ===
+    await showWord("0", halfBeat);           // 第 3 拍前半 (2.5拍)
+    await showWord("0", halfBeat);           // 第 3 拍後半 (3.0拍)
+
+    // === 第 4 拍：7 ！（喊 7 的瞬間雙方同時出招，停留完整 1 拍）===
+    vsText.innerText = "";
+    await delay(30);
+    vsText.innerText = "7 ！"; 
     playSound('seven');
     vsText.classList.remove('countdown');
+
+    // 雙方動作同時揭曉
     pIcon.innerText = ACT_ICONS[playerAction];
     aIcon.innerText = ACT_ICONS[aiAction];
     pIcon.classList.add('show');
     aIcon.classList.add('show');
     
-    await delay(halfBeat); 
+    await delay(beat - 30); // 第 4 拍完整停留一整拍（520ms），讓玩家看清楚招式
     resolveRound(playerAction, aiAction);
 }
+
 
 function resolveRound(pAct, aAct) {
     let pDead = false; let aDead = false; let resultMsg = ""; let isShootPlayed = false;
