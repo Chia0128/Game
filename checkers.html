@@ -154,8 +154,8 @@
         /* 木質六角星棋盤畫布 */
         .board-container {
             width: 100%;
-            aspect-ratio: 1 / 1.08;
-            background: radial-gradient(circle at 50% 45%, #e6ccb2 0%, #ddb892 65%, #b08968 100%);
+            aspect-ratio: 1 / 1.12;
+            background: radial-gradient(circle at 50% 48%, #e6ccb2 0%, #ddb892 65%, #b08968 100%);
             border-radius: 18px;
             border: 4px solid #7f5539;
             box-shadow: inset 0 4px 12px rgba(0,0,0,0.22), 0 4px 10px rgba(0,0,0,0.12);
@@ -251,23 +251,21 @@
     </div>
 
 <script>
-// === 1. 六角星形棋盤幾何與座標定義 (121 孔) ===
-// 使用軸向座標 (q, r)，滿足六角星形條件
+// === 1. 標準 121 孔六角星形棋盤幾何與座標定義 ===
 const BOARD_NODES = [];
 const NODE_MAP = new Map();
 
 function keyOf(q, r) { return `${q},${r}`; }
 
-// 生成 121 個標準中國跳棋孔位
-// 六角星由兩個大三角形交疊而成：
-// 三角形 A (尖端朝下): r <= 4, q >= -4, q + r >= -4
-// 三角形 B (尖端朝上): r >= -4, q <= 4, q + r <= 4
+// 修正後的標準六角星交疊公式（121 個孔位，六個尖角完全對稱）：
+// 尖端朝下的大三角形: r <= 4, q >= -4, s >= -4
+// 尖端朝上的大三角形: r >= -4, q <= 4, s <= 4
 for (let r = -8; r <= 8; r++) {
     for (let q = -8; q <= 8; q++) {
         let s = -q - r;
-        let inTriA = (r <= 4 && q >= -4 && s <= 4);
-        let inTriB = (r >= -4 && q <= 4 && s >= -4);
-        if (inTriA || inTriB) {
+        let inTriDown = (r <= 4 && q >= -4 && s >= -4);
+        let inTriUp   = (r >= -4 && q <= 4 && s <= 4);
+        if (inTriDown || inTriUp) {
             let zone = getCornerZone(q, r);
             let node = { q, r, zone, piece: null };
             BOARD_NODES.push(node);
@@ -276,17 +274,17 @@ for (let r = -8; r <= 8; r++) {
     }
 }
 
-// 判斷孔位屬於哪個三角陣地
-// 0: 正下方(玩家紅), 1: 正上方(對手綠), 2: 左上方(對手黃), 3: 右上方(對手藍), 4: 右下方, 5: 左下方, -1: 中央六邊形
+// 判斷孔位屬於哪個三角陣地（六個角各 10 孔，中央六邊形 61 孔）
+// 0: 正下方(玩家紅), 1: 正上方(對手綠), 2: 左上方(對手黃), 3: 右上方(對手藍), 4: 右下方, 5: 左下方, -1: 中央
 function getCornerZone(q, r) {
     let s = -q - r;
-    if (r >= 5) return 0;   // 下角 (10孔)
-    if (r <= -5) return 1;  // 上角 (10孔)
-    if (q <= -5) return 2;  // 左上角 (10孔)
-    if (s <= -5) return 3;  // 右上角 (10孔)
-    if (q >= 5) return 4;   // 右下角 (10孔)
-    if (s >= 5) return 5;   // 左下角 (10孔)
-    return -1;              // 中央區 (61孔)
+    if (r >= 5) return 0;   // 正下方三角 (10孔)
+    if (r <= -5) return 1;  // 正上方三角 (10孔)
+    if (q <= -5) return 2;  // 左上方三角 (10孔)
+    if (s <= -5) return 3;  // 右上方三角 (10孔)
+    if (q >= 5) return 4;   // 右下方三角 (10孔)
+    if (s >= 5) return 5;   // 左下方三角 (10孔)
+    return -1;              // 中央六邊形區 (61孔)
 }
 
 // 6 個相鄰方向向量
@@ -298,7 +296,7 @@ const DIRS = [
 
 // 玩家設定表
 const PLAYER_CONFIG = {
-    'red':    { id: 'red',    name: '你 (紅)',   isAI: false, startZone: 0, targetZone: 1, color: '#e53935', light: '#ff8a80', dark: '#8e0000' },
+    'red':    { id: 'red',    name: '你 (紅)',    isAI: false, startZone: 0, targetZone: 1, color: '#e53935', light: '#ff8a80', dark: '#8e0000' },
     'green':  { id: 'green',  name: '機器人(綠)', isAI: true,  startZone: 1, targetZone: 0, color: '#2e7d32', light: '#81c784', dark: '#005005' },
     'yellow': { id: 'yellow', name: '機器人(黃)', isAI: true,  startZone: 2, targetZone: 4, color: '#f9a825', light: '#fff59d', dark: '#c17900' },
     'blue':   { id: 'blue',   name: '機器人(藍)', isAI: true,  startZone: 3, targetZone: 5, color: '#1e88e5', light: '#90caf9', dark: '#005cb2' }
@@ -335,6 +333,7 @@ function playMarbleSound(pitchBoost = 0) {
 }
 
 // === 3. 遊戲狀態與存檔 ===
+const SAVE_KEY = 'checkersSingleSave_v2';
 let currentMode = '2p'; // '2p' or '3p'
 let turnOrder = [];
 let currentTurnIdx = 0;
@@ -342,7 +341,7 @@ let selectedNode = null;
 let validMoves = []; // [{ toNode, path: [node1, node2...] }]
 let isAnimating = false;
 let isGameOver = false;
-let activePreviewPath = []; // 動畫或懸停路徑
+let activePreviewPath = [];
 
 function saveState() {
     if (isGameOver) return;
@@ -356,11 +355,11 @@ function saveState() {
         currentTurnIdx,
         pieces
     };
-    localStorage.setItem('checkersSingleSave', JSON.stringify(data));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
 }
 
 function loadState() {
-    const raw = localStorage.getItem('checkersSingleSave');
+    const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return false;
     try {
         const data = JSON.parse(raw);
@@ -441,7 +440,6 @@ function getValidMoves(startNode) {
         for (const d of DIRS) {
             const mid = NODE_MAP.get(keyOf(node.q + d.q, node.r + d.r));
             const land = NODE_MAP.get(keyOf(node.q + d.q * 2, node.r + d.r * 2));
-            // 中間必須有任意棋子，且落點必須是空位
             if (mid && mid.piece && land && !land.piece) {
                 const landKey = keyOf(land.q, land.r);
                 if (!visitedJump.has(landKey)) {
@@ -475,7 +473,6 @@ async function executeMove(moveObj) {
     validMoves = [];
     activePreviewPath = path;
 
-    // 依序沿著連跳路徑一格一格跳躍
     for (let i = 0; i < path.length - 1; i++) {
         const from = path[i];
         const to = path[i + 1];
@@ -489,23 +486,20 @@ async function executeMove(moveObj) {
     activePreviewPath = [];
     isAnimating = false;
 
-    // 檢查是否達成勝利條件
     if (countInTarget(movingPid) === 10) {
         isGameOver = true;
-        localStorage.removeItem('checkersSingleSave');
+        localStorage.removeItem(SAVE_KEY);
         updateUI();
         drawBoard();
         showWinModal(movingPid);
         return;
     }
 
-    // 換下一位玩家
     currentTurnIdx = (currentTurnIdx + 1) % turnOrder.length;
     saveState();
     updateUI();
     drawBoard();
 
-    // 若輪到機器人，延遲一下執行 AI 思考
     const nextPid = turnOrder[currentTurnIdx];
     if (PLAYER_CONFIG[nextPid].isAI && !isGameOver) {
         setTimeout(() => runAIMove(nextPid), 380);
@@ -513,14 +507,14 @@ async function executeMove(moveObj) {
 }
 
 // === 6. 機器人 AI 決策邏輯 ===
-// 找出目標陣地最深處的尖端座標作為導航標靶
+// 六個三角尖端的標準軸向座標
 function getTargetTip(targetZone) {
-    if (targetZone === 0) return { q: -4, r: 8 };  // 下尖端
-    if (targetZone === 1) return { q: 4, r: -8 };  // 上尖端
-    if (targetZone === 2) return { q: -8, r: 4 };  // 左上尖端
-    if (targetZone === 3) return { q: 8, r: -4 };  // 右上尖端
-    if (targetZone === 4) return { q: 8, r: 4 };   // 右下尖端
-    if (targetZone === 5) return { q: -8, r: -4 }; // 左下尖端
+    if (targetZone === 0) return { q: -4, r: 8 };  // 正下方尖端
+    if (targetZone === 1) return { q: 4, r: -8 };  // 正上方尖端
+    if (targetZone === 2) return { q: -8, r: 4 };  // 左上方尖端
+    if (targetZone === 3) return { q: 4, r: 4 };   // 右上方尖端 (s = -8)
+    if (targetZone === 4) return { q: 8, r: -4 };  // 右下方尖端
+    if (targetZone === 5) return { q: -4, r: -4 }; // 左下方尖端 (s = 8)
     return { q: 0, r: 0 };
 }
 
@@ -544,23 +538,19 @@ function runAIMove(pid) {
                 const afterDist = hexDist(m.toNode, tip);
                 let progress = (beforeDist - afterDist) * 12;
 
-                // 鼓勵已進入目標區的棋子往更深處填滿，避免卡住門口
                 if (node.zone === cfg.targetZone && m.toNode.zone !== cfg.targetZone) {
                     progress -= 40;
                 }
                 if (node.zone !== cfg.targetZone && m.toNode.zone === cfg.targetZone) {
                     progress += 18;
                 }
-                // 優先選擇大跨步連環跳躍
                 if (m.isJump) {
                     progress += (m.path.length - 1) * 3.5;
                 }
-                // 把落在後方起點區的棋子往前拉
                 if (node.zone === cfg.startZone) {
                     progress += 6;
                 }
 
-                // 加入些微隨機性讓棋局多變
                 const score = progress + Math.random() * 2.5;
                 if (score > bestScore + 0.5) {
                     bestScore = score;
@@ -576,7 +566,6 @@ function runAIMove(pid) {
         const chosen = bestMoves[Math.floor(Math.random() * bestMoves.length)];
         executeMove(chosen);
     } else {
-        // 極端情況無路可走則跳過回合
         currentTurnIdx = (currentTurnIdx + 1) % turnOrder.length;
         updateUI();
     }
@@ -635,7 +624,7 @@ function updateUI() {
 
 const canvas = document.getElementById('board-canvas');
 const ctx = canvas.getContext('2d');
-let nodePositions = []; // 儲存螢幕像素座標供點擊偵測
+let nodePositions = [];
 
 function axialToPixel(q, r, cx, cy, spacing) {
     const x = cx + spacing * (q + r * 0.5);
@@ -654,13 +643,13 @@ function drawBoard() {
     const h = rect.height;
     const cx = w / 2;
     const cy = h / 2;
-    const spacing = Math.min(w / 14.2, h / 15.6);
+    // 六角星橫向共 13 孔寬、縱向共 17 層高，精準縮放讓上下左右留白均勻
+    const spacing = Math.min(w / 13.8, h / 15.8);
     const holeRadius = spacing * 0.34;
     const marbleRadius = spacing * 0.43;
 
     ctx.clearRect(0, 0, w, h);
 
-    // 預先計算所有孔位像素座標
     nodePositions = BOARD_NODES.map(node => {
         const pos = axialToPixel(node.q, node.r, cx, cy, spacing);
         return { node, x: pos.x, y: pos.y };
@@ -700,18 +689,17 @@ function drawBoard() {
         ctx.restore();
     }
 
-    // 建立合法落點集合供快速查詢
     const validSet = new Set(validMoves.map(m => keyOf(m.toNode.q, m.toNode.r)));
 
-    // 3. 繪製 121 個凹槽孔位與陣地底色提示
+    // 3. 繪製 121 個凹槽孔位與六角陣地底色
     const zoneTint = {
-        0: 'rgba(229, 57, 53, 0.22)',
-        1: 'rgba(46, 125, 50, 0.22)',
-        2: 'rgba(249, 168, 37, 0.24)',
-        3: 'rgba(30, 136, 229, 0.22)',
-        4: 'rgba(249, 168, 37, 0.14)',
-        5: 'rgba(30, 136, 229, 0.14)',
-        '-1': 'rgba(93, 64, 55, 0.18)'
+        0: 'rgba(229, 57, 53, 0.24)',   // 下：紅陣地
+        1: 'rgba(46, 125, 50, 0.24)',   // 上：綠陣地
+        2: 'rgba(249, 168, 37, 0.26)',  // 左上：黃陣地
+        3: 'rgba(30, 136, 229, 0.24)',  // 右上：藍陣地
+        4: 'rgba(249, 168, 37, 0.14)',  // 右下：黃目標區
+        5: 'rgba(30, 136, 229, 0.14)',  // 左下：藍目標區
+        '-1': 'rgba(93, 64, 55, 0.18)'  // 中央區
     };
 
     nodePositions.forEach(({ node, x, y }) => {
@@ -744,7 +732,6 @@ function drawBoard() {
         const isSelected = (selectedNode === node);
 
         ctx.save();
-        // 選中時加上金色外光環並微幅放大
         const r = isSelected ? marbleRadius * 1.15 : marbleRadius;
         if (isSelected) {
             ctx.beginPath();
@@ -753,13 +740,11 @@ function drawBoard() {
             ctx.fill();
         }
 
-        // 彈珠底部陰影
         ctx.beginPath();
         ctx.arc(x + 1.5, y + 2.5, r, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
         ctx.fill();
 
-        // 玻璃彈珠本體漸層
         const grad = ctx.createRadialGradient(
             x - r * 0.32, y - r * 0.35, r * 0.1,
             x, y, r
@@ -773,7 +758,6 @@ function drawBoard() {
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // 玻璃高光反光點
         ctx.beginPath();
         ctx.arc(x - r * 0.32, y - r * 0.32, r * 0.24, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
@@ -786,13 +770,12 @@ function drawBoard() {
 // === 8. 點擊棋盤互動事件 ===
 canvas.addEventListener('pointerdown', (e) => {
     if (isAnimating || isGameOver) return;
-    if (turnOrder[currentTurnIdx] !== 'red') return; // 僅玩家回合可操作
+    if (turnOrder[currentTurnIdx] !== 'red') return;
 
     const rect = canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
 
-    // 尋找距離點擊位置最近的孔位
     let closest = null;
     let minDist = 9999;
     nodePositions.forEach(p => {
@@ -806,7 +789,6 @@ canvas.addEventListener('pointerdown', (e) => {
     if (!closest || minDist > 26) return;
     const clickedNode = closest.node;
 
-    // 情況 A：點擊自己的紅棋 -> 選取並計算所有可走與連跳路徑
     if (clickedNode.piece === 'red') {
         selectedNode = clickedNode;
         validMoves = getValidMoves(clickedNode);
@@ -816,7 +798,6 @@ canvas.addEventListener('pointerdown', (e) => {
         return;
     }
 
-    // 情況 B：已選取棋子，且點擊的是發光合法落點 -> 執行移動
     if (selectedNode && !clickedNode.piece) {
         const chosenMove = validMoves.find(m => m.toNode === clickedNode);
         if (chosenMove) {
@@ -827,7 +808,7 @@ canvas.addEventListener('pointerdown', (e) => {
 
 window.addEventListener('resize', drawBoard);
 
-// 啟動遊戲（若有未完存檔則自動接續）
+// 啟動遊戲
 if (loadState()) {
     updateUI();
     drawBoard();
