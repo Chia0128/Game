@@ -34,6 +34,30 @@
 
         h2 { margin: 0 0 12px 0; color: #5d4037; text-align: center; font-size: 22px; }
 
+        /* 頂部固定導覽按鈕 */
+        .btn-home {
+            position: fixed; top: 15px; left: 15px; z-index: 99999;
+            box-sizing: border-box; height: 36px; padding: 0 14px;
+            font-family: system-ui, -apple-system, sans-serif; font-size: 14px;
+            font-weight: 600; color: #333333; background-color: #ffffff;
+            border: 1px solid #d1d5db; border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; text-decoration: none;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .top-right-group {
+            position: fixed; top: 15px; right: 15px; z-index: 99999;
+            display: flex; gap: 8px;
+        }
+        .btn-top-action {
+            box-sizing: border-box; height: 36px; padding: 0 12px;
+            font-family: system-ui, -apple-system, sans-serif; font-size: 14px;
+            font-weight: 600; color: #3e2723; background-color: #ffffff;
+            border: 1px solid #d7ccc8; border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .btn-top-action:active { transform: scale(0.95); }
+
         /* 頂部狀態列 */
         .stats-bar {
             display: flex;
@@ -117,7 +141,7 @@
         .btn-trash { background: #eeeeee; border-color: #9e9e9e; box-shadow: 0 4px 0 #9e9e9e; color: #424242; font-size: 14px; padding: 12px; }
         .btn-serve { background: #ff5252; border-color: #c62828; box-shadow: 0 4px 0 #c62828; color: white; font-size: 16px; padding: 12px; }
 
-        /* 彈窗與浮動特效 */
+        /* 浮動提示特效 */
         .toast {
             position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px;
@@ -127,7 +151,7 @@
         .toast.show { animation: floatUp 1s ease-out forwards; }
         @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); } 100% { opacity: 0; transform: translate(-50%, -80%) scale(1.1); } }
 
-        /* 開始與商店面板（改為正常版面流撐開外框） */
+        /* 開始與商店面板 */
         #screen-shop, #screen-start {
             display: none; flex-direction: column; align-items: center; justify-content: center;
             width: 100%; padding: 12px 4px; box-sizing: border-box;
@@ -148,24 +172,101 @@
         }
         .btn-start:active { transform: translateY(4px); box-shadow: none; }
 
-        .btn-home {
-            position: fixed; top: 15px; left: 15px; z-index: 99999;
-            box-sizing: border-box; height: 36px; padding: 0 14px;
-            font-family: system-ui, -apple-system, sans-serif; font-size: 14px;
-            font-weight: 600; color: #333333; background-color: #ffffff;
-            border: 1px solid #d1d5db; border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; text-decoration: none;
-            display: inline-flex; align-items: center; justify-content: center;
+        /* 遊戲內置彈窗（設定、清除確認、暫停、結算） */
+        .game-modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(62, 39, 35, 0.72); z-index: 100000;
+            justify-content: center; align-items: center; padding: 16px; box-sizing: border-box;
         }
+        .game-modal-card {
+            background: #ffffff; border: 3px solid #d7ccc8; border-radius: 16px;
+            max-width: 330px; width: 100%; padding: 22px 20px; text-align: center;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3); color: #3e2723;
+            animation: modalPop 0.2s ease-out;
+        }
+        @keyframes modalPop {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-title { font-size: 19px; font-weight: bold; color: #5d4037; margin: 0 0 10px 0; }
+        .modal-desc { font-size: 13.5px; color: #6d4c41; line-height: 1.55; margin-bottom: 18px; }
+        .modal-btn-col { display: flex; flex-direction: column; gap: 10px; }
+        .modal-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .m-btn {
+            padding: 11px 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: bold; cursor: pointer;
+        }
+        .m-btn:active { transform: scale(0.97); }
+        .m-btn-primary { background: #4caf50; color: #fff; box-shadow: 0 3px 0 #2e7d32; }
+        .m-btn-danger { background: #ef5350; color: #fff; box-shadow: 0 3px 0 #c62828; }
+        .m-btn-neutral { background: #efebe9; color: #4e342e; border: 1px solid #d7ccc8; }
     </style>
 </head>
 <body>
 
     <a href="index.html" class="btn-home">⬅️ 返回大廳</a>
 
+    <div class="top-right-group">
+        <button class="btn-top-action" id="btn-pause" onclick="togglePause()" style="display: none;">⏸️ 暫停</button>
+        <button class="btn-top-action" onclick="openSettings()">⚙️ 設定</button>
+    </div>
+
+    <!-- 設定彈窗 -->
+    <div id="modal-settings" class="game-modal-overlay" onclick="if(event.target === this) closeSettings()">
+        <div class="game-modal-card">
+            <h3 class="modal-title">⚙️ 店家設定</h3>
+            <div class="modal-desc">
+                目前店鋪進度：<b>第 <span id="set-day">1</span> 天</b><br>
+                累積總資金：<b>$<span id="set-money">0</span></b>
+            </div>
+            <div class="modal-btn-col">
+                <button class="m-btn m-btn-danger" onclick="openResetConfirm()">🔄 清除進度重開</button>
+                <button class="m-btn m-btn-neutral" onclick="closeSettings()">關閉設定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 清除進度雙重確認遊戲面板 -->
+    <div id="modal-reset-confirm" class="game-modal-overlay">
+        <div class="game-modal-card" style="border-color: #ef5350;">
+            <h3 class="modal-title" style="color: #c62828;">⚠️ 確定要清除進度嗎？</h3>
+            <div class="modal-desc">
+                這將會清空所有營業天數、累積資金與已購買的店面設備升級，並從<b>第 1 天</b>重新開始！
+            </div>
+            <div class="modal-btn-row">
+                <button class="m-btn m-btn-danger" onclick="confirmReset()">✅ 確定清除</button>
+                <button class="m-btn m-btn-neutral" onclick="closeResetConfirm()">❌ 取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 暫停遊戲面板 -->
+    <div id="modal-pause" class="game-modal-overlay">
+        <div class="game-modal-card" style="border-color: #ffb300;">
+            <div style="font-size: 42px; margin-bottom: 6px;">⏸️</div>
+            <h3 class="modal-title">營業暫停中</h3>
+            <div class="modal-desc">
+                先喘口氣喝口水吧！<br>客人與營業時間都已暫時凍結。
+            </div>
+            <div class="modal-btn-col">
+                <button class="m-btn m-btn-primary" onclick="togglePause()">▶️ 繼續營業</button>
+                <button class="m-btn m-btn-neutral" onclick="quitToStart()">🏠 放棄本天回開店首頁</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 每日結算遊戲面板 -->
+    <div id="modal-day-result" class="game-modal-overlay">
+        <div class="game-modal-card" id="result-card">
+            <div id="result-emoji" style="font-size: 46px; margin-bottom: 6px;">🎉</div>
+            <h3 class="modal-title" id="result-title">營業結束！</h3>
+            <div class="modal-desc" id="result-desc"></div>
+            <button class="m-btn m-btn-primary" id="result-btn" style="width: 100%;" onclick="closeDayResult()">前往收攤進貨</button>
+        </div>
+    </div>
+
     <div id="game-wrap">
         
-        <!-- 遊戲開始 / 結束結算畫面 -->
+        <!-- 遊戲開始畫面 -->
         <div id="screen-start" style="display: flex;">
             <div style="font-size: 60px; margin-bottom: 10px;">🧋</div>
             <h2 style="font-size: 26px;">手搖飲搖搖樂</h2>
@@ -177,7 +278,6 @@
                 <div style="font-size: 13px; color: #757575; margin-top: 4px;">今日目標營業額：$<span id="txt-ready-target">300</span></div>
             </div>
             <button class="btn-start" onclick="startGame()">▶️ 開始營業！</button>
-            <button class="btn" style="width:100%; margin-top: 12px; padding:12px; background:#eeeeee;" onclick="askReset()">🔄 清除進度重開</button>
         </div>
 
         <!-- 商店畫面 -->
@@ -188,7 +288,7 @@
             <div class="shop-item">
                 <div class="shop-info">
                     <h4>❄️ 頂級冷氣空調</h4>
-                    <p>客人等候耐心上限增加 30%</p>
+                    <p>所有客人等候耐心時間增加 3 秒</p>
                 </div>
                 <button class="btn-buy" id="btn-buy-ac" onclick="buyUpgrade('ac', 800)">$800</button>
             </div>
@@ -288,17 +388,18 @@ let save = {
 };
 
 // 遊戲狀態與常數
-let gameState = 'start'; // start, playing, shop
+let gameState = 'start'; // start, playing, paused, shop
 let targetMoney = 300;
 let todayRevenue = 0;
 let gameTimer = 60;
 let gameInterval;
 let customerInterval;
+let dayPassed = false;
 
 let currentOrder = null;
 let currentCup = { base: '', toppings: [], sugar: '', ice: '' };
 let patience = 100;
-let patienceDropRate = 1.5; // 每 0.1 秒掉的耐心值
+let patienceDropRate = 1.0; // 每 0.1 秒扣的百分比
 
 const BASES = ['紅茶', '綠茶', '烏龍', '鮮奶'];
 const TOPPINGS = ['珍珠', '椰果', '布丁', '奶蓋'];
@@ -319,11 +420,60 @@ function loadGame() {
         document.getElementById('txt-ready-target').innerText = targetMoney;
     }
 }
-function askReset() {
-    if(confirm("確定要放棄這家店，清空資金與升級從第 1 天重來嗎？")) {
-        localStorage.removeItem('bobaSave');
-        location.reload();
+
+// --- 設定與遊戲面板彈窗控制 ---
+function openSettings() {
+    // 若正在遊戲中打開設定，自動先暫停計時
+    if (gameState === 'playing') {
+        togglePause(true);
     }
+    document.getElementById('set-day').innerText = save.day;
+    document.getElementById('set-money').innerText = save.money;
+    document.getElementById('modal-settings').style.display = 'flex';
+}
+function closeSettings() {
+    document.getElementById('modal-settings').style.display = 'none';
+}
+function openResetConfirm() {
+    closeSettings();
+    document.getElementById('modal-reset-confirm').style.display = 'flex';
+}
+function closeResetConfirm() {
+    document.getElementById('modal-reset-confirm').style.display = 'none';
+}
+function confirmReset() {
+    localStorage.removeItem('bobaSave');
+    location.reload();
+}
+
+// --- 暫停 / 繼續控制 ---
+function togglePause(silent = false) {
+    if (gameState === 'playing') {
+        gameState = 'paused';
+        clearInterval(gameInterval);
+        clearInterval(customerInterval);
+        document.getElementById('btn-pause').innerText = '▶️ 繼續';
+        if (!silent) {
+            document.getElementById('modal-pause').style.display = 'flex';
+        }
+    } else if (gameState === 'paused') {
+        gameState = 'playing';
+        document.getElementById('btn-pause').innerText = '⏸️ 暫停';
+        document.getElementById('modal-pause').style.display = 'none';
+        startTimers();
+    }
+}
+
+function quitToStart() {
+    clearInterval(gameInterval);
+    clearInterval(customerInterval);
+    gameState = 'start';
+    document.getElementById('modal-pause').style.display = 'none';
+    document.getElementById('btn-pause').style.display = 'none';
+    document.getElementById('screen-game').style.display = 'none';
+    document.getElementById('screen-start').style.display = 'flex';
+    // 還原開店前的總資金顯示
+    loadGame();
 }
 // ----------------
 
@@ -373,23 +523,13 @@ function nextDayPrep() {
 }
 
 // --- 核心遊戲邏輯 ---
-function startGame() {
-    document.getElementById('screen-start').style.display = 'none';
-    document.getElementById('screen-game').style.display = 'block';
-    
-    gameState = 'playing';
-    todayRevenue = 0;
-    gameTimer = 60;
-    document.getElementById('val-day').innerText = save.day;
-    document.getElementById('val-target').innerText = targetMoney;
-    document.getElementById('val-money').innerText = save.money; // 顯示總資產
-    
-    resetCup();
-    spawnCustomer();
-    
+function startTimers() {
+    clearInterval(gameInterval);
+    clearInterval(customerInterval);
+
     // 主時間倒數 (每秒)
-    document.getElementById('ui-timer').style.width = '100%';
     gameInterval = setInterval(() => {
+        if (gameState !== 'playing') return;
         gameTimer--;
         document.getElementById('ui-timer').style.width = (gameTimer / 60 * 100) + '%';
         if (gameTimer <= 0) endDay();
@@ -397,35 +537,54 @@ function startGame() {
     
     // 客人耐心倒數 (每 0.1 秒)
     customerInterval = setInterval(() => {
-        if (!currentOrder) return;
+        if (gameState !== 'playing' || !currentOrder) return;
         patience -= patienceDropRate;
         let pBar = document.getElementById('c-patience');
         pBar.style.width = Math.max(0, patience) + '%';
         pBar.style.backgroundColor = patience > 50 ? '#66bb6a' : patience > 20 ? '#ffa726' : '#ef5350';
         
         if (patience <= 0) {
-            // 客人生氣走掉
             showToast("💢 客人等太久氣走了！", false);
             spawnCustomer();
         }
     }, 100);
 }
 
+function startGame() {
+    document.getElementById('screen-start').style.display = 'none';
+    document.getElementById('screen-game').style.display = 'block';
+    document.getElementById('btn-pause').style.display = 'inline-flex';
+    document.getElementById('btn-pause').innerText = '⏸️ 暫停';
+    
+    gameState = 'playing';
+    todayRevenue = 0;
+    gameTimer = 60;
+    document.getElementById('val-day').innerText = save.day;
+    document.getElementById('val-target').innerText = targetMoney;
+    document.getElementById('val-money').innerText = save.money;
+    document.getElementById('ui-timer').style.width = '100%';
+    
+    resetCup();
+    spawnCustomer();
+    startTimers();
+}
+
 function spawnCustomer() {
     resetCup();
     patience = 100;
-    let baseDrop = save.upgrades.ac ? 1.0 : 1.5; // 冷氣升級減緩耐心下降
-    patienceDropRate = baseDrop + (save.day * 0.1); // 每天稍微加快
     
     let emoji = CUSTOMER_EMOJIS[Math.floor(Math.random() * CUSTOMER_EMOJIS.length)];
     let typeRoll = Math.random();
     
     currentOrder = { type: 'normal', base: '', toppings: [], sugar: '', ice: '', text: '' };
     
+    // 計算基礎可用秒數（原版約 6.25 秒 + 全角色增加 3 秒 = 9.25 秒起跳）
+    let baseSeconds = 9.25 - Math.min(3.0, (save.day - 1) * 0.25);
+
     if (typeRoll < 0.1 && save.day >= 2) {
-        // 大冰奶傳說 (鮮奶 + 全糖 + 正常冰)
+        // 大冰奶傳說 (鮮奶 + 全糖 + 正常冰)：原本約 7.8s + 3s = 10.8s
         emoji = '😎';
-        patienceDropRate *= 0.8; // 讓他等久一點
+        baseSeconds += 1.55;
         currentOrder.base = '鮮奶';
         currentOrder.sugar = '全糖';
         currentOrder.ice = '正常冰';
@@ -436,13 +595,13 @@ function spawnCustomer() {
         emoji = '🤔';
         currentOrder.base = BASES[Math.floor(Math.random() * BASES.length)];
         currentOrder.ice = ICES[Math.floor(Math.random() * ICES.length)];
-        currentOrder.sugar = Math.random() > 0.5 ? '無糖' : '微糖'; // 隨便配
+        currentOrder.sugar = Math.random() > 0.5 ? '無糖' : '微糖';
         currentOrder.text = `給我一杯 ${currentOrder.ice} 的 ${currentOrder.base}，不要太甜，不加料。`;
     }
     else if (typeRoll < 0.4) {
-        // 趕時間外送員
+        // 趕時間外送員：原本約 2.5s + 3s = 5.5s
         emoji = '🛵';
-        patienceDropRate *= 2.5; // 掉超快
+        baseSeconds = Math.max(4.5, baseSeconds - 3.75);
         currentOrder.type = 'rush';
         currentOrder.base = BASES[Math.floor(Math.random() * BASES.length)];
         currentOrder.sugar = SUGARS[Math.floor(Math.random() * SUGARS.length)];
@@ -463,6 +622,14 @@ function spawnCustomer() {
             currentOrder.text = `我要一杯 ${currentOrder.sugar}${currentOrder.ice} 的 ${currentOrder.base}。`;
         }
     }
+
+    // 升級冷氣空調後，所有客人再增加 3 秒
+    if (save.upgrades.ac) {
+        baseSeconds += 3.0;
+    }
+
+    // 換算成每 0.1 秒扣除的百分比
+    patienceDropRate = 100 / (baseSeconds * 10);
     
     document.getElementById('c-emoji').innerText = emoji;
     document.getElementById('c-order').innerText = currentOrder.text;
@@ -490,7 +657,6 @@ function resetCup() {
 }
 
 function renderCupUI() {
-    // 渲染按鈕狀態
     document.querySelectorAll('.btn-tea').forEach(b => b.classList.toggle('active', b.innerText.includes(currentCup.base) && currentCup.base !== ''));
     document.querySelectorAll('.btn-sugar').forEach(b => b.classList.toggle('active', b.innerText === currentCup.sugar));
     document.querySelectorAll('.btn-ice').forEach(b => b.classList.toggle('active', b.innerText === currentCup.ice));
@@ -501,7 +667,6 @@ function renderCupUI() {
         b.classList.toggle('active', isHas);
     });
 
-    // 渲染杯中文字
     let parts = [];
     if(currentCup.base) parts.push(currentCup.base);
     if(currentCup.toppings.length > 0) parts.push(...currentCup.toppings);
@@ -519,7 +684,6 @@ function serveDrink() {
         return;
     }
 
-    // 驗證邏輯
     let isMatch = true;
     if (currentCup.base !== currentOrder.base) isMatch = false;
     if (currentCup.sugar !== currentOrder.sugar) isMatch = false;
@@ -530,12 +694,11 @@ function serveDrink() {
     if (cupTop !== orderTop) isMatch = false;
 
     if (isMatch) {
-        // 算錢
-        let price = 40; // 基礎售價
+        let price = 40;
         if (currentOrder.toppings.length > 0) price += 10 * currentOrder.toppings.length;
         if (save.upgrades.tea) price += 15;
-        if (save.upgrades.seal) price += 10; // 自動封膜小費
-        if (currentOrder.type === 'rush' && patience > 50) price += 20; // 外送員神速小費
+        if (save.upgrades.seal) price += 10;
+        if (currentOrder.type === 'rush' && patience > 50) price += 20;
 
         todayRevenue += price;
         save.money += price;
@@ -545,13 +708,17 @@ function serveDrink() {
         document.getElementById('c-emoji').innerText = '😍';
         document.getElementById('c-order').innerText = "太好喝了！謝謝老闆！";
         
-        setTimeout(spawnCustomer, 600); // 稍微延遲看笑臉
+        setTimeout(() => {
+            if (gameState === 'playing') spawnCustomer();
+        }, 600);
     } else {
         showToast("💢 做錯了啦！這不是我點的！", false);
         document.getElementById('c-emoji').innerText = '😡';
         document.getElementById('c-order').innerText = "我要去留一星負評！！！";
-        patience = 0; // 強制生氣走人
-        setTimeout(spawnCustomer, 800);
+        patience = 0;
+        setTimeout(() => {
+            if (gameState === 'playing') spawnCustomer();
+        }, 800);
     }
 }
 
@@ -559,17 +726,45 @@ function endDay() {
     gameState = 'over';
     clearInterval(gameInterval);
     clearInterval(customerInterval);
+    document.getElementById('btn-pause').style.display = 'none';
     
-    if (todayRevenue >= targetMoney) {
-        alert(`🌅 第 ${save.day} 天營業結束！\n本日目標：$${targetMoney}\n本日營收：$${todayRevenue}\n🎉 順利達標！將進入收攤進貨。`);
+    dayPassed = (todayRevenue >= targetMoney);
+    const modal = document.getElementById('modal-day-result');
+    const card = document.getElementById('result-card');
+    const emoji = document.getElementById('result-emoji');
+    const title = document.getElementById('result-title');
+    const desc = document.getElementById('result-desc');
+    const btn = document.getElementById('result-btn');
+
+    if (dayPassed) {
         saveGame();
-        document.getElementById('screen-game').style.display = 'none';
+        card.style.borderColor = '#4caf50';
+        emoji.innerText = '🎉';
+        title.innerText = `第 ${save.day} 天營業達標！`;
+        title.style.color = '#2e7d32';
+        desc.innerHTML = `本日目標：<b>$${targetMoney}</b><br>本日實際營收：<b style="color:#2e7d32;">$${todayRevenue}</b><br><br>順利達標！快去收攤進貨升級設備吧！`;
+        btn.innerText = '🏪 前往收攤進貨';
+        btn.className = 'm-btn m-btn-primary';
+    } else {
+        card.style.borderColor = '#ef5350';
+        emoji.innerText = '💔';
+        title.innerText = '今日營業額未達標...';
+        title.style.color = '#c62828';
+        desc.innerHTML = `本日目標：<b>$${targetMoney}</b><br>本日實際營收：<b style="color:#c62828;">$${todayRevenue}</b><br><br>店鋪面臨倒閉危機，請再挑戰一次這一天！`;
+        btn.innerText = '🔄 重新挑戰今天';
+        btn.className = 'm-btn m-btn-danger';
+    }
+    modal.style.display = 'flex';
+}
+
+function closeDayResult() {
+    document.getElementById('modal-day-result').style.display = 'none';
+    document.getElementById('screen-game').style.display = 'none';
+    if (dayPassed) {
         document.getElementById('screen-shop').style.display = 'flex';
         updateShopUI();
     } else {
-        alert(`💔 營業額未達標...\n本日營收僅有 $${todayRevenue} (目標 $${targetMoney})\n店鋪面臨倒閉危機，請再挑戰一次這一天！`);
-        // 不存檔 day++，保留重試
-        document.getElementById('screen-game').style.display = 'none';
+        loadGame();
         document.getElementById('screen-start').style.display = 'flex';
     }
 }
@@ -577,7 +772,7 @@ function endDay() {
 // 初始化載入
 loadGame();
 
-// 綁定 PWA 腳本 (若單獨執行此檔測試時不報錯)
+// 綁定 PWA 腳本
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').catch(()=>{});
