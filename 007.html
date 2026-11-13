@@ -110,7 +110,7 @@
         .bullet-icon.loaded { color: #f39c12; text-shadow: 0 0 5px rgba(243, 156, 18, 0.8); }
         .bullet-icon.empty { opacity: 0.2; filter: grayscale(100%); }
 
-        /* 動作揭曉區 (改為上下對峙配置：對手在上、VS居中、玩家在下) */
+        /* 動作揭曉區 (上下對峙配置：對手在上、VS居中、玩家在下) */
         .action-reveal {
             min-height: 118px; display: flex; flex-direction: column;
             justify-content: space-between; align-items: center;
@@ -141,12 +141,12 @@
         }
         /* 倒數跳動彈跳動畫 */
         .vs-text.countdown { 
-            font-size: 26px; color: #fbc02d; font-style: normal;
+            font-size: 24px; color: #fbc02d; font-style: normal;
             animation: bounceNum 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate;
         }
         @keyframes bounceNum {
             from { transform: scale(1); }
-            to { transform: scale(1.3); text-shadow: 0 0 15px #fbc02d; }
+            to { transform: scale(1.25); text-shadow: 0 0 15px #fbc02d; }
         }
 
         /* 操作面板 */
@@ -194,7 +194,7 @@
 
     <div id="game-wrap">
         <h2>🕵️ 007 特務對決</h2>
-        <div class="subtitle">心理博弈生死戰：誰能看穿對手？</div>
+        <div class="subtitle">誰能看穿對手!!</div>
 
         <!-- 戰鬥舞台 -->
         <div class="battle-stage" id="battle-stage">
@@ -262,6 +262,7 @@ let winStreak = 0;
 let isGameOver = false;
 let currentDifficulty = 'normal';
 let isProcessing = false;
+let roundCount = 0; // 追蹤當前回合數
 
 const logBox = document.getElementById('log-box');
 const pIcon = document.getElementById('player-action-icon');
@@ -279,6 +280,14 @@ const ACT_ICONS = {
     'defend': '🛡️',
     'shoot': '🔫',
     'snipe': '💥'
+};
+
+// 各招式對應的三段式口令
+const ACTION_CHANTS = {
+    'charge': ['裝子彈', '呀', '裝子彈'],
+    'defend': ['保護我', '呀', '保護我'],
+    'shoot':  ['碰', '碰', '碰'],
+    'snipe':  ['碰', '碰', '碰']
 };
 
 // --- Web Audio API 音效合成器 ---
@@ -370,6 +379,7 @@ function showEnemySpeech(text, duration = 2500) {
 
 function initGame() {
     playerBullets = 0; aiBullets = 0; isGameOver = false; isProcessing = false;
+    roundCount = 0; // 重置回合數
     document.getElementById('control-panel').style.display = 'grid';
     document.getElementById('btn-restart').style.display = 'none';
     document.getElementById('game-wrap').classList.remove('shake-active');
@@ -448,15 +458,19 @@ function getAiAction() {
     }
 }
 
-// 觸發回合 (三段組字節奏：007 -> 呀 -> 007 -> 清空上下出招)
+// 觸發回合 (第1回合顯示 007呀007，第2回合起依玩家選擇顯示對應口令)
 async function triggerRound(playerAction) {
     if (isGameOver || isProcessing) return;
     isProcessing = true; 
+    roundCount++;
     toggleButtons(true); 
     initAudio();
 
     const beat = 520;
     let aiAction = getAiAction();
+
+    // 決定本回合的三段口令文字
+    const chant = (roundCount === 1) ? ['007', '呀', '007'] : ACTION_CHANTS[playerAction];
 
     pIcon.classList.remove('show', 'glow-shield');
     aIcon.classList.remove('show', 'glow-shield');
@@ -464,18 +478,18 @@ async function triggerRound(playerAction) {
     
     vsText.classList.add('countdown');
 
-    // === 第一組：007 ===
-    vsText.innerText = "007";
+    // === 第一組 ===
+    vsText.innerText = chant[0];
     playSound('tick');
-    await delay(beat * 1.1);
+    await delay(beat * 1.2);
 
-    // === 第二組：呀 ===
-    vsText.innerText = "呀";
+    // === 第二組 ===
+    vsText.innerText = chant[1];
     playSound('tick');
     await delay(beat * 0.8);
 
-    // === 第三組：007 ===
-    vsText.innerText = "007";
+    // === 第三組 ===
+    vsText.innerText = chant[2];
     playSound('tick');
     await delay(beat * 1.2);
 
