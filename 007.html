@@ -457,9 +457,10 @@ async function triggerRound(playerAction) {
     playSound('tick');
     await delay(450);
     
-    // 最後的 7 ！
-    vsText.innerText = "7 ！";
-    playSound('seven');
+    // 7
+    vsText.innerText = "7";
+    playSound('tick');
+    await delay(450);
     
     // 雙方動作同時揭曉
     pIcon.innerText = ACT_ICONS[playerAction];
