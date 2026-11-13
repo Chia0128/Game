@@ -121,7 +121,7 @@
         }
         .action-icon.show { opacity: 1; transform: scale(1); }
         
-        /* 防禦成功時的護盾發光特效 */
+        /* 保護我呀保護我成功時的護盾發光特效 */
         .action-icon.glow-shield {
             text-shadow: 0 0 20px #64b5f6, 0 0 40px #64b5f6; transform: scale(1.1);
         }
@@ -218,13 +218,13 @@
             </div>
         </div>
 
-        <div class="log-box" id="log-box">雙方進入對峙狀態... 第一回合請先【🔋 集氣】填裝子彈！</div>
+        <div class="log-box" id="log-box">雙方進入對峙狀態... 第一回合請先【🔋 裝子彈】填裝子彈！</div>
 
         <!-- 操作面板 -->
         <div class="controls" id="control-panel">
-            <button class="btn-action btn-charge" id="btn-c" onclick="triggerRound('charge')">🔋 集氣 (+1)</button>
-            <button class="btn-action btn-defend" id="btn-d" onclick="triggerRound('defend')">🛡️ 防禦 (0)</button>
-            <button class="btn-action btn-shoot" id="btn-s" onclick="triggerRound('shoot')" disabled>🔫 射擊 (-1)</button>
+            <button class="btn-action btn-charge" id="btn-c" onclick="triggerRound('charge')">🔋 裝子彈 (+1)</button>
+            <button class="btn-action btn-defend" id="btn-d" onclick="triggerRound('defend')">🛡️ 保護我呀保護我 (0)</button>
+            <button class="btn-action btn-shoot" id="btn-s" onclick="triggerRound('shoot')" disabled>🔫 砰砰砰！ (-1)</button>
             <button class="btn-action btn-sniper" id="btn-sn" onclick="triggerRound('snipe')" disabled>💥 狙擊大招 (-3)</button>
         </div>
 
@@ -434,14 +434,15 @@ function getAiAction() {
     }
 }
 
-// 觸發回合 (4拍節奏：0 - 0 - 7 - 出招！)
+// 觸發回合 (四拍完整口號：0-0-7-呀 [兩拍] + 0-0-7-出招 [兩拍])
 async function triggerRound(playerAction) {
     if (isGameOver || isProcessing) return;
     isProcessing = true; 
     toggleButtons(true); 
     initAudio();
 
-    const beat = 450; // 統一管理每一拍的時間（毫秒），想調快調慢改這裡就好
+    const beat = 500;          // 每一大拍的時間（毫秒），建議設 500~600 之間會比較好念
+    const halfBeat = beat / 2; // 半拍時間（每個字跳出的間隔）
     let aiAction = getAiAction();
 
     pIcon.classList.remove('show', 'glow-shield');
@@ -449,33 +450,37 @@ async function triggerRound(playerAction) {
     document.getElementById('game-wrap').classList.remove('shake-active');
     
     vsText.classList.add('countdown');
-    
-    // 第一拍：0
-    vsText.innerText = "0";
-    playSound('tick');
-    await delay(beat);
-    
-    // 第二拍：0 (先清空再填入，搭配短暫延遲讓 CSS 動畫能重新觸發)
-    vsText.innerText = ""; 
-    await delay(50); 
-    vsText.innerText = "0";
-    playSound('tick');
-    await delay(beat - 50); // 扣掉剛剛的 50ms，保持總節拍精準
-    
-    // 第三拍：7
-    vsText.innerText = "7";
-    playSound('seven'); // 建議改回 'seven' 讓第三拍有重音區隔
-    await delay(beat);
-    
-    // 第四拍：雙方動作同時揭曉
-    vsText.innerText = "VS"; // 出招時把中間文字改回 VS 或 "！"，避免 "7" 留在畫面上太久
+
+    // 輔助小函式：讓連續相同的字（如 0 -> 0）也能有重新閃動跳出的感覺
+    const showWord = async (text, sound = 'tick') => {
+        vsText.innerText = "";
+        await delay(30);
+        vsText.innerText = text;
+        if (sound) playSound(sound);
+        await delay(halfBeat - 30);
+    };
+
+    // === 前兩拍：0 - 0 - 7 - 呀 ===
+    await showWord("0");         // 第 1 拍前半
+    await showWord("0");         // 第 1 拍後半
+    await showWord("7");         // 第 2 拍前半
+    await showWord("呀", "seven"); // 第 2 拍後半（加上重音區隔）
+
+    // === 後兩拍：0 - 0 - 7 - 出招 ===
+    await showWord("0");         // 第 3 拍前半
+    await showWord("0");         // 第 3 拍後半
+    await showWord("7");         // 第 4 拍前半
+
+    // 第 4 拍後半：雙方動作同時揭曉！
+    vsText.innerText = "！"; 
+    playSound('seven');
     vsText.classList.remove('countdown');
     pIcon.innerText = ACT_ICONS[playerAction];
     aIcon.innerText = ACT_ICONS[aiAction];
     pIcon.classList.add('show');
     aIcon.classList.add('show');
     
-    await delay(beat); 
+    await delay(halfBeat); 
     resolveRound(playerAction, aiAction);
 }
 
@@ -488,7 +493,7 @@ function resolveRound(pAct, aAct) {
     if (pAct === 'charge' || aAct === 'charge') playSound('charge');
 
     if (aAct === 'shoot') {
-        if (pAct === 'charge') { pDead = true; resultMsg += "敵方趁你集氣時開槍！<br>"; }
+        if (pAct === 'charge') { pDead = true; resultMsg += "敵方趁你裝子彈時開槍！<br>"; }
         else if (pAct === 'defend') { pIcon.classList.add('glow-shield'); }
     } else if (aAct === 'snipe') {
         if (pAct === 'charge' || pAct === 'defend' || pAct === 'shoot') {
@@ -497,7 +502,7 @@ function resolveRound(pAct, aAct) {
     }
 
     if (pAct === 'shoot') {
-        if (aAct === 'charge') { aDead = true; resultMsg += "你趁敵方集氣時精準射擊！<br>"; }
+        if (aAct === 'charge') { aDead = true; resultMsg += "你趁敵方裝子彈時精準砰砰砰！！<br>"; }
         else if (pAct === 'defend') { aIcon.classList.add('glow-shield'); showEnemySpeech("哈哈，早看穿你了！", 2000); }
     } else if (pAct === 'snipe') {
         if (aAct === 'charge' || aAct === 'defend' || aAct === 'shoot') {
@@ -507,9 +512,9 @@ function resolveRound(pAct, aAct) {
 
     if (pAct === 'shoot' && aAct === 'shoot') resultMsg += "雙方同時開槍，子彈抵銷！";
     if (pAct === 'snipe' && aAct === 'snipe') resultMsg += "雙方同時開啟大招，引發劇烈爆炸抵銷！";
-    if (pAct === 'defend' && aAct === 'defend') resultMsg += "雙方都在防禦，氣氛十分尷尬...";
-    if (pAct === 'charge' && aAct === 'charge') resultMsg += "雙方都在默默集氣儲備子彈。";
-    if (pAct === 'defend' && aAct === 'shoot') resultMsg += "你成功防禦了敵方的射擊！";
+    if (pAct === 'defend' && aAct === 'defend') resultMsg += "雙方都在保護我呀保護我，氣氛十分尷尬...";
+    if (pAct === 'charge' && aAct === 'charge') resultMsg += "雙方都在默默裝子彈儲備子彈。";
+    if (pAct === 'defend' && aAct === 'shoot') resultMsg += "你成功保護我呀保護我了敵方的砰砰砰！！";
 
     if (pAct === 'shoot') playerBullets--;
     if (pAct === 'snipe') playerBullets -= 3;
