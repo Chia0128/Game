@@ -175,7 +175,8 @@
         /* 遊戲內置彈窗（設定、清除確認、暫停、結算） */
         .game-modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(62, 39, 35, 0.72); z-index: 100000;
+            /* 防作弊：改為純不透明深色背景，阻擋偷看 */
+            background: #3e2723; z-index: 100000;
             justify-content: center; align-items: center; padding: 16px; box-sizing: border-box;
         }
         .game-modal-card {
@@ -453,6 +454,14 @@ function togglePause(silent = false) {
         clearInterval(gameInterval);
         clearInterval(customerInterval);
         document.getElementById('btn-pause').innerText = '▶️ 繼續';
+        
+        // --- 防作弊：隱藏訂單與杯子狀態 ---
+        if (currentOrder) {
+            document.getElementById('c-order').innerText = "🙈 營業暫停中，訂單已隱藏...";
+        }
+        document.getElementById('ui-cup-status').innerHTML = "<span style='color:#bdbdbd;'>🙈 遮蔽中</span>";
+        // ---------------------------------
+
         if (!silent) {
             document.getElementById('modal-pause').style.display = 'flex';
         }
@@ -460,6 +469,14 @@ function togglePause(silent = false) {
         gameState = 'playing';
         document.getElementById('btn-pause').innerText = '⏸️ 暫停';
         document.getElementById('modal-pause').style.display = 'none';
+        
+        // --- 防作弊：還原訂單與杯子狀態 ---
+        if (currentOrder) {
+            document.getElementById('c-order').innerText = currentOrder.text;
+        }
+        renderCupUI(); // 重新渲染杯中文字與按鈕狀態
+        // ---------------------------------
+        
         startTimers();
     }
 }
