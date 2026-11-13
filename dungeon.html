@@ -281,7 +281,9 @@
             <div class="modal-list" id="weapon-list"></div>
             <div style="font-size: 13px; text-align: left; margin-top: 8px; color:#aaa;">持有道具：</div>
             <div class="modal-list" id="item-list" style="max-height: 80px;"></div>
-            <button class="btn" onclick="closeBag()" style="width:100%; background:#c62828; margin-top:10px;">關閉背包</button>
+            
+            <button class="btn" onclick="askAbandon()" style="width:100%; background:#795548; margin-top:10px;">🔄 放棄本局進度重來</button>
+            <button class="btn" onclick="closeBag()" style="width:100%; background:#c62828; margin-top:8px;">關閉背包</button>
         </div>
     </div>
 
@@ -366,7 +368,7 @@
                     <button class="btn" id="btn-save-record" onclick="submitScore()" style="background:#ffb300; color:#121212; padding:6px 12px; font-size:12px;">登錄榜單</button>
                 </div>
             </div>
-            <button class="btn btn-explore" onclick="initGame()">🔄 重新開始冒險</button>
+            <button class="btn btn-explore" onclick="initGame(true)">🔄 重新開始冒險</button>
         </div>
     </div>
 
@@ -391,7 +393,7 @@ let stats = {
 };
 let currentFight = { dmgTaken: 0, absurdCount: 0, hasWhetstone: false };
 
-let weapons = [
+const defaultWeapons = [
     { name: "木劍", minDmg: 8, maxDmg: 15, unlocked: true, price: 0, trait: "無特殊效果" },
     { name: "精鋼長劍", minDmg: 14, maxDmg: 24, unlocked: false, price: 60, trait: "無特殊效果" },
     { name: "烈焰魔杖", minDmg: 20, maxDmg: 35, unlocked: false, price: 120, trait: "無特殊效果" },
@@ -401,6 +403,7 @@ let weapons = [
     { name: "無盡之刃", minDmg: 45, maxDmg: 75, unlocked: false, price: 520, trait: "自帶 30% 機率 1.8倍暴擊" },
     { name: "滅世弒神之槍", minDmg: 60, maxDmg: 110, unlocked: false, price: 750, trait: "神級：吸血 20% 且無視怪獸防禦" }
 ];
+let weapons = [];
 
 // 防禦力上限調整為 60
 function addDefense(amount) {
@@ -520,7 +523,69 @@ const logBox = document.getElementById("log-box");
 const hpBar = document.getElementById("hp-bar");
 const hpText = document.getElementById("hp-text");
 
-function initGame() {
+// --- 自動存檔與讀檔系統 ---
+function saveGame() {
+    if (gameState === "over") return; // 結算後不存檔，避免重整刷榜
+    let saveData = {
+        hp, maxHp, gold, floor, gameState,
+        enemyHp, enemyMaxHp, enemyAtk, defense,
+        potions, potions2, whetstones, currentWeaponIdx,
+        isEnemyFrozen, princessHelpCount, thiefChaseState,
+        stats: { ...stats, achieved: Array.from(stats.achieved) },
+        currentFight, weapons,
+        logHTML: logBox.innerHTML,
+        eventHTML: document.getElementById("ctrl-event").innerHTML,
+        enemyEmoji: document.getElementById("enemy-emoji").innerText
+    };
+    localStorage.setItem("dungeonSave", JSON.stringify(saveData));
+}
+
+function loadGame() {
+    let saved = localStorage.getItem("dungeonSave");
+    if (saved) {
+        try {
+            let data = JSON.parse(saved);
+            hp = data.hp; maxHp = data.maxHp; gold = data.gold; floor = data.floor;
+            gameState = data.gameState;
+            enemyHp = data.enemyHp; enemyMaxHp = data.enemyMaxHp; enemyAtk = data.enemyAtk;
+            defense = data.defense; potions = data.potions; potions2 = data.potions2;
+            whetstones = data.whetstones; currentWeaponIdx = data.currentWeaponIdx;
+            isEnemyFrozen = data.isEnemyFrozen; princessHelpCount = data.princessHelpCount;
+            thiefChaseState = data.thiefChaseState;
+            stats = data.stats;
+            stats.achieved = new Set(stats.achieved);
+            currentFight = data.currentFight;
+            weapons = data.weapons;
+            
+            logBox.innerHTML = data.logHTML || "";
+            document.getElementById("ctrl-event").innerHTML = data.eventHTML || "";
+            document.getElementById("enemy-emoji").innerText = data.enemyEmoji || "👾";
+            
+            log(`💾 已讀取上次的冒險進度（目前第 ${floor} 層），繼續你的征途！`, "color-good");
+            switchControls(gameState);
+            return true;
+        } catch(e) {
+            console.error("讀檔失敗", e);
+        }
+    }
+    return false;
+}
+
+function askAbandon() {
+    if (confirm("確定要放棄目前的冒險進度並重新開始嗎？\n(這將不會列入排行榜紀錄，所有進度都會歸零)")) {
+        localStorage.removeItem("dungeonSave");
+        closeBag();
+        initGame(true);
+    }
+}
+// --------------------------
+
+function initGame(forceNew = false) {
+    if (!forceNew && loadGame()) {
+        updateUI();
+        return; // 成功讀取存檔就跳過初始化
+    }
+
     hp = 100; maxHp = 100; gold = 0; floor = 1; defense = 0; potions = 1; potions2 = 0; whetstones = 0;
     princessHelpCount = 0; isEnemyFrozen = false; currentRunData = null; thiefChaseState = null;
     stats = { 
@@ -530,10 +595,11 @@ function initGame() {
     };
     currentFight = { dmgTaken: 0, absurdCount: 0, hasWhetstone: false };
     gameState = "explore";
-    weapons.forEach((w, idx) => w.unlocked = (idx === 0));
+    weapons = JSON.parse(JSON.stringify(defaultWeapons)); // 深拷貝初始武器
     currentWeaponIdx = 0;
     
     logBox.innerHTML = '';
+    document.getElementById("ctrl-event").innerHTML = '';
     log(`冒險開始！選擇你的武器，踏入地下城...`, "color-neutral");
     switchControls("explore");
     updateUI();
@@ -631,6 +697,10 @@ function updateUI() {
 
     if (gameState === "shop") {
         updateShopButtons();
+    }
+
+    if (gameState !== "over") {
+        saveGame();
     }
 }
 
@@ -1737,6 +1807,7 @@ function rest() {
 
 // --- 結算與本地排行榜系統 ---
 function prepareGameOver(statusText) {
+    localStorage.removeItem("dungeonSave"); // 結算清除存檔
     let totalScore = gold + floor * 10 + (stats.achieved.size * 50);
     currentRunData = {
         score: totalScore,
@@ -1826,3 +1897,7 @@ initGame();
 </script>
 </body>
 </html>
+
+我更新了你記住 他有包含自動存檔功能 
+下次用這個修改 幫我加上右上角的 i 遊戲規則說明面板 到007遊戲裡面 
+剛剛討論好的那個
