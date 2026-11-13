@@ -434,11 +434,14 @@ function getAiAction() {
     }
 }
 
-// 觸發回合 (正確的 0 - 0 - 7 獨立跳出動畫)
+// 觸發回合 (4拍節奏：0 - 0 - 7 - 出招！)
 async function triggerRound(playerAction) {
     if (isGameOver || isProcessing) return;
-    isProcessing = true; toggleButtons(true); initAudio();
+    isProcessing = true; 
+    toggleButtons(true); 
+    initAudio();
 
+    const beat = 450; // 統一管理每一拍的時間（毫秒），想調快調慢改這裡就好
     let aiAction = getAiAction();
 
     pIcon.classList.remove('show', 'glow-shield');
@@ -447,29 +450,32 @@ async function triggerRound(playerAction) {
     
     vsText.classList.add('countdown');
     
-    // 第一個 0
+    // 第一拍：0
     vsText.innerText = "0";
     playSound('tick');
-    await delay(450);
+    await delay(beat);
     
-    // 第二個 0
+    // 第二拍：0 (先清空再填入，搭配短暫延遲讓 CSS 動畫能重新觸發)
+    vsText.innerText = ""; 
+    await delay(50); 
     vsText.innerText = "0";
     playSound('tick');
-    await delay(450);
+    await delay(beat - 50); // 扣掉剛剛的 50ms，保持總節拍精準
     
-    // 7
+    // 第三拍：7
     vsText.innerText = "7";
-    playSound('tick');
-    await delay(450);
+    playSound('seven'); // 建議改回 'seven' 讓第三拍有重音區隔
+    await delay(beat);
     
-    // 雙方動作同時揭曉
+    // 第四拍：雙方動作同時揭曉
+    vsText.innerText = "VS"; // 出招時把中間文字改回 VS 或 "！"，避免 "7" 留在畫面上太久
+    vsText.classList.remove('countdown');
     pIcon.innerText = ACT_ICONS[playerAction];
     aIcon.innerText = ACT_ICONS[aiAction];
     pIcon.classList.add('show');
     aIcon.classList.add('show');
-    vsText.classList.remove('countdown');
     
-    await delay(450); 
+    await delay(beat); 
     resolveRound(playerAction, aiAction);
 }
 
