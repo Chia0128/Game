@@ -423,16 +423,30 @@ function getPotionPrice() {
     if (floor <= 50) return 25;
     if (floor <= 100) return 35;
     if (floor <= 200) return 50;
-    if (floor <= 300) return 100;
-    return 150;
+    if (floor <= 300) return 80;
+    if (floor <= 400) return 1100;
+    if (floor <= 500) return 150;
+    if (floor <= 600) return 190;
+    if (floor <= 700) return 220;
+    if (floor <= 800) return 260;
+    if (floor <= 900) return 290;
+    if (floor <= 1000) return 330;
+    return 399;
 }
 
 function getPotion2Price() {
     if (floor <= 50) return 45;
     if (floor <= 100) return 65;
     if (floor <= 200) return 95;
-    if (floor <= 300) return 190;
-    return 285;
+    if (floor <= 300) return 175;
+    if (floor <= 400) return 190;
+    if (floor <= 500) return 290;
+    if (floor <= 600) return 370;
+    if (floor <= 700) return 415;
+    if (floor <= 800) return 520;
+    if (floor <= 900) return 570;
+    if (floor <= 1000) return 650;
+    return 799;
 }
 
 function getWhetstonePrice() {
@@ -444,7 +458,14 @@ function getMaxHpPrice() {
     if (floor <= 100) return 100;
     if (floor <= 200) return 150;
     if (floor <= 300) return 200;
-    return 300;
+    if (floor <= 400) return 150;
+    if (floor <= 500) return 300;
+    if (floor <= 600) return 350;
+    if (floor <= 700) return 400;
+    if (floor <= 800) return 450;
+    if (floor <= 900) return 500;
+    if (floor <= 1000) return 550;
+    return 600;
 }
 
 function getGamblerBet() {
@@ -452,7 +473,14 @@ function getGamblerBet() {
     if (floor <= 100) return 30;
     if (floor <= 200) return 40;
     if (floor <= 300) return 120;
-    return 220;
+    if (floor <= 400) return 180;
+    if (floor <= 500) return 240;
+    if (floor <= 600) return 290;
+    if (floor <= 700) return 310;
+    if (floor <= 800) return 350;
+    if (floor <= 900) return 380;
+    if (floor <= 1000) return 410;
+    return 499;
 }
 
 function getTeamSize() {
