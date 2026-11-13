@@ -460,10 +460,10 @@ async function triggerRound(playerAction) {
     playSound('tick');
     await delay(beat * 0.8); // 260ms
 
-    // === 第三組：007 ！（佔 2 拍，出現瞬間雙方同時出招）===
-    vsText.innerText = "007 ！";
-    playSound('seven');
-    vsText.classList.remove('countdown');
+    // === 第一組：007（佔 1.5 拍）===
+    vsText.innerText = "007";
+    playSound('tick');
+    await delay(beat * 1.2); // 780ms
 
     // 雙方動作同時揭曉
     pIcon.innerText = ACT_ICONS[playerAction];
