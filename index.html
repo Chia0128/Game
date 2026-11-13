@@ -29,13 +29,110 @@
             color: #2d3436;
         }
 
+        /* 左上角安裝 App 按鈕 */
+        .btn-install-app {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 9999;
+            background: rgba(255, 255, 255, 0.95);
+            color: #2b5876;
+            border: 1px solid rgba(43, 88, 118, 0.25);
+            border-radius: 20px;
+            padding: 7px 13px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: transform 0.15s, box-shadow 0.15s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .btn-install-app:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+        }
+        .btn-install-app:active {
+            transform: scale(0.95);
+        }
+
+        /* 安裝教學彈窗 */
+        #install-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .install-card {
+            background: #ffffff;
+            border-radius: 18px;
+            max-width: 360px;
+            width: 100%;
+            padding: 22px 20px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+            text-align: left;
+            animation: popIn 0.22s ease-out;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.92); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .install-card h3 {
+            margin: 0 0 14px 0;
+            font-size: 18px;
+            color: #2b5876;
+            text-align: center;
+        }
+        .os-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+        }
+        .os-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e272e;
+            margin-bottom: 6px;
+        }
+        .os-steps {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 13px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        .btn-close-modal {
+            width: 100%;
+            padding: 11px;
+            margin-top: 4px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-close-modal:active {
+            transform: scale(0.98);
+        }
+
         /* 頂部質感標頭 */
         .header {
             background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
             color: #ffffff;
             width: 100%;
             text-align: center;
-            padding: 32px 16px 28px;
+            padding: 46px 16px 28px;
             box-shadow: 0 4px 20px rgba(43, 88, 118, 0.2);
             margin-bottom: 28px;
         }
@@ -155,6 +252,35 @@
 </head>
 <body>
 
+    <button class="btn-install-app" id="btn-install-app" onclick="openInstallModal()">📱 安裝為手機 App</button>
+
+    <!-- 安裝教學彈窗 -->
+    <div id="install-modal" onclick="if(event.target === this) closeInstallModal()">
+        <div class="install-card">
+            <h3>📱 安裝為手機 App</h3>
+            
+            <div class="os-box">
+                <div class="os-title">🍎 iPhone / iPad 使用者：</div>
+                <ol class="os-steps">
+                    <li>點擊瀏覽器下方的 <b>「分享」</b>按鈕</li>
+                    <li>在選單中向下滾動，點選 <b>「加入主畫面」</b></li>
+                    <li>點擊右上角的<b>「加入」</b>，即可完成安裝！</li>
+                </ol>
+            </div>
+
+            <div class="os-box">
+                <div class="os-title">🤖 Android 使用者：</div>
+                <ol class="os-steps">
+                    <li>點擊瀏覽器右上角的 <b>「⋮」</b>選單</li>
+                    <li>點選<b>「加到主畫面」</b></li>
+                    <li>點擊<b>「確認安裝」</b>，即可完成安裝！</li>
+                </ol>
+            </div>
+
+            <button class="btn-close-modal" onclick="closeInstallModal()">我知道了</button>
+        </div>
+    </div>
+
     <div class="header">
         <div class="header-title">🎮 迷你遊樂場大廳</div>
         <p class="header-sub">收錄 12 款精選單機與連線小遊戲 · 隨開即玩</p>
@@ -169,7 +295,7 @@
                     <div class="title">單機猜拳對戰</div>
                     <span class="tag">休閒對戰</span>
                 </div>
-                <div class="desc">隨開隨玩，挑戰電腦看誰先達標！</div>
+                <div class="desc">隨開隨玩，挑戰電腦看誰最會猜拳！</div>
             </div>
         </a>
         
@@ -205,7 +331,7 @@
                     <div class="title">圈圈叉叉</div>
                     <span class="tag">經典棋類</span>
                 </div>
-                <div class="desc">挑戰聰明 AI，看看你能否突破防線。</div>
+                <div class="desc">挑戰聰明電腦，看看你能率先連線!</div>
             </div>
         </a>
         
@@ -265,7 +391,7 @@
                     <div class="title">電子寵物石</div>
                     <span class="tag">佛系養成</span>
                 </div>
-                <div class="desc">擦拭、曬太陽、吐露心事，無壓力的佛系療癒養成！</div>
+                <div class="desc">擦拭、曬太陽、吐露心事，無壓力的佛系療癒養成！(很無聊的遊戲)</div>
             </div>
         </a>
 
@@ -289,7 +415,7 @@
                     <div class="title">007 特務對決</div>
                     <span class="tag">心理博弈</span>
                 </div>
-                <div class="desc">集氣、防禦、開槍！經典心理博弈猜拳遊戲，看你能否看穿對手的心機。</div>
+                <div class="desc">007ㄚ007 裝子彈ㄚ裝子彈!!。</div>
             </div>
         </a>
 
@@ -301,13 +427,25 @@
                     <div class="title">神諭占卜</div>
                     <span class="tag">趣味運勢</span>
                 </div>
-                <div class="desc">抽取今日神諭，看看整體的運勢走向！</div>
+                <div class="desc">抽取今日卡牌，看看整體的運勢走向！</div>
             </div>
         </a>
         
     </div>
 
     <script>
+        function openInstallModal() {
+            document.getElementById('install-modal').style.display = 'flex';
+        }
+        function closeInstallModal() {
+            document.getElementById('install-modal').style.display = 'none';
+        }
+
+        // 若已從手機桌面 App (standalone 模式) 開啟，自動隱藏安裝按鈕
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            document.getElementById('btn-install-app').style.display = 'none';
+        }
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
