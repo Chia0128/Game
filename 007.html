@@ -127,10 +127,18 @@
         }
 
         .vs-text { 
-            font-size: 18px; color: #e94560; font-style: italic; transition: 0.1s;
+            font-size: 18px; color: #e94560; font-style: italic; transition: transform 0.1s ease;
             text-shadow: 0 0 5px rgba(233, 69, 96, 0.5);
         }
-        .vs-text.countdown { font-size: 26px; color: #fbc02d; transform: scale(1.2); }
+        /* 倒數跳動彈跳動畫 */
+        .vs-text.countdown { 
+            font-size: 30px; color: #fbc02d; 
+            animation: bounceNum 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate;
+        }
+        @keyframes bounceNum {
+            from { transform: scale(1); }
+            to { transform: scale(1.35); text-shadow: 0 0 15px #fbc02d; }
+        }
 
         /* 操作面板 */
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
@@ -238,21 +246,19 @@ let aiBullets = 0;
 let winStreak = 0;
 let isGameOver = false;
 let currentDifficulty = 'normal';
-let isProcessing = false; // 防止連按
+let isProcessing = false;
 
 const logBox = document.getElementById('log-box');
 const pIcon = document.getElementById('player-action-icon');
 const aIcon = document.getElementById('ai-action-icon');
 const vsText = document.getElementById('vs-text');
 
-// 敵方資料庫
 const ENEMY_PROFILES = {
     'easy': { name: '菜鳥見習探員', emoji: '🕵️' },
     'normal': { name: '暗影王牌殺手', emoji: '🕶️' },
     'hard': { name: '幽靈組織首領', emoji: '🎭' }
 };
 
-// 動作圖示對照
 const ACT_ICONS = {
     'charge': '🔋',
     'defend': '🛡️',
@@ -265,12 +271,8 @@ let audioCtx;
 let isMuted = false;
 
 function initAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
 function toggleMute() {
@@ -284,7 +286,6 @@ function playSound(type) {
     const now = audioCtx.currentTime;
 
     if (type === 'tick') {
-        // 倒數計時音效
         let osc = audioCtx.createOscillator();
         let gain = audioCtx.createGain();
         osc.type = 'sine'; osc.frequency.value = 800;
@@ -293,8 +294,17 @@ function playSound(type) {
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(now); osc.stop(now + 0.1);
     } 
+    else if (type === 'seven') {
+        // 最後一拍「7！」較高亢的音效
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'triangle'; osc.frequency.value = 1200;
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(now); osc.stop(now + 0.15);
+    }
     else if (type === 'charge') {
-        // 集氣上升音
         let osc = audioCtx.createOscillator();
         let gain = audioCtx.createGain();
         osc.type = 'sine';
@@ -306,7 +316,6 @@ function playSound(type) {
         osc.start(now); osc.stop(now + 0.3);
     }
     else if (type === 'defend') {
-        // 防禦金屬聲
         let osc = audioCtx.createOscillator();
         let gain = audioCtx.createGain();
         osc.type = 'triangle'; osc.frequency.value = 1200;
@@ -316,17 +325,14 @@ function playSound(type) {
         osc.start(now); osc.stop(now + 0.2);
     }
     else if (type === 'shoot' || type === 'snipe') {
-        // 射擊爆破聲 (利用雜訊波)
         let bufferSize = audioCtx.sampleRate * 0.3;
         let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         let data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
         
-        let noise = audioCtx.createBufferSource();
-        noise.buffer = buffer;
+        let noise = audioCtx.createBufferSource(); noise.buffer = buffer;
         let filter = audioCtx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = type === 'snipe' ? 300 : 1200; // 狙擊槍聲音更沉
+        filter.type = 'lowpass'; filter.frequency.value = type === 'snipe' ? 300 : 1200;
         
         let gain = audioCtx.createGain();
         gain.gain.setValueAtTime(type === 'snipe' ? 0.6 : 0.3, now);
@@ -344,28 +350,20 @@ function log(msg, className = '') {
 
 function showEnemySpeech(text, duration = 2500) {
     const bubble = document.getElementById('enemy-speech');
-    bubble.innerText = text;
-    bubble.classList.add('show');
+    bubble.innerText = text; bubble.classList.add('show');
     setTimeout(() => bubble.classList.remove('show'), duration);
 }
 
 function initGame() {
-    playerBullets = 0;
-    aiBullets = 0;
-    isGameOver = false;
-    isProcessing = false;
-    
+    playerBullets = 0; aiBullets = 0; isGameOver = false; isProcessing = false;
     document.getElementById('control-panel').style.display = 'grid';
     document.getElementById('btn-restart').style.display = 'none';
     document.getElementById('game-wrap').classList.remove('shake-active');
     
-    pIcon.classList.remove('show', 'glow-shield');
-    aIcon.classList.remove('show', 'glow-shield');
-    vsText.innerText = 'VS';
-    vsText.classList.remove('countdown');
+    pIcon.classList.remove('show', 'glow-shield'); aIcon.classList.remove('show', 'glow-shield');
+    vsText.innerText = 'VS'; vsText.classList.remove('countdown');
 
-    updateUI();
-    log("對局開始！請選擇你的動作。");
+    updateUI(); log("對局開始！請選擇你的動作。");
     showEnemySpeech("放馬過來吧，菜鳥！", 2000);
     toggleButtons(false);
 }
@@ -374,23 +372,18 @@ function changeDifficulty() {
     currentDifficulty = document.getElementById('sel-difficulty').value;
     document.getElementById('txt-enemy-name').innerText = ENEMY_PROFILES[currentDifficulty].name;
     document.getElementById('enemy-emoji').innerText = ENEMY_PROFILES[currentDifficulty].emoji;
-    winStreak = 0;
-    document.getElementById('txt-streak').innerText = winStreak;
+    winStreak = 0; document.getElementById('txt-streak').innerText = winStreak;
     initGame();
 }
 
 function updateUI() {
-    // 玩家子彈圖示
-    let pBelt = document.getElementById('player-bullets');
-    pBelt.innerHTML = '';
+    let pBelt = document.getElementById('player-bullets'); pBelt.innerHTML = '';
     for(let i=0; i<Math.max(3, playerBullets); i++) {
         pBelt.innerHTML += `<span class="bullet-icon ${i < playerBullets ? 'loaded' : 'empty'}">🟡</span>`;
     }
     document.getElementById('player-bullet-label').innerText = `彈匣：${playerBullets} / 3`;
     
-    // AI 子彈圖示
-    let aBelt = document.getElementById('ai-bullets');
-    aBelt.innerHTML = '';
+    let aBelt = document.getElementById('ai-bullets'); aBelt.innerHTML = '';
     for(let i=0; i<Math.max(3, aiBullets); i++) {
         aBelt.innerHTML += `<span class="bullet-icon ${i < aiBullets ? 'loaded' : 'empty'}">🟡</span>`;
     }
@@ -402,7 +395,6 @@ function updateUI() {
 function toggleButtons(disable) {
     document.getElementById('btn-c').disabled = disable;
     document.getElementById('btn-d').disabled = disable;
-    // 射擊與狙擊依子彈數防呆
     document.getElementById('btn-s').disabled = disable || playerBullets < 1;
     document.getElementById('btn-sn').disabled = disable || playerBullets < 3;
 }
@@ -410,17 +402,14 @@ function toggleButtons(disable) {
 const delay = ms => new Promise(res => setTimeout(res, ms));
 
 function getAiAction() {
-    let canShoot = aiBullets >= 1;
-    let canSnipe = aiBullets >= 3;
-    let pCanShoot = playerBullets >= 1;
-    let pCanSnipe = playerBullets >= 3;
+    let canShoot = aiBullets >= 1; let canSnipe = aiBullets >= 3;
+    let pCanShoot = playerBullets >= 1; let pCanSnipe = playerBullets >= 3;
 
     if (aiBullets === 0 && playerBullets === 0) return 'charge';
 
     if (currentDifficulty === 'easy') {
         let pool = ['charge', 'defend'];
-        if (canShoot) pool.push('shoot', 'shoot');
-        if (canSnipe) pool.push('snipe');
+        if (canShoot) pool.push('shoot', 'shoot'); if (canSnipe) pool.push('snipe');
         return pool[Math.floor(Math.random() * pool.length)];
     } 
     else if (currentDifficulty === 'normal') {
@@ -428,12 +417,8 @@ function getAiAction() {
         if (canSnipe) return Math.random() < 0.7 ? 'snipe' : 'shoot';
         if (pCanShoot) {
             let r = Math.random();
-            if (r < 0.33) return 'defend';
-            if (r < 0.66) return 'shoot';
-            return 'charge';
-        } else {
-            return Math.random() < 0.6 ? 'shoot' : 'charge';
-        }
+            if (r < 0.33) return 'defend'; if (r < 0.66) return 'shoot'; return 'charge';
+        } else return Math.random() < 0.6 ? 'shoot' : 'charge';
     } 
     else if (currentDifficulty === 'hard') {
         if (aiBullets === 0) {
@@ -441,8 +426,7 @@ function getAiAction() {
             return (pCanShoot && Math.random() < 0.8) ? 'defend' : 'charge';
         }
         if (canSnipe) {
-            if (pCanSnipe && Math.random() < 0.3) return 'defend';
-            return 'snipe';
+            if (pCanSnipe && Math.random() < 0.3) return 'defend'; return 'snipe';
         }
         if (pCanSnipe) return 'shoot';
         if (pCanShoot) return Math.random() < 0.5 ? 'charge' : (Math.random() < 0.5 ? 'defend' : 'shoot');
@@ -450,58 +434,52 @@ function getAiAction() {
     }
 }
 
-// 觸發回合 (加入節奏動畫)
+// 觸發回合 (正確的 0 - 0 - 7 獨立跳出動畫)
 async function triggerRound(playerAction) {
     if (isGameOver || isProcessing) return;
-    isProcessing = true;
-    toggleButtons(true);
-    initAudio(); // 確保音效解鎖
+    isProcessing = true; toggleButtons(true); initAudio();
 
     let aiAction = getAiAction();
 
-    // 動畫開始：隱藏上一局圖示
     pIcon.classList.remove('show', 'glow-shield');
     aIcon.classList.remove('show', 'glow-shield');
     document.getElementById('game-wrap').classList.remove('shake-active');
     
-    // 0 - 0 - 7 倒數節奏
     vsText.classList.add('countdown');
     
-    vsText.innerText = "0...";
+    // 第一個 0
+    vsText.innerText = "0";
     playSound('tick');
-    await delay(350);
+    await delay(450);
     
-    vsText.innerText = "0...";
+    // 第二個 0
+    vsText.innerText = "0";
     playSound('tick');
-    await delay(350);
+    await delay(450);
     
+    // 最後的 7 ！
     vsText.innerText = "7 ！";
+    playSound('seven');
     
-    // 揭曉動作
+    // 雙方動作同時揭曉
     pIcon.innerText = ACT_ICONS[playerAction];
     aIcon.innerText = ACT_ICONS[aiAction];
     pIcon.classList.add('show');
     aIcon.classList.add('show');
     vsText.classList.remove('countdown');
     
-    await delay(200); // 稍微停頓揭曉畫面
+    await delay(250); 
     resolveRound(playerAction, aiAction);
 }
 
 function resolveRound(pAct, aAct) {
-    let pDead = false;
-    let aDead = false;
-    let resultMsg = "";
-    
-    let isShootPlayed = false;
+    let pDead = false; let aDead = false; let resultMsg = ""; let isShootPlayed = false;
 
-    // 音效與特效判定
     if (pAct === 'shoot' || aAct === 'shoot') { playSound('shoot'); isShootPlayed = true; }
     if (pAct === 'snipe' || aAct === 'snipe') { playSound('snipe'); document.getElementById('game-wrap').classList.add('shake-active'); }
     if (!isShootPlayed && (pAct === 'defend' || aAct === 'defend')) playSound('defend');
     if (pAct === 'charge' || aAct === 'charge') playSound('charge');
 
-    // 判斷玩家被擊中
     if (aAct === 'shoot') {
         if (pAct === 'charge') { pDead = true; resultMsg += "敵方趁你集氣時開槍！<br>"; }
         else if (pAct === 'defend') { pIcon.classList.add('glow-shield'); }
@@ -511,24 +489,21 @@ function resolveRound(pAct, aAct) {
         }
     }
 
-    // 判斷 AI 被擊中
     if (pAct === 'shoot') {
         if (aAct === 'charge') { aDead = true; resultMsg += "你趁敵方集氣時精準射擊！<br>"; }
-        else if (aAct === 'defend') { aIcon.classList.add('glow-shield'); showEnemySpeech("哈哈，早看穿你了！", 2000); }
+        else if (pAct === 'defend') { aIcon.classList.add('glow-shield'); showEnemySpeech("哈哈，早看穿你了！", 2000); }
     } else if (pAct === 'snipe') {
         if (aAct === 'charge' || aAct === 'defend' || aAct === 'shoot') {
             aDead = true; resultMsg += "你的狙擊大招完美擊殺對手！<br>";
         }
     }
 
-    // 互動文字與子彈扣除
     if (pAct === 'shoot' && aAct === 'shoot') resultMsg += "雙方同時開槍，子彈抵銷！";
     if (pAct === 'snipe' && aAct === 'snipe') resultMsg += "雙方同時開啟大招，引發劇烈爆炸抵銷！";
     if (pAct === 'defend' && aAct === 'defend') resultMsg += "雙方都在防禦，氣氛十分尷尬...";
     if (pAct === 'charge' && aAct === 'charge') resultMsg += "雙方都在默默集氣儲備子彈。";
     if (pAct === 'defend' && aAct === 'shoot') resultMsg += "你成功防禦了敵方的射擊！";
 
-    // 扣彈與加彈結算 (先扣再加)
     if (pAct === 'shoot') playerBullets--;
     if (pAct === 'snipe') playerBullets -= 3;
     if (aAct === 'shoot') aiBullets--;
@@ -537,9 +512,8 @@ function resolveRound(pAct, aAct) {
     if (pAct === 'charge' && !pDead) playerBullets++;
     if (aAct === 'charge' && !aDead) aiBullets++;
 
-    updateUI(); // 更新最新子彈顯示
+    updateUI();
 
-    // 結算勝負與紅光
     if (pDead && aDead) {
         document.getElementById('red-flash-overlay').classList.add('flash');
         log("<span class='log-important'>雙方同歸於盡！平手結束！</span>");
@@ -553,18 +527,12 @@ function resolveRound(pAct, aAct) {
         log(resultMsg + "<span class='log-important log-win'><br>🏆 任務成功！你擊殺了目標！</span>");
         endGame(true);
     } else {
-        log(resultMsg);
-        isProcessing = false;
-        toggleButtons(false);
+        log(resultMsg); isProcessing = false; toggleButtons(false);
         setTimeout(() => document.getElementById('red-flash-overlay').classList.remove('flash'), 300);
         
-        // 存活時的敵人心理戰喊話
         vsText.innerText = 'VS';
-        if (playerBullets >= 2 && Math.random() > 0.3) {
-            showEnemySpeech("可惡...他子彈快滿了...");
-        } else if (aiBullets >= 2 && Math.random() > 0.4) {
-            showEnemySpeech("準備好受死吧！");
-        }
+        if (playerBullets >= 2 && Math.random() > 0.3) showEnemySpeech("可惡...他子彈快滿了...");
+        else if (aiBullets >= 2 && Math.random() > 0.4) showEnemySpeech("準備好受死吧！");
     }
 }
 
@@ -575,18 +543,14 @@ function endGame(playerWon) {
     document.getElementById('btn-restart').style.display = 'block';
 
     if (playerWon) {
-        winStreak++;
-        document.getElementById('txt-streak').innerText = winStreak;
+        winStreak++; document.getElementById('txt-streak').innerText = winStreak;
     } else {
-        winStreak = 0;
-        document.getElementById('txt-streak').innerText = winStreak;
+        winStreak = 0; document.getElementById('txt-streak').innerText = winStreak;
     }
 }
 
-// 啟動遊戲
 document.getElementById('txt-enemy-name').innerText = ENEMY_PROFILES[currentDifficulty].name;
 initGame();
-
 </script>
 </body>
 </html>
