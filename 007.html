@@ -434,7 +434,7 @@ function getAiAction() {
     }
 }
 
-// 觸發回合 (三段組字節奏：007 [1.5拍] -> 呀 [0.5拍] -> 007出招 [2拍])
+// 觸發回合 (三段組字節奏：007 -> 呀 -> 007 -> 清空出招)
 async function triggerRound(playerAction) {
     if (isGameOver || isProcessing) return;
     isProcessing = true; 
@@ -450,32 +450,34 @@ async function triggerRound(playerAction) {
     
     vsText.classList.add('countdown');
 
-    // === 第一組：007（佔 1.5 拍）===
+    // === 第一組：007（1.2 拍）===
     vsText.innerText = "007";
     playSound('tick');
-    await delay(beat * 1.2); // 780ms
+    await delay(beat * 1.2);
 
-    // === 第二組：呀（佔 0.5 拍，剛好湊滿前 2 拍）===
+    // === 第二組：呀（0.8 拍）===
     vsText.innerText = "呀";
     playSound('tick');
-    await delay(beat * 0.8); // 260ms
+    await delay(beat * 0.8);
 
-    // === 第一組：007（佔 1.5 拍）===
+    // === 第三組：007（1.2 拍）===
     vsText.innerText = "007";
     playSound('tick');
-    await delay(beat * 1.2); // 780ms
+    await delay(beat * 1.2);
 
-    // 雙方動作同時揭曉
+    // === 雙方動作同時揭曉（中間文字清空，不顯示 VS 也不留 007）===
+    vsText.innerText = ""; 
+    vsText.classList.remove('countdown');
+    playSound('seven'); // 出招瞬間播放重音音效（若不需要可改成 'tick' 或刪除這行）
+
     pIcon.innerText = ACT_ICONS[playerAction];
     aIcon.innerText = ACT_ICONS[aiAction];
     pIcon.classList.add('show');
     aIcon.classList.add('show');
 
-    await delay(beat * 2); // 停留完整 2 拍（1040ms）讓玩家看清楚招式再結算
+    await delay(beat * 1.5); // 停留時間讓玩家看清楚招式再結算
     resolveRound(playerAction, aiAction);
 }
-
-
 
 function resolveRound(pAct, aAct) {
     let pDead = false; let aDead = false; let resultMsg = ""; let isShootPlayed = false;
