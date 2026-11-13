@@ -55,6 +55,20 @@
         .stat-item { display: flex; flex-direction: column; align-items: center; }
         .stat-value { font-size: 16px; color: #fff; }
 
+        /* 神明護體狀態橫幅 */
+        #blessing-zone {
+            display: none;
+            font-size: 12px;
+            color: #fff59d;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #4a148c, #7b1fa2);
+            padding: 5px;
+            border-radius: 6px;
+            font-weight: bold;
+            border: 1px solid #ce93d8;
+        }
+
         /* 隊伍顯示區 */
         #team-zone {
             font-size: 12px;
@@ -164,16 +178,16 @@
         .btn-shop { background: #e65100; font-size: 13px; }
         .btn-bag { background: #6a1b9a; }
         .btn-flee { background: #424242; grid-column: span 2; }
-        .btn-event { background: #512da8; }
-        .btn-event-danger { background: #b71c1c; }
-        .btn-event-safe { background: #455a64; }
+        .btn-event { background: #512da8; font-size: 13px; }
+        .btn-event-danger { background: #b71c1c; font-size: 13px; }
+        .btn-event-safe { background: #455a64; font-size: 13px; }
 
-        /* 背包彈窗 */
-        #modal-overlay {
+        /* 背包與排行榜彈窗 */
+        #modal-overlay, #rank-modal-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.75);
             justify-content: center;
             align-items: center;
             z-index: 10000;
@@ -207,12 +221,56 @@
             align-items: center;
         }
         .weapon-option.equipped { border: 1px solid #ffb300; background: #3e3214; }
+
+        /* 排行榜列表與登錄區樣式 */
+        .rank-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: #262626;
+            border-radius: 4px;
+            border-left: 3px solid #555;
+        }
+        .rank-row.top-1 { border-left-color: #ffd700; background: #2e2a18; }
+        .rank-row.top-2 { border-left-color: #c0c0c0; }
+        .rank-row.top-3 { border-left-color: #cd7f32; }
+        
+        #record-submit-box {
+            grid-column: span 2;
+            background: #2c2c2c;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ffb300;
+            margin-bottom: 4px;
+        }
+        .record-input-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .record-input-row input {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #121212;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+        }
+        .record-input-row input:focus { border-color: #ffb300; }
     </style>
 </head>
 <body>
 
     <button onclick="window.location.href='index.html'" style="all: unset; position: fixed; top: 15px; left: 15px; z-index: 99999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;">
         ⬅️ 返回大廳
+    </button>
+
+    <button onclick="openLeaderboard()" style="all: unset; position: fixed; top: 15px; right: 15px; z-index: 99999; box-sizing: border-box; height: 36px; padding: 0 14px; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; font-weight: 600; color: #333333; background-color: #fff8e1; border: 1px solid #ffb300; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none;">
+        🏆 排行榜
     </button>
 
     <div id="modal-overlay">
@@ -227,6 +285,16 @@
         </div>
     </div>
 
+    <!-- 本地排行榜 Modal -->
+    <div id="rank-modal-overlay">
+        <div class="modal-card" style="border-color: #ffb300;">
+            <h3 style="margin-top:0; color:#ffb300;">🏆 地下城歷代英雄榜</h3>
+            <div style="font-size: 11px; color:#aaa; margin-bottom: 6px;">本機裝置歷史最高評分紀錄 (前 10 名)</div>
+            <div class="modal-list" id="rank-list" style="max-height: 250px;"></div>
+            <button class="btn" onclick="closeLeaderboard()" style="width:100%; background:#424242; margin-top:10px;">關閉排行榜</button>
+        </div>
+    </div>
+
     <div id="game-wrap">
         <div id="milestone-banner">🎉 里程碑達成！</div>
 
@@ -237,7 +305,8 @@
             <div class="stat-item"><span style="color: #aaa; font-size: 11px;">金幣</span><span class="stat-value color-gold" id="val-gold">0</span></div>
             <div class="stat-item"><span style="color: #aaa; font-size: 11px;">當前武器</span><span class="stat-value" id="val-weapon" style="font-size:13px; color:#64b5f6;">木劍</span></div>
         </div>
-        
+
+        <div id="blessing-zone">✨ 神明護體生效中：剩餘 <span id="val-blessing">0</span> 層</div>
         <div id="team-zone">👥 冒險天團：<span id="val-team">無</span></div>
 
         <div class="hp-container">
@@ -249,6 +318,7 @@
             <div style="font-size: 22px; margin-bottom: 2px;" id="enemy-emoji">👾</div>
             <div style="font-weight: bold; color: #ff5252; font-size: 13px;" id="enemy-hp-text">敵方生命：30</div>
             <div style="font-size: 10px; color: #ff9800; display: none;" id="enemy-buff-text">⚠️ 狂暴加成中</div>
+            <div style="font-size: 11px; color: #ffea00; font-weight: bold; display: none; margin-top: 2px;" id="enemy-thief-text">🏃‍♂️ 怪盜逃跑倒數：3 回合</div>
         </div>
 
         <div class="log-box" id="log-box"></div>
@@ -257,7 +327,16 @@
             <button class="btn btn-explore" onclick="explore()">🚪 探索下一間房間</button>
             <button class="btn btn-rest" id="btn-rest" onclick="rest()">⛺ 紮營休息 (30金)</button>
             <button class="btn btn-bag" onclick="openBag()">🎒 查看背包</button>
-            <button class="btn btn-flee" onclick="retreat()">🏃 攜帶戰利品撤退</button>
+            <button class="btn btn-flee" onclick="askRetreat()">🏃 攜帶戰利品撤退</button>
+        </div>
+
+        <!-- 撤退雙重確認面板 -->
+        <div class="controls" id="ctrl-retreat-confirm" style="display: none;">
+            <div style="grid-column: span 2; background: #2c2c2c; padding: 10px; border-radius: 8px; border: 1px solid #ffb300; font-size: 13px; color: #ffecb3; text-align: center; font-weight: bold;">
+                確定要結束本次冒險並結算成績嗎？
+            </div>
+            <button class="btn" style="background: #2e7d32;" onclick="retreat()">✅ 確定撤退</button>
+            <button class="btn" style="background: #546e7a;" onclick="cancelRetreat()">❌ 繼續冒險</button>
         </div>
 
         <div class="controls" id="ctrl-combat" style="display: none;">
@@ -280,6 +359,13 @@
         <div class="controls" id="ctrl-event" style="display: none;"></div>
 
         <div class="controls" id="ctrl-over" style="display: none;">
+            <div id="record-submit-box">
+                <div style="font-size: 12px; color: #ffb300; font-weight: bold;">✍️ 登錄本次冒險成績 (<span id="final-score-preview">0</span> 分)</div>
+                <div class="record-input-row">
+                    <input type="text" id="player-name-input" placeholder="輸入冒險者代號..." maxlength="10">
+                    <button class="btn" id="btn-save-record" onclick="submitScore()" style="background:#ffb300; color:#121212; padding:6px 12px; font-size:12px;">登錄榜單</button>
+                </div>
+            </div>
             <button class="btn btn-explore" onclick="initGame()">🔄 重新開始冒險</button>
         </div>
     </div>
@@ -294,24 +380,16 @@ let whetstones = 0;  // 狂戰士磨刀石數量
 let currentWeaponIdx = 0;
 let isEnemyFrozen = false;
 let princessHelpCount = 0;
+let currentRunData = null; // 暫存本局結算成績
+let thiefChaseState = null; // 追蹤神偷追擊戰狀態
 
-let stats = {
-    totalSpent: 0,
-    consecutiveTraps: 0,
-    bananaMet: false,
-    princessMet: false,
-    achieved: new Set(),
-    curseFloorsLeft: 0,
-    curseExtraAtk: 0,
-    princessJoined: false,
-    railWorkerJoined: false, // 阿榮
-    climberJoined: false,
-    chefJoined: false,
-    antJoined: false,
-    inspectorJoined: false,
-    shadowJoined: false
+let stats = { 
+    totalSpent: 0, consecutiveTraps: 0, bananaMet: false, princessMet: false, achieved: new Set(),
+    curseFloorsLeft: 0, curseExtraAtk: 0, blessingFloorsLeft: 0,
+    princessJoined: false, railWorkerJoined: false, // 阿榮
+    climberJoined: false, chefJoined: false, antJoined: false, inspectorJoined: false, shadowJoined: false
 };
-let currentFight = { dmgTaken: 0, absurdCount: 0 };
+let currentFight = { dmgTaken: 0, absurdCount: 0, hasWhetstone: false };
 
 let weapons = [
     { name: "木劍", minDmg: 8, maxDmg: 15, unlocked: true, price: 0, trait: "無特殊效果" },
@@ -345,30 +423,16 @@ function getPotionPrice() {
     if (floor <= 50) return 25;
     if (floor <= 100) return 35;
     if (floor <= 200) return 50;
-    if (floor <= 300) return 80;
-    if (floor <= 400) return 1100;
-    if (floor <= 500) return 150;
-    if (floor <= 600) return 190;
-    if (floor <= 700) return 220;
-    if (floor <= 800) return 260;
-    if (floor <= 900) return 290;
-    if (floor <= 1000) return 330;
-    return 399;
+    if (floor <= 300) return 100;
+    return 150;
 }
 
 function getPotion2Price() {
     if (floor <= 50) return 45;
     if (floor <= 100) return 65;
     if (floor <= 200) return 95;
-    if (floor <= 300) return 175;
-    if (floor <= 400) return 190;
-    if (floor <= 500) return 290;
-    if (floor <= 600) return 370;
-    if (floor <= 700) return 415;
-    if (floor <= 800) return 520;
-    if (floor <= 900) return 570;
-    if (floor <= 1000) return 650;
-    return 799;
+    if (floor <= 300) return 190;
+    return 285;
 }
 
 function getWhetstonePrice() {
@@ -380,14 +444,7 @@ function getMaxHpPrice() {
     if (floor <= 100) return 100;
     if (floor <= 200) return 150;
     if (floor <= 300) return 200;
-    if (floor <= 400) return 150;
-    if (floor <= 500) return 300;
-    if (floor <= 600) return 350;
-    if (floor <= 700) return 400;
-    if (floor <= 800) return 450;
-    if (floor <= 900) return 500;
-    if (floor <= 1000) return 550;
-    return 600;
+    return 300;
 }
 
 function getGamblerBet() {
@@ -395,14 +452,7 @@ function getGamblerBet() {
     if (floor <= 100) return 30;
     if (floor <= 200) return 40;
     if (floor <= 300) return 120;
-    if (floor <= 400) return 180;
-    if (floor <= 500) return 240;
-    if (floor <= 600) return 290;
-    if (floor <= 700) return 310;
-    if (floor <= 800) return 350;
-    if (floor <= 900) return 380;
-    if (floor <= 1000) return 410;
-    return 499;
+    return 220;
 }
 
 function getTeamSize() {
@@ -444,12 +494,13 @@ const hpText = document.getElementById("hp-text");
 
 function initGame() {
     hp = 100; maxHp = 100; gold = 0; floor = 1; defense = 0; potions = 1; potions2 = 0; whetstones = 0;
-    princessHelpCount = 0; isEnemyFrozen = false;
+    princessHelpCount = 0; isEnemyFrozen = false; currentRunData = null; thiefChaseState = null;
     stats = { 
         totalSpent: 0, consecutiveTraps: 0, bananaMet: false, princessMet: false, achieved: new Set(),
-        curseFloorsLeft: 0, curseExtraAtk: 0,
+        curseFloorsLeft: 0, curseExtraAtk: 0, blessingFloorsLeft: 0,
         princessJoined: false, railWorkerJoined: false, climberJoined: false, chefJoined: false, antJoined: false, inspectorJoined: false, shadowJoined: false
     };
+    currentFight = { dmgTaken: 0, absurdCount: 0, hasWhetstone: false };
     gameState = "explore";
     weapons.forEach((w, idx) => w.unlocked = (idx === 0));
     currentWeaponIdx = 0;
@@ -510,6 +561,14 @@ function updateUI() {
         btnRest.innerText = `⛺ 紮營休息 (${restCost}金)`;
     }
 
+    let bZone = document.getElementById("blessing-zone");
+    if (stats.blessingFloorsLeft > 0) {
+        bZone.style.display = "block";
+        document.getElementById("val-blessing").innerText = stats.blessingFloorsLeft;
+    } else {
+        bZone.style.display = "none";
+    }
+
     let teamSize = getTeamSize();
     let tZone = document.getElementById("team-zone");
     if (teamSize > 0) {
@@ -530,7 +589,14 @@ function updateUI() {
     if (gameState === "combat") {
         document.getElementById("enemy-zone").style.display = "block";
         document.getElementById("enemy-hp-text").innerText = `敵方生命：${enemyHp}`;
-        document.getElementById("enemy-buff-text").style.display = teamSize > 0 ? "block" : "none";
+        if (thiefChaseState && thiefChaseState.active) {
+            document.getElementById("enemy-buff-text").style.display = "none";
+            document.getElementById("enemy-thief-text").style.display = "block";
+            document.getElementById("enemy-thief-text").innerText = `🏃‍♂️ 怪盜逃跑倒數：${thiefChaseState.turnsLeft} 回合 (不會反擊)`;
+        } else {
+            document.getElementById("enemy-thief-text").style.display = "none";
+            document.getElementById("enemy-buff-text").style.display = teamSize > 0 ? "block" : "none";
+        }
     } else {
         document.getElementById("enemy-zone").style.display = "none";
     }
@@ -573,15 +639,32 @@ function tryRecruit(id, icon, name, msg) {
 
 function switchControls(state) {
     document.getElementById("ctrl-explore").style.display = state === "explore" ? "grid" : "none";
+    document.getElementById("ctrl-retreat-confirm").style.display = state === "retreat_confirm" ? "grid" : "none";
     document.getElementById("ctrl-combat").style.display = state === "combat" ? "grid" : "none";
     document.getElementById("ctrl-shop").style.display = state === "shop" ? "grid" : "none";
     document.getElementById("ctrl-event").style.display = state === "event" ? "grid" : "none";
     document.getElementById("ctrl-over").style.display = state === "over" ? "grid" : "none";
 }
 
+function askRetreat() {
+    switchControls("retreat_confirm");
+}
+
+function cancelRetreat() {
+    switchControls("explore");
+}
+
 function explore() {
     floor++;
     log(`--- 進入第 ${floor} 層 ---`, "color-neutral");
+
+    // 神明護體 Buff 結算
+    if (stats.blessingFloorsLeft > 0) {
+        let healAmt = Math.floor(maxHp * 0.10);
+        hp = Math.min(maxHp, hp + healAmt);
+        stats.blessingFloorsLeft--;
+        log(`✨ <span style="color:#fff59d;">【神明護體】</span> 神光沐浴，自動恢復 ${healAmt} 生命！`, "color-good");
+    }
 
     if (floor % 25 === 0) {
         showMilestoneBanner(floor);
@@ -610,71 +693,33 @@ function explore() {
     else if (floor > 100) thiefChance = 0.04;
 
     if (roll < thiefChance) {
-        if (gold > 0) {
+        if (stats.blessingFloorsLeft > 0) {
+            log(`✨ <b>【神明護體】</b> 一道神聖結界彈飛了企圖靠近的【神偷怪盜】！財產毫髮無傷！`, "color-good");
+        } else if (gold > 0) {
             let stolen = Math.floor(gold / 2);
             gold -= stolen;
-            log(`🦹 <b>一道黑影竄出！你遭遇了【神偷怪盜】！</b><br>他趁你不備順走了一半的財產（扣除 <span style="color:#ff3d00;">${stolen} 金幣</span>）並迅速消失在陰影中！`, "color-thief");
             if (stolen >= 100) unlockAchievement("一夜暴窮", "單次被神偷怪盜洗劫超過 100 金幣");
+
+            if (floor > 300) {
+                // 300 層以後觸發追擊選項
+                gameState = "event";
+                thiefChaseState = { active: false, stolenGold: stolen, turnsLeft: 3 };
+                log(`🦹 <b>一道黑影竄出！你遭遇了【神偷怪盜】！</b><br>他抓走了你一半的財產（<span style="color:#ff3d00;">${stolen} 金幣</span>），正準備鑽進地洞逃跑！`, "color-thief");
+                let eventPanel = document.getElementById("ctrl-event");
+                eventPanel.innerHTML = `
+                    <button class="btn btn-event-danger" onclick="startThiefChase()">⚔️ 追上去暴打他！(限時3回合)</button>
+                    <button class="btn btn-event-safe" onclick="resolveEvent('thief_escape', 'leave')">😭 算了，讓他跑吧</button>
+                `;
+                switchControls("event");
+            } else {
+                log(`🦹 <b>一道黑影竄出！你遭遇了【神偷怪盜】！</b><br>他趁你不備順走了一半的財產（扣除 <span style="color:#ff3d00;">${stolen} 金幣</span>）並迅速消失在陰影中！`, "color-thief");
+            }
         } else {
             log(`🦹 <b>一道黑影竄出！你遭遇了【神偷怪盜】！</b><br>但他摸了摸你的空口袋，嫌棄地吐了一口口水後離開了...`, "color-neutral");
         }
     }
     else if (roll < thiefChance + 0.25) {
-        gameState = "combat";
-        isEnemyFrozen = false;
-        
-        let hpRoll = Math.floor(Math.random() * 8);
-        if (floor <= 5) {
-            enemyMaxHp = 18 + hpRoll;
-        } else if (floor <= 10) {
-            enemyMaxHp = Math.floor(18 + hpRoll + floor * 0.5);
-        } else if (floor <= 20) {
-            enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.0);
-        } else if (floor <= 30) {
-            enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.5);
-        } else if (floor <= 40) {
-            enemyMaxHp = Math.floor(18 + hpRoll + floor * 2.0);
-        } else if (floor <= 50) {
-            enemyMaxHp = Math.floor(18 + hpRoll + floor * 2.5);
-        } else {
-            enemyMaxHp = Math.floor(18 + hpRoll + floor * 3.0);
-        }
-        
-        let baseAtk = 5;
-        if (floor <= 5) {
-            baseAtk += Math.floor(Math.random() * 5);
-        } else if (floor <= 10) {
-            baseAtk += Math.floor(Math.random() * 8);
-        } else if (floor <= 20) {
-            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 0.5);
-        } else if (floor <= 30) {
-            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 1);
-        } else if (floor <= 50) {
-            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 1.5);
-        } else if (floor <= 80) {
-            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 2);
-        } else if (floor <= 100) {
-            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 2.5);
-        } else {
-            baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 3.0);
-        }
-
-        if (stats.curseFloorsLeft > 0) {
-            baseAtk += stats.curseExtraAtk;
-        }
-
-        let teamN = getTeamSize();
-        if (teamN > 0) {
-            enemyMaxHp = Math.floor(enemyMaxHp * (1 + teamN * 0.20));
-            baseAtk = Math.floor(baseAtk * (1 + teamN * 0.10));
-        }
-        
-        enemyHp = enemyMaxHp;
-        enemyAtk = baseAtk;
-        currentFight = { dmgTaken: 0, absurdCount: 0 };
-        document.getElementById("enemy-emoji").innerText = ["👾", "🐺", "🧛", "🧟", "🐉"][Math.min(Math.floor(floor/3), 4)];
-        log(`危險！遭遇了地牢怪獸！`, "color-bad");
-        switchControls("combat");
+        startNormalCombat();
     } 
     else if (roll < thiefChance + 0.35) {
         let earned = Math.floor(20 + Math.random() * 25 + floor * 2);
@@ -682,12 +727,16 @@ function explore() {
         log(`💎 發現古老寶箱！獲得 ${earned} 枚金幣。`, "color-gold");
     } 
     else if (roll < thiefChance + 0.45) {
-        stats.consecutiveTraps++;
-        let dmg = Math.max(5, Math.floor(12 + Math.random() * 10 + floor - defense));
-        hp -= dmg;
-        log(`⚠️ 踩到毒刺陷阱！防具減傷後受到 ${dmg} 點傷害。`, "color-bad");
-        if (stats.consecutiveTraps >= 3) unlockAchievement("衰神附體", "連續探索 3 次踩到陷阱");
-        checkDeath();
+        if (stats.blessingFloorsLeft > 0) {
+            log(`✨ <b>【神明護體】</b> 你踩到了毒刺陷阱，但金光護體讓你完全免疫了傷害！`, "color-good");
+        } else {
+            stats.consecutiveTraps++;
+            let dmg = Math.max(5, Math.floor(12 + Math.random() * 10 + floor - defense));
+            hp -= dmg;
+            log(`⚠️ 踩到毒刺陷阱！防具減傷後受到 ${dmg} 點傷害。`, "color-bad");
+            if (stats.consecutiveTraps >= 3) unlockAchievement("衰神附體", "連續探索 3 次踩到陷阱");
+            checkDeath();
+        }
     }
     else if (roll < thiefChance + 0.55) {
         let heal = Math.floor(15 + Math.random() * 15);
@@ -730,12 +779,98 @@ function explore() {
     updateUI();
 }
 
+function startNormalCombat(isDemonBoss = false) {
+    gameState = "combat";
+    isEnemyFrozen = false;
+    thiefChaseState = null;
+    
+    let hpRoll = Math.floor(Math.random() * 8);
+    if (floor <= 5) {
+        enemyMaxHp = 18 + hpRoll;
+    } else if (floor <= 10) {
+        enemyMaxHp = Math.floor(18 + hpRoll + floor * 0.5);
+    } else if (floor <= 20) {
+        enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.0);
+    } else if (floor <= 30) {
+        enemyMaxHp = Math.floor(18 + hpRoll + floor * 1.5);
+    } else if (floor <= 40) {
+        enemyMaxHp = Math.floor(18 + hpRoll + floor * 2.0);
+    } else if (floor <= 50) {
+        enemyMaxHp = Math.floor(18 + hpRoll + floor * 2.5);
+    } else {
+        enemyMaxHp = Math.floor(18 + hpRoll + floor * 3.0);
+    }
+    
+    let baseAtk = 5;
+    if (floor <= 5) {
+        baseAtk += Math.floor(Math.random() * 5);
+    } else if (floor <= 10) {
+        baseAtk += Math.floor(Math.random() * 8);
+    } else if (floor <= 20) {
+        baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 0.5);
+    } else if (floor <= 30) {
+        baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 1);
+    } else if (floor <= 50) {
+        baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 1.5);
+    } else if (floor <= 80) {
+        baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 2);
+    } else if (floor <= 100) {
+        baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 2.5);
+    } else {
+        baseAtk += Math.floor(Math.random() * 8) + Math.floor(floor * 3.0);
+    }
+
+    if (stats.curseFloorsLeft > 0) {
+        baseAtk += stats.curseExtraAtk;
+    }
+
+    let teamN = getTeamSize();
+    if (teamN > 0) {
+        enemyMaxHp = Math.floor(enemyMaxHp * (1 + teamN * 0.20));
+        baseAtk = Math.floor(baseAtk * (1 + teamN * 0.10));
+    }
+
+    if (isDemonBoss) {
+        enemyMaxHp = Math.floor(enemyMaxHp * 1.8);
+        baseAtk = Math.floor(baseAtk * 1.3);
+        document.getElementById("enemy-emoji").innerText = "👑";
+        log(`👑 <b>【地下城魔王分身】</b> 降臨！散發著令人窒息的深淵威壓！`, "color-bad");
+    } else {
+        document.getElementById("enemy-emoji").innerText = ["👾", "🐺", "🧛", "🧟", "🐉"][Math.min(Math.floor(floor/3), 4)];
+        log(`危險！遭遇了地牢怪獸！`, "color-bad");
+    }
+    
+    enemyHp = enemyMaxHp;
+    enemyAtk = baseAtk;
+    currentFight = { dmgTaken: 0, absurdCount: 0, hasWhetstone: false, isDemonBoss: isDemonBoss };
+    switchControls("combat");
+}
+
+function startThiefChase() {
+    gameState = "combat";
+    isEnemyFrozen = false;
+    thiefChaseState.active = true;
+    thiefChaseState.turnsLeft = 3;
+    
+    // 怪盜血量隨層數提高，成為高血量打寶木樁
+    enemyMaxHp = Math.floor(150 + floor * 1.2);
+    enemyHp = enemyMaxHp;
+    enemyAtk = 0; // 怪盜只顧著逃跑，完全不會回擊
+    currentFight = { dmgTaken: 0, absurdCount: 0, hasWhetstone: false };
+    
+    document.getElementById("enemy-emoji").innerText = "🦹";
+    log(`🏃‍♂️ <b>追擊開始！</b> 你攔住了【神偷怪盜】，趁他抱頭鼠竄時在 3 回合內打倒他！`, "color-thief");
+    switchControls("combat");
+    updateUI();
+}
+
 function triggerSpecialEvent() {
     gameState = "event";
     
-    let pool = ['gambler', 'blacksmith', 'mimic', 'siren', 'altar'];
+    // 移除獨立的 blacksmith，合併至 altar
+    let pool = ['gambler', 'mimic', 'siren', 'altar'];
     if (floor >= 301) {
-        pool.push('railworker', '101', 'nightmarket', 'ant', 'jail', 'time', 'roulette');
+        pool.push('railworker', '101', 'nightmarket', 'ant', 'jail', 'time', 'roulette', 'scale', 'demon_boss');
     } else if (floor >= 251) {
         pool.push('time');
     } else if (floor >= 201) {
@@ -761,12 +896,6 @@ function triggerSpecialEvent() {
             <button class="btn btn-event" onclick="resolveEvent('gambler', 'play')">🎲 賭一把 (${bet}金)</button>
             <button class="btn btn-event-safe" onclick="resolveEvent('gambler', 'leave')">🚶 拒絕並離開</button>
         `;
-    } else if (eventType === 'blacksmith') {
-        log(`🩸 <b>【鮮血鐵匠】</b>：「我可以把武器磨得更鋒利，但我不要錢，我要你的血...」`, "color-event");
-        eventPanel.innerHTML = `
-            <button class="btn btn-event-danger" onclick="resolveEvent('blacksmith', 'trade')">🩸 獻出 30 HP 升級武器</button>
-            <button class="btn btn-event-safe" onclick="resolveEvent('blacksmith', 'leave')">🚶 覺得太毛了，快逃</button>
-        `;
     } else if (eventType === 'mimic') {
         log(`🎁 <b>【可疑的華麗寶箱】</b> 房間中央擺著鑲滿寶石的寶箱，但似乎在微微顫動...`, "color-event");
         eventPanel.innerHTML = `
@@ -780,12 +909,34 @@ function triggerSpecialEvent() {
             <button class="btn btn-event-safe" onclick="resolveEvent('siren', 'leave')">🚶 禮貌拒絕</button>
         `;
     } else if (eventType === 'altar') {
-        log(`🗿 <b>【遠古神祕祭壇】</b> 石碑上寫著：「等價交換，庇護降臨。」`, "color-event");
-        eventPanel.innerHTML = `
-            <button class="btn btn-event" onclick="resolveEvent('altar', 'potion')">🧪 獻祭 1 罐普普通通生命藥水</button>
-            <button class="btn btn-event" onclick="resolveEvent('altar', 'gold')">💰 獻祭 40 金幣</button>
-            <button class="btn btn-event-safe" onclick="resolveEvent('altar', 'leave')" style="grid-column: span 2;">🚶 什麼都不做</button>
-        `;
+        if (floor <= 200) {
+            // 1~200 層：每 50 層動態提高代價與回報
+            let tier = Math.floor((floor - 1) / 50) + 1; // 1, 2, 3, 4
+            let hpCost = 30 + (tier - 1) * 15;
+            let dmgGain = 5 + (tier - 1) * 3;
+            let potCost = tier;
+            let defGain = 3 + (tier - 1) * 1;
+            let goldCost = 40 + (tier - 1) * 40;
+            let maxHpGain = 25 + (tier - 1) * 15;
+
+            log(`🗿 <b>【遠古神祕祭壇 (第${tier}階)】</b> 刻著古老銘文：「獻出代價，換取對應的祝福。」`, "color-event");
+            eventPanel.innerHTML = `
+                <button class="btn btn-event-danger" onclick="resolveEvent('altar', 'blood')">🩸 獻祭 ${hpCost} HP (最大傷+${dmgGain})</button>
+                <button class="btn btn-event" onclick="resolveEvent('altar', 'potion')">🧪 獻祭 ${potCost} 罐普通藥水 (防禦+${defGain})</button>
+                <button class="btn btn-event" onclick="resolveEvent('altar', 'gold')" style="grid-column: span 2;">💰 獻祭 ${goldCost} 金幣 (生命上限+${maxHpGain})</button>
+                <button class="btn btn-event-safe" onclick="resolveEvent('altar', 'leave')" style="grid-column: span 2;">🚶 什麼都不做</button>
+            `;
+        } else {
+            // 201 層以後：混沌深淵祭壇大改版
+            let goldCost = 500 + Math.floor((floor - 201) / 50) * 250;
+            log(`🔮 <b>【混沌深淵祭壇】</b> 深淵法則降臨！祭壇散發著禁忌與狂暴的紫黑色光芒：`, "color-event");
+            eventPanel.innerHTML = `
+                <button class="btn btn-event-danger" onclick="resolveEvent('altar', 'abyss_blood')">🩸 賭命狂戰：獻祭 35% 當前HP<br><span style="font-size:10px;">(武器最小/最大傷害永久 +15)</span></button>
+                <button class="btn btn-event" onclick="resolveEvent('altar', 'abyss_alchemy')">🧪 煉金轉化：獻祭 3普通 或 1牆藥水<br><span style="font-size:10px;">(獲得 2 磨刀石 + 80 生命上限)</span></button>
+                <button class="btn btn-event" onclick="resolveEvent('altar', 'abyss_blessing')" style="grid-column: span 2;">💰 神明祝福：獻祭 ${goldCost} 金幣<br><span style="font-size:10px;">(5層內免疫陷阱與怪盜 + 每步回血10%)</span></button>
+                <button class="btn btn-event-safe" onclick="resolveEvent('altar', 'leave')" style="grid-column: span 2;">🚶 敬畏地離開</button>
+            `;
+        }
     } else if (eventType === 'railworker') {
         log(`🛤️ <b>【地城流浪鐵道工：阿榮】</b>：「哎呀，年輕人！這段路不好走吧？來，跟叔叔聊聊天，或者幫把手，叔叔不會虧待你的！」`, "color-event");
         eventPanel.innerHTML = `
@@ -831,13 +982,31 @@ function triggerSpecialEvent() {
             <button class="btn btn-event-danger" onclick="resolveEvent('roulette', 'play')">🎲 輪盤大對決(1/5致命)</button>
             <button class="btn btn-event-safe" onclick="resolveEvent('roulette', 'leave')">🚶 跳過荒唐輪盤</button>
         `;
+    } else if (eventType === 'scale') {
+        log(`⚖️ <b>【深淵靈魂天平】</b>：天平兩端分別放著「生命之火」與「無雙鋒芒」，你要如何傾斜？`, "color-event");
+        eventPanel.innerHTML = `
+            <button class="btn btn-event-danger" onclick="resolveEvent('scale', 'power')">🔥 燃燒一半生命上限 ➔ 武器傷害翻倍</button>
+            <button class="btn btn-event" onclick="resolveEvent('scale', 'life')">❤️ 武器傷害減半 ➔ 生命上限 +300</button>
+            <button class="btn btn-event-safe" onclick="resolveEvent('scale', 'leave')" style="grid-column: span 2;">🚶 保持平衡並離開</button>
+        `;
+    } else if (eventType === 'demon_boss') {
+        log(`👑 <b>【地下城魔王分身】</b>：王座上的黑影緩緩睜開血紅雙眼：「敢挑戰深淵的霸主嗎？」`, "color-event");
+        eventPanel.innerHTML = `
+            <button class="btn btn-event-danger" onclick="resolveEvent('demon_boss', 'fight')">⚔️ 拔劍迎戰魔王分身！</button>
+            <button class="btn btn-event-safe" onclick="resolveEvent('demon_boss', 'leave')">🏃 趁他還沒起身快溜</button>
+        `;
     }
     switchControls("event");
 }
 
 function resolveEvent(event, choice) {
     if (choice === 'leave') {
-        log(`你選擇了遠離，繼續踏上旅途。`, "color-neutral");
+        if (event === 'thief_escape') {
+            log(`😭 你無奈地看著神偷怪盜帶著金幣鑽進地洞消失了...`, "color-neutral");
+            thiefChaseState = null;
+        } else {
+            log(`你選擇了遠離，繼續踏上旅途。`, "color-neutral");
+        }
         gameState = "explore";
         switchControls("explore");
         updateUI();
@@ -866,12 +1035,6 @@ function resolveEvent(event, choice) {
             log(`❌ 金幣不足 ${bet}，哥布林鄙視地看了你一眼。`, "color-bad");
         }
     } 
-    else if (event === 'blacksmith') {
-        hp -= 30;
-        weapons[currentWeaponIdx].maxDmg += 5;
-        log(`🔥 鐵匠汲取了你的血液！武器最大傷害永久 +5！`, "color-achieve");
-        checkDeath();
-    }
     else if (event === 'mimic') {
         if (Math.random() < 0.5) {
             gold += 100;
@@ -879,6 +1042,7 @@ function resolveEvent(event, choice) {
         } else {
             gameState = "combat";
             isEnemyFrozen = false;
+            thiefChaseState = null;
             let teamN = getTeamSize();
             enemyMaxHp = Math.floor((30 + floor * 5) * (1 + teamN * 0.20));
             enemyHp = enemyMaxHp;
@@ -887,7 +1051,7 @@ function resolveEvent(event, choice) {
             log(`😱 寶箱突然長出牙齒！是寶箱怪！牠狠狠咬了你一口先發制人！`, "color-bad");
             let dmg = Math.max(1, enemyAtk - defense);
             hp -= dmg;
-            currentFight = { dmgTaken: dmg, absurdCount: 0 };
+            currentFight = { dmgTaken: dmg, absurdCount: 0, hasWhetstone: false };
             checkDeath();
             if (hp > 0) {
                 switchControls("combat");
@@ -908,16 +1072,65 @@ function resolveEvent(event, choice) {
         }
     }
     else if (event === 'altar') {
-        if (choice === 'potion' && potions >= 1) {
-            potions--;
-            if (addDefense(3)) log(`🛡️ 祭壇散發光芒，防禦力永久 +3！`, "color-good");
-            else log(`🛡️ 祭壇散發光芒，但防禦力已達 60 極限！`, "color-neutral");
-        } else if (choice === 'gold' && gold >= 40) {
-            gold -= 40;
-            if (addDefense(3)) log(`🛡️ 祭壇散發光芒，防禦力永久 +3！`, "color-good");
-            else log(`🛡️ 祭壇散發光芒，但防禦力已達 60 極限！`, "color-neutral");
-        } else {
-            log(`❌ 祭品不足，祭壇毫無反應。`, "color-bad");
+        // 1~200 層傳統動態祭壇
+        let tier = Math.floor((floor - 1) / 50) + 1;
+        let hpCost = 30 + (tier - 1) * 15;
+        let dmgGain = 5 + (tier - 1) * 3;
+        let potCost = tier;
+        let defGain = 3 + (tier - 1) * 1;
+        let goldCost = 40 + (tier - 1) * 40;
+        let maxHpGain = 25 + (tier - 1) * 15;
+
+        if (choice === 'blood') {
+            hp -= hpCost;
+            weapons[currentWeaponIdx].maxDmg += dmgGain;
+            log(`🩸 祭壇汲取了 ${hpCost} 點鮮血！當前武器最大傷害永久 +${dmgGain}！`, "color-achieve");
+            checkDeath();
+        } else if (choice === 'potion') {
+            if (potions >= potCost) {
+                potions -= potCost;
+                if (addDefense(defGain)) log(`🛡️ 祭壇散發光芒，防禦力永久 +${defGain}！`, "color-good");
+                else {
+                    maxHp += maxHpGain; hp += maxHpGain;
+                    log(`🛡️ 防禦力已達 60 極限！祭壇改為賜予生命上限 +${maxHpGain}！`, "color-good");
+                }
+            } else log(`❌ 普普通通生命藥水不足 ${potCost} 罐，祭壇毫無反應。`, "color-bad");
+        } else if (choice === 'gold') {
+            if (gold >= goldCost) {
+                gold -= goldCost;
+                maxHp += maxHpGain; hp += maxHpGain;
+                log(`❤️ 祭壇吞噬了 ${goldCost} 金幣，生命上限永久 +${maxHpGain}！`, "color-good");
+            } else log(`❌ 金幣不足 ${goldCost}，祭壇毫無反應。`, "color-bad");
+        }
+        // 201 層以後混沌深淵祭壇
+        else if (choice === 'abyss_blood') {
+            let cost = Math.max(1, Math.floor(hp * 0.35));
+            hp -= cost;
+            weapons[currentWeaponIdx].minDmg += 15;
+            weapons[currentWeaponIdx].maxDmg += 15;
+            log(`🩸 <b>【賭命狂戰】</b> 燃燒了 ${cost} 點生命！當前武器最小與最大傷害雙雙永久 +15！`, "color-achieve");
+            checkDeath();
+        } else if (choice === 'abyss_alchemy') {
+            if (potions >= 3) {
+                potions -= 3;
+                whetstones += 2; maxHp += 80; hp += 80;
+                log(`🧪 <b>【煉金轉化】</b> 獻祭 3 罐普通藥水，煉成 2 個狂戰士磨刀石且生命上限 +80！`, "color-good");
+            } else if (potions2 >= 1) {
+                potions2 -= 1;
+                whetstones += 2; maxHp += 80; hp += 80;
+                log(`🧪 <b>【煉金轉化】</b> 獻祭 1 罐牆生命藥水，煉成 2 個狂戰士磨刀石且生命上限 +80！`, "color-good");
+            } else {
+                log(`❌ 藥水不足（需 3 罐普通藥水或 1 罐牆藥水），煉金陣黯淡了下來。`, "color-bad");
+            }
+        } else if (choice === 'abyss_blessing') {
+            let abyssGoldCost = 500 + Math.floor((floor - 201) / 50) * 250;
+            if (gold >= abyssGoldCost) {
+                gold -= abyssGoldCost;
+                stats.blessingFloorsLeft = 5;
+                log(`✨ <b>【神明祝福】</b> 獻祭 ${abyssGoldCost} 金幣！獲得 5 層神明護體（免疫陷阱怪盜、每步回血 10%）！`, "color-gold");
+            } else {
+                log(`❌ 金幣不足 ${abyssGoldCost}，深淵神明不予理會。`, "color-bad");
+            }
         }
     }
     else if (event === 'railworker') {
@@ -1061,6 +1274,27 @@ function resolveEvent(event, choice) {
             }
         }
     }
+    else if (event === 'scale') {
+        if (choice === 'power') {
+            maxHp = Math.max(1, Math.floor(maxHp / 2));
+            hp = Math.min(hp, maxHp);
+            weapons[currentWeaponIdx].minDmg *= 2;
+            weapons[currentWeaponIdx].maxDmg *= 2;
+            log(`⚖️ <b>【靈魂傾斜】</b> 獻祭了一半生命上限，當前武器傷害徹底翻倍！`, "color-achieve");
+        } else if (choice === 'life') {
+            weapons[currentWeaponIdx].minDmg = Math.max(1, Math.floor(weapons[currentWeaponIdx].minDmg / 2));
+            weapons[currentWeaponIdx].maxDmg = Math.max(2, Math.floor(weapons[currentWeaponIdx].maxDmg / 2));
+            maxHp += 300; hp += 300;
+            log(`⚖️ <b>【靈魂傾斜】</b> 武器變得鈍重，但生命上限暴增 +300！`, "color-good");
+        }
+    }
+    else if (event === 'demon_boss') {
+        if (choice === 'fight') {
+            startNormalCombat(true);
+            updateUI();
+            return;
+        }
+    }
 
     if (hp > 0 && gameState !== "combat") {
         gameState = "explore";
@@ -1142,6 +1376,12 @@ function combatAction(action) {
         enemyHp -= counterDmg;
         log(`🛡️ 舉盾防禦，反擊造成 ${counterDmg} 點傷害！`);
     } else if (action === "flee") {
+        if (thiefChaseState && thiefChaseState.active) {
+            log(`🏃 你放棄追擊，神偷怪盜帶著偷走的 ${thiefChaseState.stolenGold} 金幣逃之夭夭！`, "color-bad");
+            thiefChaseState = null;
+            endCombat();
+            return;
+        }
         if (Math.random() < 0.5) {
             log(`🏃 成功逃跑！但掉落了 10 枚金幣。`);
             gold = Math.max(0, gold - 10);
@@ -1187,9 +1427,25 @@ function combatAction(action) {
     let goldBeforeReward = gold;
 
     if (enemyHp <= 0) {
+        if (thiefChaseState && thiefChaseState.active) {
+            let extraLoot = Math.floor(1000 + Math.random() * 2001);
+            gold += thiefChaseState.stolenGold + extraLoot;
+            whetstones++;
+            log(`🎉 <b>成功逮住神偷怪盜！</b> 全數奪回 ${thiefChaseState.stolenGold} 金幣，並從他袋子裡搜出額外 <span class="color-gold">${extraLoot} 金幣</span> 與 1 個磨刀石！`, "color-gold");
+            thiefChaseState = null;
+            endCombat();
+            return;
+        }
+
         let earned = Math.floor(18 + Math.random() * 20 + floor * 3);
+        if (currentFight.isDemonBoss) {
+            earned += 1500;
+            potions2 += 2;
+            log(`👑 <b>討伐【地下城魔王分身】成功！</b> 獲得巨額賞金 ${earned} 金幣與 2 罐牆生命藥水！`, "color-gold");
+        } else {
+            log(`🏆 擊敗怪物！獲得 ${earned} 枚金幣！`, "color-gold");
+        }
         gold += earned;
-        log(`🏆 擊敗怪物！獲得 ${earned} 枚金幣！`, "color-gold");
         
         if (hp <= 5) unlockAchievement("極限求生大師", "HP低於 5 點時成功擊敗怪物");
         if (currentFight.dmgTaken === 0) unlockAchievement("無傷劍客", "無傷擊敗一隻怪物");
@@ -1197,6 +1453,20 @@ function combatAction(action) {
 
         endCombat();
     } else {
+        // 如果是追擊神偷怪盜模式，怪盜不會反擊，而是倒數逃跑
+        if (thiefChaseState && thiefChaseState.active) {
+            thiefChaseState.turnsLeft--;
+            if (thiefChaseState.turnsLeft <= 0) {
+                log(`💨 <b>追擊失敗！</b> 神偷怪盜一溜煙鑽進地洞，帶著偷走的 ${thiefChaseState.stolenGold} 金幣消失了...`, "color-thief");
+                thiefChaseState = null;
+                endCombat();
+            } else {
+                log(`🦹 神偷怪盜抱頭鼠竄沒有反擊，距離鑽進地洞還有 <b>${thiefChaseState.turnsLeft}</b> 回合！`, "color-event");
+                updateUI();
+            }
+            return;
+        }
+
         if (isEnemyFrozen) {
             log(`❄️ 怪物被凍結/擊退，動彈不得，錯失了攻擊機會！`, "color-good");
             isEnemyFrozen = false;
@@ -1274,7 +1544,9 @@ function combatAction(action) {
 function endCombat() {
     gameState = "explore";
     isEnemyFrozen = false;
+    thiefChaseState = null;
     currentFight.hasWhetstone = false;
+    currentFight.isDemonBoss = false;
     switchControls("explore");
     updateUI();
 }
@@ -1435,10 +1707,81 @@ function rest() {
     }
 }
 
+// --- 結算與本地排行榜系統 ---
+function prepareGameOver(statusText) {
+    let totalScore = gold + floor * 10 + (stats.achieved.size * 50);
+    currentRunData = {
+        score: totalScore,
+        floor: floor,
+        gold: gold,
+        titles: stats.achieved.size,
+        status: statusText,
+        date: new Date().toLocaleDateString()
+    };
+    document.getElementById("final-score-preview").innerText = totalScore;
+    document.getElementById("record-submit-box").style.display = "block";
+    document.getElementById("btn-save-record").disabled = false;
+    document.getElementById("btn-save-record").innerText = "登錄榜單";
+    document.getElementById("player-name-input").value = "";
+}
+
+function submitScore() {
+    if (!currentRunData) return;
+    let nameInput = document.getElementById("player-name-input").value.trim();
+    let playerName = nameInput || "無名冒險者";
+    
+    let board = JSON.parse(localStorage.getItem("dungeonLeaderboard") || "[]");
+    board.push({
+        name: playerName,
+        ...currentRunData
+    });
+    
+    // 依總評分由高到低排序，保留前 10 名
+    board.sort((a, b) => b.score - a.score);
+    board = board.slice(0, 10);
+    localStorage.setItem("dungeonLeaderboard", JSON.stringify(board));
+    
+    document.getElementById("btn-save-record").disabled = true;
+    document.getElementById("btn-save-record").innerText = "已登錄";
+    log(`🏆 <b>【${playerName}】</b> 的成績 (${currentRunData.score} 分) 已載入歷代英雄榜！`, "color-gold");
+    openLeaderboard();
+}
+
+function openLeaderboard() {
+    let board = JSON.parse(localStorage.getItem("dungeonLeaderboard") || "[]");
+    let listEl = document.getElementById("rank-list");
+    listEl.innerHTML = "";
+    
+    if (board.length === 0) {
+        listEl.innerHTML = `<div style="text-align:center; color:#777; padding:20px;">目前尚無冒險紀錄，快去挑戰地下城吧！</div>`;
+    } else {
+        board.forEach((entry, idx) => {
+            let medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`;
+            let topClass = idx < 3 ? `top-${idx + 1}` : "";
+            let statusColor = entry.status === "凱旋撤退" ? "#4caf50" : "#f44336";
+            listEl.innerHTML += `
+                <div class="rank-row ${topClass}">
+                    <div>
+                        <div style="font-weight:bold; color:#fff; font-size:13px;">${medal} ${entry.name} <span style="font-size:10px; color:${statusColor};">[${entry.status}]</span></div>
+                        <div style="font-size:10px; color:#aaa;">第 ${entry.floor} 層 ｜ ${entry.gold} 金 ｜ ${entry.titles} 稱號</div>
+                    </div>
+                    <div style="font-weight:bold; color:#ffb300; font-size:14px;">${entry.score} 分</div>
+                </div>
+            `;
+        });
+    }
+    document.getElementById("rank-modal-overlay").style.display = "flex";
+}
+
+function closeLeaderboard() {
+    document.getElementById("rank-modal-overlay").style.display = "none";
+}
+
 function retreat() {
     if (gold >= 300) unlockAchievement("地城守財奴", "攜帶超過 300 枚金幣成功撤退");
     let totalScore = gold + floor * 10 + (stats.achieved.size * 50);
     log(`\n🎉 帶著 ${gold} 金幣安然撤退！<br>🏆 總評分：${totalScore}`, "color-gold");
+    prepareGameOver("凱旋撤退");
     gameState = "over"; switchControls("over");
 }
 
@@ -1446,6 +1789,7 @@ function checkDeath() {
     if (hp <= 0) {
         hp = 0;
         log(`\n💀 體力耗盡，倒在了第 ${floor} 層...`, "color-bad");
+        prepareGameOver("英勇陣亡");
         gameState = "over"; switchControls("over");
     }
 }
