@@ -434,15 +434,14 @@ function getAiAction() {
     }
 }
 
-// 觸發回合 (精準口號節奏：0-0-7 [1.5拍] + 呀 [0.5拍] + 0-0 [1拍] + 7出招 [1拍])
+// 觸發回合 (三段組字節奏：007 [1.5拍] -> 呀 [0.5拍] -> 007出招 [2拍])
 async function triggerRound(playerAction) {
     if (isGameOver || isProcessing) return;
     isProcessing = true; 
     toggleButtons(true); 
     initAudio();
 
-    const beat = 520;          // 每一大拍的時間（毫秒），520ms 念起來最接近真實語速
-    const halfBeat = beat / 2; // 半拍時間（260ms）
+    const beat = 520; // 每一大拍的基準時間（毫秒）
     let aiAction = getAiAction();
 
     pIcon.classList.remove('show', 'glow-shield');
@@ -451,31 +450,18 @@ async function triggerRound(playerAction) {
     
     vsText.classList.add('countdown');
 
-    // 輔助函式：讓連續相同的字也能有明顯的跳動切換感
-    const showWord = async (text, duration, sound = 'tick') => {
-        vsText.innerText = "";
-        await delay(30);
-        vsText.innerText = text;
-        if (sound) playSound(sound);
-        await delay(duration - 30);
-    };
+    // === 第一組：007（佔 1.5 拍）===
+    vsText.innerText = "007";
+    playSound('tick');
+    await delay(beat * 1.5); // 780ms
 
-    // === 前 1.5 拍：0 - 0 - 7 ===
-    await showWord("0", halfBeat);           // 第 1 拍前半 (0.5拍)
-    await showWord("0", halfBeat);           // 第 1 拍後半 (1.0拍)
-    await showWord("7", halfBeat);           // 第 2 拍前半 (1.5拍完成)
+    // === 第二組：呀（佔 0.5 拍，剛好湊滿前 2 拍）===
+    vsText.innerText = "呀";
+    playSound('tick');
+    await delay(beat * 0.5); // 260ms
 
-    // === 第 2 拍後半：呀 ===
-    await showWord("呀", halfBeat, "seven"); // 第 2 拍後半 (2.0拍完成，帶重音)
-
-    // === 第 3 拍：0 - 0 ===
-    await showWord("0", halfBeat);           // 第 3 拍前半 (2.5拍)
-    await showWord("0", halfBeat);           // 第 3 拍後半 (3.0拍)
-
-    // === 第 4 拍：7 ！（喊 7 的瞬間雙方同時出招，停留完整 1 拍）===
-    vsText.innerText = "";
-    await delay(30);
-    vsText.innerText = "7 ！"; 
+    // === 第三組：007 ！（佔 2 拍，出現瞬間雙方同時出招）===
+    vsText.innerText = "007 ！";
     playSound('seven');
     vsText.classList.remove('countdown');
 
@@ -484,10 +470,11 @@ async function triggerRound(playerAction) {
     aIcon.innerText = ACT_ICONS[aiAction];
     pIcon.classList.add('show');
     aIcon.classList.add('show');
-    
-    await delay(beat - 30); // 第 4 拍完整停留一整拍（520ms），讓玩家看清楚招式
+
+    await delay(beat * 2); // 停留完整 2 拍（1040ms）讓玩家看清楚招式再結算
     resolveRound(playerAction, aiAction);
 }
+
 
 
 function resolveRound(pAct, aAct) {
