@@ -21,14 +21,15 @@
 
         #game-wrap {
             background: #ffffff;
-            padding: 16px;
+            padding: 20px 16px;
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             max-width: 400px;
             width: 100%;
+            margin-top: 40px;
             border: 3px solid #d7ccc8;
             position: relative;
-            overflow: hidden;
+            box-sizing: border-box;
         }
 
         h2 { margin: 0 0 12px 0; color: #5d4037; text-align: center; font-size: 22px; }
@@ -121,28 +122,29 @@
             position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px;
             font-size: 16px; font-weight: bold; pointer-events: none; opacity: 0; z-index: 100;
+            white-space: nowrap;
         }
         .toast.show { animation: floatUp 1s ease-out forwards; }
         @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); } 100% { opacity: 0; transform: translate(-50%, -80%) scale(1.1); } }
 
-        /* 商店面板 */
+        /* 開始與商店面板（改為正常版面流撐開外框） */
         #screen-shop, #screen-start {
             display: none; flex-direction: column; align-items: center; justify-content: center;
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fffaf0; z-index: 50; padding: 20px; box-sizing: border-box;
+            width: 100%; padding: 12px 4px; box-sizing: border-box;
         }
         .shop-item {
-            width: 100%; background: #ffffff; border: 2px solid #e0e0e0; padding: 12px; border-radius: 12px;
+            width: 100%; background: #fffaf0; border: 2px solid #e0e0e0; padding: 12px; border-radius: 12px;
             margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+            box-sizing: border-box;
         }
         .shop-info h4 { margin: 0 0 4px 0; color: #3e2723; }
         .shop-info p { margin: 0; font-size: 11px; color: #757575; }
-        .btn-buy { background: #ffb300; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-buy { background: #ffb300; color: #3e2723; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
         .btn-buy:disabled { background: #e0e0e0; color: #9e9e9e; cursor: not-allowed; }
 
         .btn-start {
             background: #4caf50; border: none; box-shadow: 0 4px 0 #2e7d32; color: white;
-            font-size: 18px; font-weight: bold; padding: 14px 24px; border-radius: 12px; cursor: pointer; margin-top: 20px; width: 100%;
+            font-size: 18px; font-weight: bold; padding: 14px 24px; border-radius: 12px; cursor: pointer; margin-top: 10px; width: 100%;
         }
         .btn-start:active { transform: translateY(4px); box-shadow: none; }
 
@@ -167,21 +169,21 @@
         <div id="screen-start" style="display: flex;">
             <div style="font-size: 60px; margin-bottom: 10px;">🧋</div>
             <h2 style="font-size: 26px;">手搖飲搖搖樂</h2>
-            <p style="text-align: center; color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 20px;">
+            <p style="text-align: center; color: #666; font-size: 14px; line-height: 1.5; margin: 0 0 18px 0;">
                 迎戰台灣手搖飲的尖峰時刻！<br>依照客人的奇怪點單完美調製飲料。<br>賺取營業額來升級你的店面吧！
             </p>
-            <div style="background: #fff8e1; border: 2px dashed #ffb300; padding: 12px; border-radius: 12px; width: 100%; text-align: center; margin-bottom: 20px;">
+            <div style="background: #fff8e1; border: 2px dashed #ffb300; padding: 12px; border-radius: 12px; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 14px;">
                 <div style="font-weight: bold; color: #d84315;">準備進入 第 <span id="txt-ready-day">1</span> 天</div>
                 <div style="font-size: 13px; color: #757575; margin-top: 4px;">今日目標營業額：$<span id="txt-ready-target">300</span></div>
             </div>
             <button class="btn-start" onclick="startGame()">▶️ 開始營業！</button>
-            <button class="btn" style="width:100%; margin-top: 10px; padding:12px; background:#eeeeee;" onclick="askReset()">🔄 清除進度重開</button>
+            <button class="btn" style="width:100%; margin-top: 12px; padding:12px; background:#eeeeee;" onclick="askReset()">🔄 清除進度重開</button>
         </div>
 
         <!-- 商店畫面 -->
         <div id="screen-shop">
             <h2 style="margin-bottom: 5px;">🏪 收攤進貨</h2>
-            <p style="font-size: 13px; color: #d84315; font-weight: bold; margin-bottom: 16px;">目前資金：$<span id="txt-shop-money">0</span></p>
+            <p style="font-size: 13px; color: #d84315; font-weight: bold; margin: 0 0 16px 0;">目前資金：$<span id="txt-shop-money">0</span></p>
             
             <div class="shop-item">
                 <div class="shop-info">
@@ -205,7 +207,7 @@
                 <button class="btn-buy" id="btn-buy-seal" onclick="buyUpgrade('seal', 2000)">$2000</button>
             </div>
 
-            <button class="btn-start" style="margin-top: 20px;" onclick="nextDayPrep()">▶️ 準備迎接隔天</button>
+            <button class="btn-start" style="margin-top: 16px;" onclick="nextDayPrep()">▶️ 準備迎接隔天</button>
         </div>
 
         <!-- 遊戲主畫面 -->
