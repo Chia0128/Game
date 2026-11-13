@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>經典跳棋 - 單機對戰</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f3e9dc;
+            background-image: radial-gradient(#d5bdaf 1px, transparent 1px);
+            background-size: 18px 18px;
+            color: #3e2723;
+            margin: 0;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 頂部導覽列 */
+        .btn-home {
+            position: fixed; top: 14px; left: 14px; z-index: 9999;
+            height: 36px; padding: 0 14px;
+            font-size: 14px; font-weight: 600; color: #333;
+            background: #ffffff; border: 1px solid #d1d5db; border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer;
+            text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .top-right-btns {
+            position: fixed; top: 14px; right: 14px; z-index: 9999;
+            display: flex; gap: 8px;
+        }
+        .btn-top {
+            height: 36px; padding: 0 12px;
+            font-size: 13px; font-weight: 700; color: #4e342e;
+            background: #ffffff; border: 1px solid #d7ccc8; border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12); cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .btn-top:active { transform: scale(0.95); }
+
+        /* 主容器 */
+        #game-wrap {
+            background: #fffaf0;
+            border: 3px solid #8d6e63;
+            border-radius: 20px;
+            padding: 16px 12px 14px;
+            max-width: 430px;
+            width: 100%;
+            margin-top: 44px;
+            box-shadow: 0 12px 28px rgba(62, 39, 35, 0.22);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 21px;
+            color: #4e342e;
+            letter-spacing: 1px;
+        }
+
+        /* 模式切換藥丸列 */
+        .mode-switch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            background: #efebe9;
+            padding: 4px;
+            border-radius: 12px;
+            width: 100%;
+            margin-bottom: 10px;
+            border: 1px solid #d7ccc8;
+        }
+        .mode-btn {
+            border: none;
+            background: transparent;
+            padding: 8px 6px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #6d4c41;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .mode-btn.active {
+            background: #5d4037;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+        }
+
+        /* 玩家進度與回合指示區 */
+        .players-bar {
+            display: flex;
+            justify-content: space-around;
+            gap: 6px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .player-pill {
+            flex: 1;
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 700;
+            transition: 0.2s;
+            opacity: 0.65;
+        }
+        .player-pill.active-turn {
+            opacity: 1;
+            background: #fff8e1;
+            border-color: #ffb300;
+            transform: scale(1.03);
+            box-shadow: 0 3px 8px rgba(255, 179, 0, 0.25);
+        }
+        .dot-sample {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+            vertical-align: middle;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.35), inset 2px 2px 3px rgba(255,255,255,0.8);
+        }
+
+        /* 狀態提示條 */
+        .status-banner {
+            width: 100%;
+            background: #efebe9;
+            border-radius: 8px;
+            padding: 6px 10px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #4e342e;
+            margin-bottom: 10px;
+        }
+
+        /* 木質六角星棋盤畫布 */
+        .board-container {
+            width: 100%;
+            aspect-ratio: 1 / 1.08;
+            background: radial-gradient(circle at 50% 45%, #e6ccb2 0%, #ddb892 65%, #b08968 100%);
+            border-radius: 18px;
+            border: 4px solid #7f5539;
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.22), 0 4px 10px rgba(0,0,0,0.12);
+            position: relative;
+            overflow: hidden;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: pointer;
+        }
+
+        /* 遊戲結束勝利彈窗 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(62, 39, 35, 0.78);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .modal-card {
+            background: #ffffff;
+            border: 3px solid #ffb300;
+            border-radius: 18px;
+            max-width: 320px;
+            width: 100%;
+            padding: 24px 20px;
+            text-align: center;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+            animation: popIn 0.25s ease-out;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.88); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .btn-modal {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 10px;
+            background: #5d4037;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="btn-home">⬅️ 返回大廳</a>
+
+    <div class="top-right-btns">
+        <button class="btn-top" id="btn-mute" onclick="toggleMute()">🔊</button>
+        <button class="btn-top" onclick="confirmRestart()">🔄 重新開局</button>
+    </div>
+
+    <!-- 勝利結算彈窗 -->
+    <div id="win-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div style="font-size: 52px; margin-bottom: 8px;" id="win-emoji">🏆</div>
+            <h3 style="margin: 0 0 8px 0; font-size: 22px; color: #4e342e;" id="win-title">恭喜獲勝！</h3>
+            <p style="margin: 0 0 16px 0; font-size: 14px; color: #6d4c41; line-height: 1.5;" id="win-desc"></p>
+            <button class="btn-modal" style="background: #2e7d32;" onclick="startNewGame(currentMode)">🔄 再來一局</button>
+            <button class="btn-modal" style="background: #8d6e63;" onclick="document.getElementById('win-modal').style.display='none'">👀 檢視棋盤</button>
+        </div>
+    </div>
+
+    <div id="game-wrap">
+        <h2>🌟 經典六角跳棋</h2>
+
+        <!-- 模式切換 -->
+        <div class="mode-switch">
+            <button class="mode-btn active" id="mode-2p" onclick="switchMode('2p')">👤 雙人對決 (1v1)</button>
+            <button class="mode-btn" id="mode-3p" onclick="switchMode('3p')">👥 三人混戰 (1v2)</button>
+        </div>
+
+        <!-- 玩家進度列 -->
+        <div class="players-bar" id="players-bar"></div>
+
+        <!-- 狀態提示 -->
+        <div class="status-banner" id="status-banner">輪到你了！點擊下方紅色彈珠開始移動</div>
+
+        <!-- 棋盤畫布 -->
+        <div class="board-container">
+            <canvas id="board-canvas"></canvas>
+        </div>
+    </div>
+
+<script>
+// === 1. 六角星形棋盤幾何與座標定義 (121 孔) ===
+// 使用軸向座標 (q, r)，滿足六角星形條件
+const BOARD_NODES = [];
+const NODE_MAP = new Map();
+
+function keyOf(q, r) { return `${q},${r}`; }
+
+// 生成 121 個標準中國跳棋孔位
+// 六角星由兩個大三角形交疊而成：
+// 三角形 A (尖端朝下): r <= 4, q >= -4, q + r >= -4
+// 三角形 B (尖端朝上): r >= -4, q <= 4, q + r <= 4
+for (let r = -8; r <= 8; r++) {
+    for (let q = -8; q <= 8; q++) {
+        let s = -q - r;
+        let inTriA = (r <= 4 && q >= -4 && s <= 4);
+        let inTriB = (r >= -4 && q <= 4 && s >= -4);
+        if (inTriA || inTriB) {
+            let zone = getCornerZone(q, r);
+            let node = { q, r, zone, piece: null };
+            BOARD_NODES.push(node);
+            NODE_MAP.set(keyOf(q, r), node);
+        }
+    }
+}
+
+// 判斷孔位屬於哪個三角陣地
+// 0: 正下方(玩家紅), 1: 正上方(對手綠), 2: 左上方(對手黃), 3: 右上方(對手藍), 4: 右下方, 5: 左下方, -1: 中央六邊形
+function getCornerZone(q, r) {
+    let s = -q - r;
+    if (r >= 5) return 0;   // 下角 (10孔)
+    if (r <= -5) return 1;  // 上角 (10孔)
+    if (q <= -5) return 2;  // 左上角 (10孔)
+    if (s <= -5) return 3;  // 右上角 (10孔)
+    if (q >= 5) return 4;   // 右下角 (10孔)
+    if (s >= 5) return 5;   // 左下角 (10孔)
+    return -1;              // 中央區 (61孔)
+}
+
+// 6 個相鄰方向向量
+const DIRS = [
+    { q: 1, r: 0 }, { q: -1, r: 0 },
+    { q: 0, r: 1 }, { q: 0, r: -1 },
+    { q: 1, r: -1 }, { q: -1, r: 1 }
+];
+
+// 玩家設定表
+const PLAYER_CONFIG = {
+    'red':    { id: 'red',    name: '你 (紅)',   isAI: false, startZone: 0, targetZone: 1, color: '#e53935', light: '#ff8a80', dark: '#8e0000' },
+    'green':  { id: 'green',  name: '機器人(綠)', isAI: true,  startZone: 1, targetZone: 0, color: '#2e7d32', light: '#81c784', dark: '#005005' },
+    'yellow': { id: 'yellow', name: '機器人(黃)', isAI: true,  startZone: 2, targetZone: 4, color: '#f9a825', light: '#fff59d', dark: '#c17900' },
+    'blue':   { id: 'blue',   name: '機器人(藍)', isAI: true,  startZone: 3, targetZone: 5, color: '#1e88e5', light: '#90caf9', dark: '#005cb2' }
+};
+
+// === 2. Web Audio API 彈珠音效 ===
+let audioCtx = null;
+let isMuted = false;
+
+function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('btn-mute').innerText = isMuted ? '🔇' : '🔊';
+}
+
+function playMarbleSound(pitchBoost = 0) {
+    if (isMuted) return;
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(620 + pitchBoost * 85, now);
+    osc.frequency.exponentialRampToValueAtTime(280, now + 0.09);
+
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.09);
+}
+
+// === 3. 遊戲狀態與存檔 ===
+let currentMode = '2p'; // '2p' or '3p'
+let turnOrder = [];
+let currentTurnIdx = 0;
+let selectedNode = null;
+let validMoves = []; // [{ toNode, path: [node1, node2...] }]
+let isAnimating = false;
+let isGameOver = false;
+let activePreviewPath = []; // 動畫或懸停路徑
+
+function saveState() {
+    if (isGameOver) return;
+    const pieces = {};
+    BOARD_NODES.forEach(n => {
+        if (n.piece) pieces[keyOf(n.q, n.r)] = n.piece;
+    });
+    const data = {
+        mode: currentMode,
+        turnOrder,
+        currentTurnIdx,
+        pieces
+    };
+    localStorage.setItem('checkersSingleSave', JSON.stringify(data));
+}
+
+function loadState() {
+    const raw = localStorage.getItem('checkersSingleSave');
+    if (!raw) return false;
+    try {
+        const data = JSON.parse(raw);
+        currentMode = data.mode || '2p';
+        turnOrder = data.turnOrder;
+        currentTurnIdx = data.currentTurnIdx || 0;
+        BOARD_NODES.forEach(n => {
+            n.piece = data.pieces[keyOf(n.q, n.r)] || null;
+        });
+        updateModeButtons();
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function updateModeButtons() {
+    document.getElementById('mode-2p').classList.toggle('active', currentMode === '2p');
+    document.getElementById('mode-3p').classList.toggle('active', currentMode === '3p');
+}
+
+function switchMode(mode) {
+    if (isAnimating) return;
+    if (mode === currentMode && !isGameOver) return;
+    startNewGame(mode);
+}
+
+function confirmRestart() {
+    if (isAnimating) return;
+    startNewGame(currentMode);
+}
+
+function startNewGame(mode) {
+    currentMode = mode;
+    updateModeButtons();
+    document.getElementById('win-modal').style.display = 'none';
+    isGameOver = false;
+    isAnimating = false;
+    selectedNode = null;
+    validMoves = [];
+    activePreviewPath = [];
+
+    turnOrder = (mode === '2p') ? ['red', 'green'] : ['red', 'yellow', 'blue'];
+    currentTurnIdx = 0;
+
+    // 清空並擺放初始棋子
+    BOARD_NODES.forEach(n => n.piece = null);
+    turnOrder.forEach(pid => {
+        const startZ = PLAYER_CONFIG[pid].startZone;
+        BOARD_NODES.forEach(n => {
+            if (n.zone === startZ) n.piece = pid;
+        });
+    });
+
+    saveState();
+    updateUI();
+    drawBoard();
+}
+
+// === 4. 核心跳棋規則：鄰近移動 + 連環跳躍 BFS ===
+function getValidMoves(startNode) {
+    const moves = [];
+    const visitedJump = new Set();
+    visitedJump.add(keyOf(startNode.q, startNode.r));
+
+    // 1. 鄰近 6 個方向的單步空位移動
+    for (const d of DIRS) {
+        const next = NODE_MAP.get(keyOf(startNode.q + d.q, startNode.r + d.r));
+        if (next && !next.piece) {
+            moves.push({ toNode: next, path: [startNode, next], isJump: false });
+        }
+    }
+
+    // 2. 廣度優先搜尋 (BFS) 找出所有多段連環跳躍路徑
+    const queue = [{ node: startNode, path: [startNode] }];
+    while (queue.length > 0) {
+        const { node, path } = queue.shift();
+        for (const d of DIRS) {
+            const mid = NODE_MAP.get(keyOf(node.q + d.q, node.r + d.r));
+            const land = NODE_MAP.get(keyOf(node.q + d.q * 2, node.r + d.r * 2));
+            // 中間必須有任意棋子，且落點必須是空位
+            if (mid && mid.piece && land && !land.piece) {
+                const landKey = keyOf(land.q, land.r);
+                if (!visitedJump.has(landKey)) {
+                    visitedJump.add(landKey);
+                    const newPath = [...path, land];
+                    moves.push({ toNode: land, path: newPath, isJump: true });
+                    queue.push({ node: land, path: newPath });
+                }
+            }
+        }
+    }
+    return moves;
+}
+
+// 計算某位玩家已進入目標三角陣地的棋子數量 (滿 10 顆即勝利)
+function countInTarget(pid) {
+    const targetZ = PLAYER_CONFIG[pid].targetZone;
+    let count = 0;
+    BOARD_NODES.forEach(n => {
+        if (n.piece === pid && n.zone === targetZ) count++;
+    });
+    return count;
+}
+
+// === 5. 移動動畫與回合推進 ===
+async function executeMove(moveObj) {
+    isAnimating = true;
+    const path = moveObj.path;
+    const movingPid = path[0].piece;
+    selectedNode = null;
+    validMoves = [];
+    activePreviewPath = path;
+
+    // 依序沿著連跳路徑一格一格跳躍
+    for (let i = 0; i < path.length - 1; i++) {
+        const from = path[i];
+        const to = path[i + 1];
+        to.piece = movingPid;
+        from.piece = null;
+        playMarbleSound(i);
+        drawBoard();
+        await new Promise(res => setTimeout(res, path.length > 2 ? 230 : 160));
+    }
+
+    activePreviewPath = [];
+    isAnimating = false;
+
+    // 檢查是否達成勝利條件
+    if (countInTarget(movingPid) === 10) {
+        isGameOver = true;
+        localStorage.removeItem('checkersSingleSave');
+        updateUI();
+        drawBoard();
+        showWinModal(movingPid);
+        return;
+    }
+
+    // 換下一位玩家
+    currentTurnIdx = (currentTurnIdx + 1) % turnOrder.length;
+    saveState();
+    updateUI();
+    drawBoard();
+
+    // 若輪到機器人，延遲一下執行 AI 思考
+    const nextPid = turnOrder[currentTurnIdx];
+    if (PLAYER_CONFIG[nextPid].isAI && !isGameOver) {
+        setTimeout(() => runAIMove(nextPid), 380);
+    }
+}
+
+// === 6. 機器人 AI 決策邏輯 ===
+// 找出目標陣地最深處的尖端座標作為導航標靶
+function getTargetTip(targetZone) {
+    if (targetZone === 0) return { q: -4, r: 8 };  // 下尖端
+    if (targetZone === 1) return { q: 4, r: -8 };  // 上尖端
+    if (targetZone === 2) return { q: -8, r: 4 };  // 左上尖端
+    if (targetZone === 3) return { q: 8, r: -4 };  // 右上尖端
+    if (targetZone === 4) return { q: 8, r: 4 };   // 右下尖端
+    if (targetZone === 5) return { q: -8, r: -4 }; // 左下尖端
+    return { q: 0, r: 0 };
+}
+
+function hexDist(a, b) {
+    return (Math.abs(a.q - b.q) + Math.abs(a.q + a.r - b.q - b.r) + Math.abs(a.r - b.r)) / 2;
+}
+
+function runAIMove(pid) {
+    if (isGameOver || turnOrder[currentTurnIdx] !== pid) return;
+    const cfg = PLAYER_CONFIG[pid];
+    const tip = getTargetTip(cfg.targetZone);
+
+    let bestScore = -99999;
+    let bestMoves = [];
+
+    BOARD_NODES.forEach(node => {
+        if (node.piece === pid) {
+            const moves = getValidMoves(node);
+            moves.forEach(m => {
+                const beforeDist = hexDist(node, tip);
+                const afterDist = hexDist(m.toNode, tip);
+                let progress = (beforeDist - afterDist) * 12;
+
+                // 鼓勵已進入目標區的棋子往更深處填滿，避免卡住門口
+                if (node.zone === cfg.targetZone && m.toNode.zone !== cfg.targetZone) {
+                    progress -= 40;
+                }
+                if (node.zone !== cfg.targetZone && m.toNode.zone === cfg.targetZone) {
+                    progress += 18;
+                }
+                // 優先選擇大跨步連環跳躍
+                if (m.isJump) {
+                    progress += (m.path.length - 1) * 3.5;
+                }
+                // 把落在後方起點區的棋子往前拉
+                if (node.zone === cfg.startZone) {
+                    progress += 6;
+                }
+
+                // 加入些微隨機性讓棋局多變
+                const score = progress + Math.random() * 2.5;
+                if (score > bestScore + 0.5) {
+                    bestScore = score;
+                    bestMoves = [m];
+                } else if (Math.abs(score - bestScore) <= 0.5) {
+                    bestMoves.push(m);
+                }
+            });
+        }
+    });
+
+    if (bestMoves.length > 0) {
+        const chosen = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+        executeMove(chosen);
+    } else {
+        // 極端情況無路可走則跳過回合
+        currentTurnIdx = (currentTurnIdx + 1) % turnOrder.length;
+        updateUI();
+    }
+}
+
+function showWinModal(winnerPid) {
+    const cfg = PLAYER_CONFIG[winnerPid];
+    const modal = document.getElementById('win-modal');
+    const emoji = document.getElementById('win-emoji');
+    const title = document.getElementById('win-title');
+    const desc = document.getElementById('win-desc');
+
+    if (!cfg.isAI) {
+        emoji.innerText = '🎉';
+        title.innerText = '太神啦！你獲勝了！';
+        title.style.color = '#2e7d32';
+        desc.innerText = '你率先將 10 顆玻璃彈珠全部送進對面陣地，完美制霸六角棋盤！';
+    } else {
+        emoji.innerText = '🤖';
+        title.innerText = `${cfg.name} 獲勝！`;
+        title.style.color = '#c62828';
+        desc.innerText = '差一點點！試著在中央多搭幾座「連環跳橋樑」一口氣飛躍過去吧！';
+    }
+    modal.style.display = 'flex';
+}
+
+// === 7. UI 狀態更新與 Canvas 繪製 ===
+function updateUI() {
+    const bar = document.getElementById('players-bar');
+    const activePid = turnOrder[currentTurnIdx];
+    bar.innerHTML = '';
+
+    turnOrder.forEach(pid => {
+        const cfg = PLAYER_CONFIG[pid];
+        const done = countInTarget(pid);
+        const isTurn = (pid === activePid && !isGameOver);
+        bar.innerHTML += `
+            <div class="player-pill ${isTurn ? 'active-turn' : ''}">
+                <span><span class="dot-sample" style="background:${cfg.color};"></span>${cfg.name}</span>
+                <span style="color:#5d4037;">${done}/10</span>
+            </div>
+        `;
+    });
+
+    const banner = document.getElementById('status-banner');
+    if (isGameOver) {
+        banner.innerText = '🏁 本局對戰已結束！';
+    } else if (activePid === 'red') {
+        banner.innerText = selectedNode
+            ? `已選取紅棋：請點擊發光綠圈移動（共 ${validMoves.length} 個落點）`
+            : '👉 輪到你了！點擊任意一顆紅色彈珠';
+    } else {
+        banner.innerText = `⏳ ${PLAYER_CONFIG[activePid].name} 正在思考路線...`;
+    }
+}
+
+const canvas = document.getElementById('board-canvas');
+const ctx = canvas.getContext('2d');
+let nodePositions = []; // 儲存螢幕像素座標供點擊偵測
+
+function axialToPixel(q, r, cx, cy, spacing) {
+    const x = cx + spacing * (q + r * 0.5);
+    const y = cy + spacing * (r * Math.sqrt(3) / 2);
+    return { x, y };
+}
+
+function drawBoard() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const w = rect.width;
+    const h = rect.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const spacing = Math.min(w / 14.2, h / 15.6);
+    const holeRadius = spacing * 0.34;
+    const marbleRadius = spacing * 0.43;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 預先計算所有孔位像素座標
+    nodePositions = BOARD_NODES.map(node => {
+        const pos = axialToPixel(node.q, node.r, cx, cy, spacing);
+        return { node, x: pos.x, y: pos.y };
+    });
+    const posMap = new Map();
+    nodePositions.forEach(p => posMap.set(keyOf(p.node.q, p.node.r), p));
+
+    // 1. 繪製棋盤相鄰連線網格
+    ctx.strokeStyle = 'rgba(93, 64, 55, 0.25)';
+    ctx.lineWidth = 1.5;
+    nodePositions.forEach(({ node, x, y }) => {
+        for (let i = 0; i < 3; i++) {
+            const d = DIRS[i * 2];
+            const nb = posMap.get(keyOf(node.q + d.q, node.r + d.r));
+            if (nb) {
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(nb.x, nb.y);
+                ctx.stroke();
+            }
+        }
+    });
+
+    // 2. 繪製連跳動畫軌跡虛線
+    if (activePreviewPath.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = '#ff6f00';
+        ctx.lineWidth = 3.5;
+        ctx.setLineDash([6, 5]);
+        ctx.beginPath();
+        activePreviewPath.forEach((n, idx) => {
+            const p = posMap.get(keyOf(n.q, n.r));
+            if (idx === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // 建立合法落點集合供快速查詢
+    const validSet = new Set(validMoves.map(m => keyOf(m.toNode.q, m.toNode.r)));
+
+    // 3. 繪製 121 個凹槽孔位與陣地底色提示
+    const zoneTint = {
+        0: 'rgba(229, 57, 53, 0.22)',
+        1: 'rgba(46, 125, 50, 0.22)',
+        2: 'rgba(249, 168, 37, 0.24)',
+        3: 'rgba(30, 136, 229, 0.22)',
+        4: 'rgba(249, 168, 37, 0.14)',
+        5: 'rgba(30, 136, 229, 0.14)',
+        '-1': 'rgba(93, 64, 55, 0.18)'
+    };
+
+    nodePositions.forEach(({ node, x, y }) => {
+        ctx.beginPath();
+        ctx.arc(x, y, holeRadius, 0, Math.PI * 2);
+        ctx.fillStyle = zoneTint[node.zone] || 'rgba(93, 64, 55, 0.18)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(93, 64, 55, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // 若是合法移動落點，畫出醒目的發光提示圈
+        if (validSet.has(keyOf(node.q, node.r))) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, marbleRadius * 0.92, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 230, 118, 0.38)';
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#00c853';
+            ctx.stroke();
+            ctx.restore();
+        }
+    });
+
+    // 4. 繪製立體玻璃彈珠
+    nodePositions.forEach(({ node, x, y }) => {
+        if (!node.piece) return;
+        const cfg = PLAYER_CONFIG[node.piece];
+        const isSelected = (selectedNode === node);
+
+        ctx.save();
+        // 選中時加上金色外光環並微幅放大
+        const r = isSelected ? marbleRadius * 1.15 : marbleRadius;
+        if (isSelected) {
+            ctx.beginPath();
+            ctx.arc(x, y, r + 4, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 213, 79, 0.65)';
+            ctx.fill();
+        }
+
+        // 彈珠底部陰影
+        ctx.beginPath();
+        ctx.arc(x + 1.5, y + 2.5, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.fill();
+
+        // 玻璃彈珠本體漸層
+        const grad = ctx.createRadialGradient(
+            x - r * 0.32, y - r * 0.35, r * 0.1,
+            x, y, r
+        );
+        grad.addColorStop(0, cfg.light);
+        grad.addColorStop(0.55, cfg.color);
+        grad.addColorStop(1, cfg.dark);
+
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // 玻璃高光反光點
+        ctx.beginPath();
+        ctx.arc(x - r * 0.32, y - r * 0.32, r * 0.24, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+        ctx.fill();
+
+        ctx.restore();
+    });
+}
+
+// === 8. 點擊棋盤互動事件 ===
+canvas.addEventListener('pointerdown', (e) => {
+    if (isAnimating || isGameOver) return;
+    if (turnOrder[currentTurnIdx] !== 'red') return; // 僅玩家回合可操作
+
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    // 尋找距離點擊位置最近的孔位
+    let closest = null;
+    let minDist = 9999;
+    nodePositions.forEach(p => {
+        const d = Math.hypot(p.x - clickX, p.y - clickY);
+        if (d < minDist) {
+            minDist = d;
+            closest = p;
+        }
+    });
+
+    if (!closest || minDist > 26) return;
+    const clickedNode = closest.node;
+
+    // 情況 A：點擊自己的紅棋 -> 選取並計算所有可走與連跳路徑
+    if (clickedNode.piece === 'red') {
+        selectedNode = clickedNode;
+        validMoves = getValidMoves(clickedNode);
+        playMarbleSound(1);
+        updateUI();
+        drawBoard();
+        return;
+    }
+
+    // 情況 B：已選取棋子，且點擊的是發光合法落點 -> 執行移動
+    if (selectedNode && !clickedNode.piece) {
+        const chosenMove = validMoves.find(m => m.toNode === clickedNode);
+        if (chosenMove) {
+            executeMove(chosenMove);
+        }
+    }
+});
+
+window.addEventListener('resize', drawBoard);
+
+// 啟動遊戲（若有未完存檔則自動接續）
+if (loadState()) {
+    updateUI();
+    drawBoard();
+    const activePid = turnOrder[currentTurnIdx];
+    if (PLAYER_CONFIG[activePid].isAI && !isGameOver) {
+        setTimeout(() => runAIMove(activePid), 500);
+    }
+} else {
+    startNewGame('2p');
+}
+</script>
+</body>
+</html>
